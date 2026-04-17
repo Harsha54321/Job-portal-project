@@ -22,6 +22,8 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
   const fromSignup = location.state?.fromSignup || false;
 
   const [formData, setFormData] = useState({
+    fullName: "",
+    employerId: "",
     companyName: "",
     companyMoto: "",
     contactPerson: "",
@@ -111,6 +113,7 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
 
       const profile = response.data;
       setFormData({
+
         companyName: profile.company_name || "",
         companyMoto: profile.company_moto || "",
         contactPerson: profile.contact_person || "",
@@ -162,6 +165,34 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
     const mobileRegex = /^[6-9]\d{9}$/;
     const emailRegex = /^[a-zA-Z][a-zA-Z0-9._%+-]*@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
     const urlRegex = /^(https?:\/\/)[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}(\/[a-zA-Z0-9._~:/?#[\]@!$&'()*+,;=%-]*)?$/;
+    const fullNameRegex = /^[A-Za-z]+( [A-Za-z]+)+$/;
+    const employerIdRegex = /^(?=.*[A-Za-z])[A-Za-z0-9](?:[A-Za-z0-9_-]{0,18}[A-Za-z0-9])?$/;
+
+    // --- VALIDATION LOGIC ---
+
+    // Fullname
+    if (!formData.fullName.trim()) {
+      newErrors.fullName = "Please enter your full name";
+    } else if (formData.fullName.length < 3) {
+      newErrors.fullName = "Full name must be at least 3 characters";
+    } else if (!fullNameRegex.test(formData.fullName)) {
+      newErrors.fullName = "Enter valid full name (First & Last name, only letters)";
+    }
+
+    //Employee Id
+    if (!formData.employerId.trim()) {
+      newErrors.employerId = "Employer ID is required";
+    } else if (formData.employerId.length > 20) {
+      newErrors.employerId = "Maximum 20 characters allowed";
+    } else if (!/^[A-Za-z0-9_-]+$/.test(formData.employerId)) {
+      newErrors.employerId = "Only letters, numbers, '-' and '_' are allowed";
+    } else if (!/^[A-Za-z0-9]/.test(formData.employerId)) {
+      newErrors.employerId = "Must start with a letter or number";
+    } else if (!/[A-Za-z0-9]$/.test(formData.employerId)) {
+      newErrors.employerId = "Must end with a letter or number";
+    } else if (!employerIdRegex.test(formData.employerId)) {
+      newErrors.employerId = "Invalid Employer ID format";
+    }
 
     // --- VALIDATION LOGIC ---
 
@@ -233,7 +264,7 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
 
   const handleChange = (e) => {
 
-    // const { name, value, files } = e?.target;
+    // const {name, value, files} = e?.target;
     const target = e?.target;
     if (!target) return;
 
@@ -514,6 +545,40 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
         )}
 
         <form className="aboutcompany-form">
+            {/* Full Name */}
+          <div className="aboutcompany-form-group">
+            <label>Full Name *</label>
+            <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+              <input
+                className={errors.fullName ? "input-error" : ""}
+                type="text"
+                name="fullName"
+                placeholder="e.g., ch krishna kumar"
+                value={formData.fullName}
+                onChange={handleChange}
+                disabled={isLoading}
+              />
+              {errors.fullName && <span className="error-msg">{errors.fullName}</span>}
+            </div>
+          </div>
+ 
+          {/* Employee Id */}
+          <div className="aboutcompany-form-group">
+            <label>Employee ID *</label>
+            <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+              <input
+                className={errors.employerId ? "input-error" : ""}
+                type="text"
+                name="employerId"
+                placeholder="e.g., ch krishna kumar"
+                value={formData.employerId}
+                onChange={handleChange}
+                disabled={isLoading}
+              />
+              {errors.employerId && <span className="error-msg">{errors.employerId}</span>}
+            </div>
+          </div>
+
           {/* Company Name */}
           <div className="aboutcompany-form-group">
             <label>Company Name *</label>
@@ -668,7 +733,7 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
             <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
               <select
                 className={errors.companySize ? "input-error" : ""}
-                
+
                 name="companySize"
                 value={formData.companySize}
                 onChange={handleChange}
