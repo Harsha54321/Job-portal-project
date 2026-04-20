@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import api from "../api/axios";
@@ -17,11 +16,6 @@ export const Elogin = () => {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
 
-  // const [formValues, setFormValues] = useState({
-  //   username: localStorage.getItem("rememberedEmail") || "",
-  //   password: "",
-  // });
-
   const [formValues, setFormValues] = useState({
     username: savedEmail || "",
     password: savedPassword || "",
@@ -36,7 +30,6 @@ export const Elogin = () => {
   const handleRememberMeChange = (e) => {
     setRememberMe(e.target.checked);
   };
-
 
   const togglePasswordView = () => {
     setPasswordShow((prev) => !prev);
@@ -63,6 +56,41 @@ export const Elogin = () => {
     return Object.keys(newErrors).length === 0;
   };
 
+  // Function to check onboarding status and redirect
+  const checkAndRedirect = async () => {
+    try {
+      const response = await api.get('/employer/onboarding-status/');
+      console.log("Onboarding status:", response.data);
+      
+      const { has_company_profile, has_verification, verification_status } = response.data;
+      
+      // Redirect based on status
+      if (!has_company_profile) {
+        // No company profile - go to About Your Company
+        navigate('/Job-portal/Employer/about-your-company', { 
+          state: { fromSignup: false, fromLoginRedirect: true }
+        });
+      } else if (!has_verification) {
+        // Has company but no verification - go to Company Verify
+        navigate('/Job-portal/Employer/about-your-company/company-verification', {
+          state: { fromLoginRedirect: true }
+        });
+      } else if (verification_status === 'rejected') {
+        // Verification rejected - go to Company Verify to resubmit
+        navigate('/Job-portal/Employer/about-your-company/company-verification', {
+          state: { fromLoginRedirect: true, rejected: true }
+        });
+      } else {
+        // Has company and verification (pending or approved) - go to Dashboard
+        navigate('/Job-portal/employer/dashboard');
+      }
+    } catch (error) {
+      console.error("Error checking status:", error);
+      // On error, still go to dashboard
+      navigate('/Job-portal/employer/dashboard');
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -76,23 +104,22 @@ export const Elogin = () => {
         password: formValues.password,
       });
 
-      console.log(" Login response:", res.data); // Debug: see what data comes back
-
+      console.log("Login response:", res.data);
 
       if (rememberMe) {
         localStorage.setItem("rememberedEmail", formValues.username);
-        localStorage.setItem("rememberedPassword", formValues.password); // Saves password
+        localStorage.setItem("rememberedPassword", formValues.password);
       } else {
         localStorage.removeItem("rememberedEmail");
         localStorage.removeItem("rememberedPassword");
       }
-      //  Save ALL necessary data to localStorage
+      
+      // Save ALL necessary data to localStorage
       localStorage.setItem("access", res.data.access);
       localStorage.setItem("refresh", res.data.refresh);
       localStorage.setItem("userRole", "Employer");
 
-      //  IMPORTANT: Save user_id (this was missing!)
-      // Check where user_id is in the response
+      // Save user_id
       if (res.data.user_id) {
         localStorage.setItem("user_id", res.data.user_id);
       } else if (res.data.user && res.data.user.id) {
@@ -115,8 +142,10 @@ export const Elogin = () => {
         access: localStorage.getItem("access") ? "present" : "missing"
       });
 
-      // ✅ Redirect after login
+      // ✅ Check onboarding status and redirect accordingly
       navigate("/Job-portal/employer/dashboard");
+      await checkAndRedirect();
+      
     } catch (err) {
       console.error("Login error:", err);
       setErrors({
@@ -221,6 +250,3 @@ export const Elogin = () => {
     </div>
   );
 };
-
-
-

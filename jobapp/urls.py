@@ -68,6 +68,8 @@ from .views import (
     LinkToExistingCompanyView,
     VerifyCompanyEmailOTPView,
     SendCompanyEmailOTPView,
+    CompanyVerificationStatusView,
+    EmployerOnboardingStatusView,
 
     # REMOVED: Company-related view imports (CompanyListView, CompanyDetailView, etc.)
 )
@@ -190,6 +192,9 @@ urlpatterns = [
     path('company/profile/', CompanyProfileDetailView.as_view(), name='company-profile-detail'),
     path('company/profile/update/', CompanyProfileUpdateView.as_view(), name='company-profile-update'),
     path('company/link-to-existing/', LinkToExistingCompanyView.as_view(), name='link-to-existing-company'),
+
+    #dashboad-verification status
+    path('company/verification-status/', CompanyVerificationStatusView.as_view(), name='company-verification-status'),
     
     # Company Profile Public Endpoints
     path('companies/', CompanyProfileListView.as_view(), name='company-profile-list'),
@@ -220,4 +225,7 @@ urlpatterns = [
 
     path('company/send-email-otp/', SendCompanyEmailOTPView.as_view(), name='send-company-email-otp'),
     path('company/verify-email-otp/', VerifyCompanyEmailOTPView.as_view(), name='verify-company-email-otp'),
+
+    path('employer/onboarding-status/', EmployerOnboardingStatusView.as_view(), name='employer-onboarding-status'),
+
 ]

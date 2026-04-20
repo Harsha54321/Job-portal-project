@@ -15,7 +15,7 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
   const [backendError, setBackendError] = useState("");
   const [existingLogo, setExistingLogo] = useState(null);
   const [hasExistingProfile, setHasExistingProfile] = useState(false);
-  
+
   // State for popup modal
   const [showPopup, setShowPopup] = useState(false);
   const [pendingCompanyName, setPendingCompanyName] = useState("");
@@ -50,57 +50,118 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
     }
   }, [fromSignup]);
 
+//   // const fetchExistingProfile = async () => {
+//   //   try {
+//   //     setIsLoading(true);
+//   //     console.log("Fetching existing company profile for dashboard...");
+
+//   //     const response = await api.get("/company/profile/");
+//   //     console.log("✅ Existing profile found:", response.data);
+
+//   //     const profile = response.data;
+//   //     setFormData({
+//   //       fullName: profile.full_name|| "",
+//   //       employerId: profile.employee_id || "",
+//   //       companyName: profile.company_name || "",
+//   //       companyMoto: profile.company_moto || "",
+//   //       contactPerson: profile.contact_person || "",
+//   //       contactNumber: profile.contact_number || "",
+//   //       companyMail: profile.company_email || "",
+//   //       website: profile.website || "",
+//   //       companySize: profile.company_size || "",
+//   //       address1: profile.address1 || "",
+//   //       address2: profile.address2 || "",
+//   //       about: profile.about || "",
+//   //       companyLogo: null,
+//   //     });
+
+//   //     setExistingLogo(profile.company_logo);
+//   //     setHasExistingProfile(true);
+
+    // } catch (err) {
+    //   if (err.response?.status === 404) {
+    //     console.log("No existing profile found");
+    //     setHasExistingProfile(false);
+    //     setExistingLogo(null);
+    //     if (!hideNavigation) {
+    //       setBackendError("No company profile found. Please create one.");
+    //     }
+    //   } else if (err.response?.status === 401) {
+    //     console.log("Unauthorized - redirecting to login");
+    //     if (!hideNavigation) {
+    //       navigate("/Job-portal/employer/login");
+    //     } else {
+    //       setBackendError("Session expired. Please login again.");
+    //     }
+    //   } else {
+    //     console.error("Error fetching profile:", err);
+    //     setBackendError("Failed to load company profile");
+    //   }
+    // } finally {
+    //   setIsLoading(false);
+    // }
+//   }; 
+
   const fetchExistingProfile = async () => {
-    try {
-      setIsLoading(true);
-      console.log("Fetching existing company profile for dashboard...");
+  try {
+    setIsLoading(true);
 
-      const response = await api.get("/company/profile/");
-      console.log("✅ Existing profile found:", response.data);
+    const [employerRes, companyRes] = await Promise.allSettled([
+      api.get("/profile/employer/"),
+      api.get("/company/profile/")
+    ]);
 
-      const profile = response.data;
-      setFormData({
-        fullName: profile.full_name|| "",
-        employerId: profile.employee_id || "",
-        companyName: profile.company_name || "",
-        companyMoto: profile.company_moto || "",
-        contactPerson: profile.contact_person || "",
-        contactNumber: profile.contact_number || "",
-        companyMail: profile.company_email || "",
-        website: profile.website || "",
-        companySize: profile.company_size || "",
-        address1: profile.address1 || "",
-        address2: profile.address2 || "",
-        about: profile.about || "",
-        companyLogo: null,
-      });
-
-      setExistingLogo(profile.company_logo);
-      setHasExistingProfile(true);
-
-    } catch (err) {
-      if (err.response?.status === 404) {
-        console.log("No existing profile found");
-        setHasExistingProfile(false);
-        setExistingLogo(null);
-        if (!hideNavigation) {
-          setBackendError("No company profile found. Please create one.");
-        }
-      } else if (err.response?.status === 401) {
-        console.log("Unauthorized - redirecting to login");
+    // ✅ 401 check -when token expired 
+    if (employerRes.status === "rejected") {
+      const status = employerRes.reason?.response?.status;
+      if (status === 401) {
         if (!hideNavigation) {
           navigate("/Job-portal/employer/login");
         } else {
           setBackendError("Session expired. Please login again.");
         }
-      } else {
-        console.error("Error fetching profile:", err);
-        setBackendError("Failed to load company profile");
+        return;
       }
-    } finally {
-      setIsLoading(false);
     }
-  };
+
+    const employerData = employerRes.status === "fulfilled" ? employerRes.value.data : null;
+    const companyData = companyRes.status === "fulfilled" ? companyRes.value.data : null;
+
+    // ✅ Company profile 
+    if (companyData) {
+      setHasExistingProfile(true);
+      setExistingLogo(companyData.company_logo || companyData.logo_url);
+    } else {
+      // ✅ New user - company profile లేదు
+      setHasExistingProfile(false);
+      setExistingLogo(null);
+    }
+
+    setFormData({
+      fullName: employerData?.full_name || "",
+      employerId: employerData?.employee_id || "",
+      companyName: companyData?.company_name || "",
+      companyMoto: companyData?.company_moto || "",
+      contactPerson: companyData?.contact_person || "",
+      contactNumber: companyData?.contact_number || "",
+      companyMail: companyData?.company_email || "",
+      website: companyData?.website || "",
+      companySize: companyData?.company_size || "",
+      address1: companyData?.address1 || "",
+      address2: companyData?.address2 || "",
+      about: companyData?.about || "",
+      companyLogo: null,
+    });
+
+  } catch (err) {
+    // ✅ Unexpected errors మాత్రమే ఇక్కడికి వస్తాయి
+    console.error("Unexpected error fetching profile:", err);
+    setBackendError("Failed to load profile. Please refresh.");
+  } finally {
+    setIsLoading(false);
+  }
+};
+
 
   const validateForm = () => {
     const newErrors = {};
@@ -237,21 +298,21 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
   const linkToExistingCompany = async (companyName) => {
     setIsLoading(true);
     setBackendError("");
-    
+
     try {
       const response = await api.post("/company/link-to-existing/", {
         company_name: companyName
       });
-      
+
       console.log("✅ Linked to existing company:", response.data);
-      
+
       setCompanyProfile({
         ...formData,
         id: response.data.company_id,
         companyName: response.data.company_name,
         isExisting: true
       });
-      
+
       return {
         success: true,
         data: {
@@ -262,7 +323,7 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
       };
     } catch (err) {
       console.error("Link to company error:", err);
-      
+
       if (err.response?.status === 404) {
         setBackendError("Company not found. Please create a new company.");
       } else if (err.response?.status === 400) {
@@ -270,7 +331,7 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
       } else {
         setBackendError("Failed to link to company. Please try again.");
       }
-      
+
       return { success: false, error: "Link failed" };
     } finally {
       setIsLoading(false);
@@ -304,10 +365,10 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
       return { success: true, data: { ...response.data, is_existing: false } };
     } catch (err) {
       console.error("Create profile error:", err);
-      
+
       if (err.response?.status === 400) {
         const errorMsg = err.response?.data?.error || "";
-        
+
         // ✅ Check if error is about duplicate company
         if (errorMsg.includes("already exists")) {
           // Show popup instead of window.confirm
@@ -316,7 +377,7 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
           setIsLoading(false);
           return { success: false, error: "duplicate_company", pending: true };
         }
-        
+
         // Handle other validation errors
         const backendErrors = err.response.data;
         const newErrors = {};
@@ -338,12 +399,58 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
         setErrors(newErrors);
         return { success: false, error: "Validation failed" };
       }
-      
+
       return { success: false, error: err.response?.data?.error || "Network error" };
     } finally {
       setIsLoading(false);
     }
   };
+
+
+  const updateEmployerProfile = async (data) => {
+  try {
+    await api.patch("/profile/employer/", {
+      full_name: data.fullName,
+      employee_id: data.employerId,
+    });
+    console.log("✅ Employer profile updated");
+    return true;
+
+  } catch (err) {
+    console.error("Employer profile update error:", err);
+
+    if (err.response?.status === 400) {
+      const errorData = err.response.data;
+      const newErrors = {};
+
+      // map of exact errors from
+      if (errorData.employee_id) {
+        newErrors.employerId = Array.isArray(errorData.employee_id)
+          ? errorData.employee_id[0]  // "This Employee ID is already in use."
+          : errorData.employee_id;
+      }
+
+      if (errorData.full_name) {
+        newErrors.fullName = Array.isArray(errorData.full_name)
+          ? errorData.full_name[0]
+          : errorData.full_name;
+      }
+
+      if (Object.keys(newErrors).length > 0) {
+        setErrors(prev => ({ ...prev, ...newErrors }));
+        window.scrollTo({ top: 100, behavior: "smooth" });
+        return false;
+      }
+    }
+
+    if (err.response?.status === 401) {
+      setBackendError("Session expired. Please login again.");
+      return false;
+    }
+
+    return true;
+  }
+};
 
   // ✅ Update existing company profile
   const updateCompanyProfile = async (data) => {
@@ -405,7 +512,7 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
   const handleJoinExistingCompany = async () => {
     setShowPopup(false);
     const result = await linkToExistingCompany(pendingCompanyName);
-    
+
     if (result.success) {
       setCompanyProfile({
         ...formData,
@@ -434,7 +541,7 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
     setErrors({ companyName: "Please use a different company name" });
   };
 
-  // ✅ Next button - ALWAYS go to verification page
+  //  Next button - ALWAYS go to verification page
   const handleNext = async (e) => {
     e.preventDefault();
 
@@ -445,6 +552,10 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
     }
 
     console.log("Saving company profile...");
+
+    //  First update employer profile (full_name + employee_id)
+    const employerUpdated = await updateEmployerProfile(formData);
+    if (!employerUpdated) return;
 
     let result;
     if (fromSignup || !hasExistingProfile) {
@@ -484,6 +595,10 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
 
     console.log("Saving Company Profile from Dashboard:", formData);
 
+    //  First update employer profile (full_name + employee_id)
+    const employerUpdated = await updateEmployerProfile(formData);
+    if (!employerUpdated) return;
+
     let result;
     if (hasExistingProfile) {
       result = await updateCompanyProfile(formData);
@@ -522,14 +637,14 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
             <p>Do you want to join this existing company instead of creating a new one?</p>
           </div>
           <div className="popup-modal-footer">
-            <button 
-              className="popup-btn-cancel" 
+            <button
+              className="popup-btn-cancel"
               onClick={handleCancelJoin}
             >
               No, Use Different Name
             </button>
-            <button 
-              className="popup-btn-confirm" 
+            <button
+              className="popup-btn-confirm"
               onClick={handleJoinExistingCompany}
             >
               Yes, Join Existing Company
@@ -853,7 +968,7 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
       </div>
 
       {!hideNavigation && <Footer />}
-      
+
       {/* Popup Modal CSS */}
       <style>{`
         .popup-modal-overlay {

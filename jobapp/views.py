@@ -1737,7 +1737,41 @@ class SubmitComplaintView(APIView):
             )
  
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
- 
+
+class CompanyVerificationStatusView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request):
+        """
+        Get verification status for the logged-in employer
+        Returns: { status: 'pending'/'approved'/'rejected'/'not_submitted', is_verified: true/false }
+        """
+        # Only employers can access this
+        if request.user.user_type != 'employer':
+            return Response(
+                {"error": "Only employers can access verification status"},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        try:
+            # Check if employer has submitted verification
+            verification = CompanyVerification.objects.get(employer=request.user)
+            
+            return Response({
+                "status": verification.status,  # 'pending', 'approved', 'rejected'
+                "is_verified": verification.status == "approved",
+                "legal_name": verification.legal_name,
+                "submitted_at": verification.created_at,
+                "message": f"Your verification is {verification.status}"
+            }, status=status.HTTP_200_OK)
+            
+        except CompanyVerification.DoesNotExist:
+            # No verification submitted yet
+            return Response({
+                "status": "not_submitted",
+                "is_verified": False,
+                "message": "No verification request found. Please submit company verification."
+            }, status=status.HTTP_200_OK)
 
 class AdminComplaintListView(APIView):
     permission_classes = [IsAuthenticated, IsAdminUserType]
@@ -2259,3 +2293,46 @@ class VerifyCompanyEmailOTPView(APIView):
             "message": "Email verified successfully",
             "verified": True
         }, status=200)    
+
+class EmployerOnboardingStatusView(APIView):
+    permission_classes = [IsAuthenticated]
+ 
+    def get(self, request):
+        user = request.user
+ 
+        if user.user_type != "employer":
+            return Response(
+                {"error": "Only employers allowed"},
+                status=403
+            )
+ 
+        # ==================================
+        # CORRECT COMPANY PROFILE CHECK
+        # ==================================
+        has_company_profile = False
+ 
+        if hasattr(user, "employer_profile"):
+            has_company_profile = (
+                user.employer_profile.company is not None
+            )
+ 
+        # ==================================
+        # VERIFICATION CHECK
+        # ==================================
+        verification = CompanyVerification.objects.filter(
+            employer=user
+        ).order_by("-id").first()
+ 
+        has_verification = verification is not None
+ 
+        verification_status = (
+            verification.status
+            if verification
+            else None
+        )
+ 
+        return Response({
+            "has_company_profile": has_company_profile,
+            "has_verification": has_verification,
+            "verification_status": verification_status
+        })

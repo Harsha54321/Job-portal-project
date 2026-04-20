@@ -1,3 +1,64 @@
+
+.pending-verification-overlay {
+    position: fixed; 
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999; 
+    background: rgba(255, 255, 255, 0.1); 
+    backdrop-filter: blur(3px); 
+}
+
+/* The Pop-up Card (Solid White) */
+.pending-pop-box {
+    background-color: #ffffff !important;
+    padding: 60px 40px;
+    border-radius: 24px;
+    text-align: center;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    max-width: 480px;
+    width: 90%;
+    z-index: 10000;
+    border: 1px solid #eaeaea;
+}
+
+/*  Ensure the Clock Icon is sharp */
+.pending-clock-image {
+    width: 130px;
+    margin-bottom: 30px;
+    animation: bouncePop 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes bouncePop {
+    0% { transform: scale(0.5); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+/*  Text Styling inside the Card */
+.pending-pop-box h2 {
+    font-size: 30px;
+    color: #01325D;
+    margin-bottom: 12px;
+    font-weight: 800;
+}
+
+.pending-pop-box p {
+    color: #4a5568;
+    font-size: 16px;
+    line-height: 1.6;
+}
+
+/*  Logic to prevent scrolling while blurred */
+body.modal-open {
+    overflow: hidden;
+}
+
+
+
 .container{
     display: flex;
     min-height: 100vh;
