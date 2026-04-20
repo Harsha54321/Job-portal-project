@@ -1372,21 +1372,34 @@ class CompanyVerificationSerializer(serializers.ModelSerializer):
     def validate(self, data):
         registration_number = data.get("registration_number")
         tax_id = data.get("tax_id")
+        legal_name = data.get("legal_name")
+        
+        # Safely get employer from context
+        employer = None
+        if hasattr(self, 'context') and 'request' in self.context:
+            employer = self.context['request'].user
  
-        if CompanyVerification.objects.filter(
-            registration_number=registration_number
-        ).exists():
+        # Check if this employer already has a verification
+        if employer and CompanyVerification.objects.filter(employer=employer).exists():
             raise serializers.ValidationError(
-                "This company registration number is already submitted for verification."
+                "You have already submitted a verification request."
             )
- 
-        if CompanyVerification.objects.filter(
-            tax_id=tax_id
-        ).exists():
-            raise serializers.ValidationError(
-                "This GST/Tax ID is already used by another company."
-            )
- 
+        
+        # Only check for existing verifications with same details if they are approved
+        # This allows multiple pending verifications for the same company from different employers
+        existing_reg = CompanyVerification.objects.filter(
+            registration_number=registration_number,
+            status='approved'
+        ).exists()
+        
+        existing_tax = CompanyVerification.objects.filter(
+            tax_id=tax_id,
+            status='approved'
+        ).exists()
+        
+        # Allow verification submission even if company exists
+        # The save() method will handle linking to existing company
+        
         return data
  
  
@@ -1435,25 +1448,107 @@ class ComplaintSerializer(serializers.ModelSerializer):
 # Billing Serializer
 
 class PlanSerializer(serializers.ModelSerializer):
+    pricing = serializers.SerializerMethodField()
+   
     class Meta:
         model = Plan
-        fields = "__all__"
-
-
+        fields = ['id', 'name', 'monthly_price', 'duration_days', 'pricing']
+   
+    def get_pricing(self, obj):
+        # Get duration from request if provided
+        request = self.context.get('request')
+        duration = request.query_params.get('duration', None) if request else None
+       
+        if duration and duration in ['monthly', '6_months', 'yearly']:
+            return obj.get_price_for_duration(duration)
+        else:
+            return obj.get_all_pricing()
+ 
+ 
+ 
 class SubscriptionSerializer(serializers.ModelSerializer):
     plan = PlanSerializer()
     class Meta:
         model = Subscription
         fields = "__all__"
-
-
+ 
+ 
 class InvoiceSerializer(serializers.ModelSerializer):
     class Meta:
         model = Invoice
         fields = "__all__"
-
-
+ 
+ 
 class PaymentMethodSerializer(serializers.ModelSerializer):
     class Meta:
         model = PaymentMethod
-        fields = "__all__"
+        fields = ['id', 'method_type', 'card_last4', 'card_holder_name',
+                  'expiry_date', 'upi_id', 'bank_name', 'is_default']
+        read_only_fields = ['user']
+        extra_kwargs = {
+            'method_type': {'required': False},
+            'card_last4': {'required': False},
+            'card_holder_name': {'required': False},
+            'expiry_date': {'required': False},
+            'upi_id': {'required': False},
+            'bank_name': {'required': False},
+        }
+   
+    def validate(self, data):
+        # Only validate for create operations
+        if self.instance is None:
+            method_type = data.get('method_type')
+           
+            if method_type == 'card':
+                if not data.get('card_last4'):
+                    raise serializers.ValidationError({
+                        'card_last4': 'Card last 4 digits are required for card payments'
+                    })
+                if not data.get('card_holder_name'):
+                    raise serializers.ValidationError({
+                        'card_holder_name': 'Card holder name is required for card payments'
+                    })
+                if not data.get('expiry_date'):
+                    raise serializers.ValidationError({
+                        'expiry_date': 'Expiry date is required for card payments'
+                    })
+                import re
+                if not re.match(r'^(0[1-9]|1[0-2])/(\d{2})$', data.get('expiry_date')):
+                    raise serializers.ValidationError({
+                        'expiry_date': 'Expiry date must be in MM/YY format'
+                    })
+                   
+            elif method_type == 'upi':
+                if not data.get('upi_id'):
+                    raise serializers.ValidationError({
+                        'upi_id': 'UPI ID is required for UPI payments'
+                    })
+                if '@' not in data.get('upi_id'):
+                    raise serializers.ValidationError({
+                        'upi_id': 'Please enter a valid UPI ID'
+                    })
+                   
+            elif method_type == 'netbanking':
+                if not data.get('bank_name'):
+                    raise serializers.ValidationError({
+                        'bank_name': 'Bank name is required for net banking'
+                    })
+       
+        return data
+   
+    def create(self, validated_data):
+        # User is already passed from the view, don't try to get from context
+        # If this is the first payment method, make it default
+        if not PaymentMethod.objects.filter(user=validated_data['user']).exists():
+            validated_data['is_default'] = True
+           
+        return super().create(validated_data)
+   
+    def update(self, instance, validated_data):
+        is_default = validated_data.get('is_default')
+       
+        if is_default and not instance.is_default:
+            # Set all other payment methods to non-default
+            PaymentMethod.objects.filter(user=instance.user).exclude(id=instance.id).update(is_default=False)
+           
+        return super().update(instance, validated_data)

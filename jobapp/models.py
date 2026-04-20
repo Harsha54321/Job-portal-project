@@ -845,40 +845,59 @@ class Complaint(models.Model):
         super().save(*args, **kwargs)
 
 # Billing
-
+ 
 from django.contrib.auth import get_user_model
-
+ 
 User = get_user_model()
 from django.utils.timezone import now
-
+ 
+# models.py - Add discount fields
 class Plan(models.Model):
     name = models.CharField(max_length=50)
-    price = models.DecimalField(max_digits=10, decimal_places=2)
+    monthly_price = models.DecimalField(max_digits=10, decimal_places=2, default=0)  # Add default=0
     duration_days = models.IntegerField(default=30)
-
+   
     def __str__(self):
         return self.name
-
-
+   
+    def get_all_pricing(self):
+        """Simple implementation to avoid error"""
+        return {
+            'monthly': {'total': float(self.monthly_price)},
+            '6_months': {'total': float(self.monthly_price) * 6 * 0.9},
+            'yearly': {'total': float(self.monthly_price) * 12 * 0.85}
+        }
+ 
+ 
 class Subscription(models.Model):
     STATUS = [
         ('active', 'Active'),
         ('cancelled', 'Cancelled'),
         ('expired', 'Expired'),
     ]
-
+ 
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     plan = models.ForeignKey(Plan, on_delete=models.CASCADE)
     status = models.CharField(max_length=20, choices=STATUS, default='active')
     start_date = models.DateTimeField(auto_now_add=True)
     end_date = models.DateTimeField(blank=True, null=True)
-
+    duration = models.CharField(max_length=20, default='monthly')  # Store which duration they paid for
+ 
     def save(self, *args, **kwargs):
         if not self.end_date:
-            self.end_date = now() + timedelta(days=self.plan.duration_days)
+            # Set end date based on duration
+            if self.duration == 'monthly':
+                days = self.plan.duration_days
+            elif self.duration == '6_months':
+                days = 180
+            elif self.duration == 'yearly':
+                days = 365
+            else:
+                days = self.plan.duration_days
+           
+            self.end_date = now() + timedelta(days=days)
         super().save(*args, **kwargs)
-
-
+ 
 class Payment(models.Model):
     STATUS_CHOICES = (
         ('created', 'Created'),
@@ -887,71 +906,98 @@ class Payment(models.Model):
         ('failed', 'Failed'),
         ('refunded', 'Refunded'),
     )
-
+ 
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     plan = models.ForeignKey(Plan, on_delete=models.SET_NULL, null=True)
-
+ 
     razorpay_order_id = models.CharField(max_length=255, unique=True, null=True, blank=True)
     razorpay_payment_id = models.CharField(max_length=255, blank=True, null=True)
     razorpay_signature = models.TextField(blank=True, null=True)
-
+ 
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     currency = models.CharField(max_length=10, default='INR')
-
+ 
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='created')
-
+ 
     payment_method = models.CharField(max_length=50, blank=True)
     failure_reason = models.TextField(blank=True)
-
+ 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     razorpay_response = models.JSONField(blank=True, null=True)
-
-
+ 
+ 
 class Invoice(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-
+ 
     invoice_number = models.CharField(max_length=100, unique=True)
     invoice_date = models.DateTimeField(auto_now_add=True)
-
+ 
     company_name = models.CharField(max_length=255)
     email = models.EmailField()
-
+    phone = models.CharField(max_length=20, blank=True, null=True)  
+ 
     payment_method = models.CharField(max_length=50)
     transaction_id = models.CharField(max_length=100)
     payment_status = models.CharField(max_length=50)
-
+ 
     subtotal = models.DecimalField(max_digits=10, decimal_places=2)
     gst = models.DecimalField(max_digits=10, decimal_places=2)
     total = models.DecimalField(max_digits=10, decimal_places=2)
-
+ 
     plan_name = models.CharField(max_length=100)
     duration = models.CharField(max_length=50)
     start_date = models.DateTimeField()
     end_date = models.DateTimeField()
-
+ 
     created_at = models.DateTimeField(auto_now_add=True)
-
-
+ 
+ 
 class PaymentMethod(models.Model):
     TYPE = [
         ('card', 'Card'),
         ('upi', 'UPI'),
         ('netbanking', 'Net Banking'),
     ]
-
+ 
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     method_type = models.CharField(max_length=20, choices=TYPE)
-
+ 
     card_last4 = models.CharField(max_length=4, blank=True)
     card_holder_name = models.CharField(max_length=100, blank=True)
-
+ 
     upi_id = models.CharField(max_length=100, blank=True)
     bank_name = models.CharField(max_length=100, blank=True)
-
+ 
     is_default = models.BooleanField(default=False)
-
+ 
+    expiry_date = models.CharField(max_length=7, blank=True, null=True)
+ 
     def save(self, *args, **kwargs):
         if self.is_default:
             PaymentMethod.objects.filter(user=self.user).update(is_default=False)
         super().save(*args, **kwargs)
+ 
+
+# Company Email OTP
+
+class CompanyEmailOTP(models.Model):
+    PURPOSE_CHOICES = (
+        ('company_verification', 'Company Verification'),
+        ('company_email_change', 'Company Email Change'),
+    )
+    
+    company_name = models.CharField(max_length=255, null=True, blank=True)
+    email = models.EmailField()
+    otp = models.CharField(max_length=6)
+    purpose = models.CharField(max_length=30, choices=PURPOSE_CHOICES)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    is_verified = models.BooleanField(default=False)
+    
+    def is_valid(self):
+        from django.utils import timezone
+        return timezone.now() < self.expires_at and not self.is_verified
+    
+    def __str__(self):
+        return f"OTP for {self.email} - {self.purpose}"        

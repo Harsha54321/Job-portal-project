@@ -1,4 +1,4 @@
-
+ 
 import React, { useState, useEffect, useMemo } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import './EmployerDashboard.css'
@@ -36,16 +36,17 @@ import { AboutYourCompany } from './AboutYourCompany'
 import place from '../assets/opportunity_location.png'
 import { LogoutModal } from '../Components-Jobseeker/LogoutModal'
 import { AnalyticsPage } from './AnalyticsPage'
+import { PlansBilling } from './PlansBilling'
 import api from "../api/axios";
-
+ 
 export const EmployerDashboard = () => {
     const { currentEmployer, getJobStats } = useJobs();
     const [showLogoutModal, setShowLogoutModal] = useState(false);
     const [applications, setApplications] = useState([]);
     const [loadingStats, setLoadingStats] = useState(true);
-
+ 
     const PostedJob = currentEmployer?.jobPosted || [];
-
+ 
     // Fetch applications for accurate stats
     useEffect(() => {
         const fetchApplications = async () => {
@@ -59,23 +60,23 @@ export const EmployerDashboard = () => {
                 setLoadingStats(false);
             }
         };
-
+ 
         fetchApplications();
     }, []);
-
+ 
     // Calculate stats directly from applications data
     const jobStats = useMemo(() => {
         if (!PostedJob.length || !applications.length) {
             return { totalApps: 0, totalShortlisted: 0, totalInterview: 0 };
         }
-
+ 
         const employerJobIds = PostedJob.map(job => String(job.id));
-
+ 
         // Filter applications for employer's jobs
         const employerApplications = applications.filter(app =>
             employerJobIds.includes(String(app.job?.id))
         );
-
+ 
         const totalApps = employerApplications.length;
         const totalShortlisted = employerApplications.filter(app =>
             app.status?.toLowerCase() === 'shortlisted'
@@ -83,22 +84,22 @@ export const EmployerDashboard = () => {
         const totalInterview = employerApplications.filter(app =>
             app.status?.toLowerCase() === 'interview_called'
         ).length;
-
+ 
         console.log("Dashboard Stats:", { totalApps, totalShortlisted, totalInterview });
-
+ 
         return { totalApps, totalShortlisted, totalInterview };
     }, [applications, PostedJob]);
-
+ 
     // Get stats for each job
     const getJobApplicationStats = (jobId) => {
         if (!applications.length) {
             return { total: 0, new: 0, screening: 0, interview: 0, rejected: 0 };
         }
-
+ 
         const jobApplications = applications.filter(app =>
             String(app.job?.id) === String(jobId)
         );
-
+ 
         return {
             total: jobApplications.length,
             new: jobApplications.filter(app => app.status?.toLowerCase() === 'applied').length,
@@ -110,50 +111,50 @@ export const EmployerDashboard = () => {
             rejected: jobApplications.filter(app => app.status?.toLowerCase() === 'rejected').length
         };
     };
-
+ 
     const activeJobsCount = PostedJob.length;
-
+ 
     const navigate = useNavigate();
-
+ 
     const [activeMenu, setActiveMenu] = useState(null);
     const initialLetter = currentEmployer?.hrName?.charAt(0).toUpperCase() || "U";
-
+ 
     const handleLogoutConfirm = async () => {
         setShowLogoutModal(false);
-
+ 
         try {
             const refresh = localStorage.getItem("refresh");
-
+ 
             if (refresh) {
                 await api.post("logout/", { refresh });
             }
         } catch (err) {
             console.error("Logout failed:", err);
         } finally {
-
+           
             localStorage.removeItem("access");
             localStorage.removeItem("refresh");
             localStorage.removeItem("userRole");
             localStorage.removeItem("user_id");
             localStorage.removeItem("user_type");
             localStorage.removeItem("profile_id");
-
+ 
             navigate('/');
         }
     };
-
+ 
     const [activetab, setActiveTab] = useState('Dashboard');
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
     const [selectedJob, setSelectedJob] = useState(null);
-
+ 
     const toggleMenu = (id) => {
         setActiveMenu(activeMenu === id ? null : id);
     };
-
+ 
     const location = useLocation();
     const fromVerify = location.state?.fromVerify || false;
     const [isVerifying, setIsVerifying] = useState(fromVerify);
-
+ 
     useEffect(() => {
         if (fromVerify) {
             const timer = setTimeout(() => {
@@ -162,16 +163,16 @@ export const EmployerDashboard = () => {
             return () => clearTimeout(timer);
         }
     }, [fromVerify]);
-
+ 
     const ToggleSidebar = () => {
         setIsSidebarOpen(!isSidebarOpen)
     }
-
+ 
     const handleViewApplicants = (job) => {
         setSelectedJob(job);
         setActiveTab('ViewApplicants');
     };
-
+ 
     return (
         <>
             <EHeader />
@@ -198,7 +199,7 @@ export const EmployerDashboard = () => {
                                     {activetab === 'Post a Job' ? <img src={PostJobsAct} height={25} width={25} alt="Post a Job" /> : <img src={PostJobs} height={20} width={20} alt="Post a Job" />}
                                     <div className='Enav-item'>Post a Job</div>
                                 </div>
-
+ 
                                 <div onClick={() => !isVerifying && setActiveTab('My job post')} className={activetab === 'My job post' ? "Active" : 'Navbox'} >
                                     {activetab === 'My job post' ? <img src={MypostAct} height={35} width={20} alt="My Job Post" /> : <img src={Mypost} height={15} width={20} alt="My Job Post" />}
                                     <div className='Enav-item'>My Job Post</div>
@@ -236,7 +237,7 @@ export const EmployerDashboard = () => {
                                     <div className='EE-Name'><h3 style={{ margin: "15px", fontSize: "22px" }}>{initialLetter}</h3></div>
                                     <img src={jobpost} width={30} style={{ padding: '5px' }} onClick={() => ToggleSidebar()} />
                                 </div>
-
+ 
                                 <div className='ENavbar1' style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
                                     <div onClick={() => !isVerifying && setActiveTab('Dashboard')} className={activetab === 'Dashboard' ? "Active1" : 'Navbox1'} >
                                         {activetab === 'Dashboard' ? <img src={DashboardIC} height={20} width={20} alt="Dashboard" /> : <img src={Dashboard} height={18} width={18} alt="Dashboard" />}
@@ -270,7 +271,7 @@ export const EmployerDashboard = () => {
                             </div>
                         </div>
                     )}
-
+ 
                 <div className={isSidebarOpen ? 'Emainsec' : 'Emainsec2'}>
                     {activetab === 'Dashboard' && (
                         <>
@@ -294,17 +295,9 @@ export const EmployerDashboard = () => {
                                             <h2>Hi {currentEmployer?.hrName || "User"},</h2>
                                             <p style={{ fontWeight: "600" }}>Here's, What's Going on... </p>
                                         </div>
-                                        <button
-                                            className='post-job-btn'
-                                            onClick={() => {
-                                                !isVerifying && setActiveTab('Post a Job');
-                                                window.scrollTo(0, 0);
-                                            }}
-                                        >
-                                            + Post a Job
-                                        </button>
+                                        <button className='post-job-btn' onClick={() => { setActiveTab('Post a Job') }}>+ Post a Job</button>
                                     </div>
-
+ 
                                     <div className='E-DashB-Over-View'>
                                         <h2 style={{ marginLeft: "40px" }}>Overview</h2>
                                         <div className='EDashB-Application-Counts'>
@@ -326,7 +319,7 @@ export const EmployerDashboard = () => {
                                             </div>
                                         </div>
                                     </div>
-
+ 
                                     {/* Recently posted jobs */}
                                     <div>
                                         <div className='ERecent-Post-Cont'>
@@ -342,7 +335,7 @@ export const EmployerDashboard = () => {
                                                         <span className="postedjobs-label">Rejected</span>
                                                         <div />
                                                     </div>
-
+ 
                                                     <div className="postedjobs-list">
                                                         {PostedJob.slice(0, 5).map((job) => {
                                                             const stats = getJobApplicationStats(job.id);
@@ -363,7 +356,7 @@ export const EmployerDashboard = () => {
                                                                     <span className="postedjobs-badge">{stats.screening}</span>
                                                                     <span className="postedjobs-badge">{stats.interview}</span>
                                                                     <span className="postedjobs-badge">{stats.rejected}</span>
-
+ 
                                                                     <div className="postedjobs-actions">
                                                                         <button className="postedjobs-view-btn" onClick={() => handleViewApplicants(job)}>
                                                                             View applicants
@@ -393,28 +386,30 @@ export const EmployerDashboard = () => {
                             )}
                         </>
                     )}
-
-                    {activetab === 'Post a Job' && (
-                        <PostJobForm onCancel={() => setActiveTab('Dashboard')} />
-                    )}
-
+ 
+                    {activetab === 'Post a Job' && (<PostJobForm />)}
+ 
                     {activetab === 'My job post' && (<PostedJobs onViewApplicants={(job) => { setSelectedJob(job); setActiveTab('ViewApplicants'); }} />)}
-
+ 
                     {activetab === 'ViewApplicants' && (<ViewApplicants job={selectedJob} onBack={() => setActiveTab('My job post')} />)}
-
+ 
                     {activetab === 'Find a Talent' && (<FindTalent />)}
-
+ 
                     {activetab === 'Analytics' && (<AnalyticsPage />)}
-
-                    {activetab === 'Billing' && (<h1>Billing Section</h1>)}
-
+ 
+                    {activetab === 'Billing' && (<PlansBilling />)}
+ 
+ 
+                    {/* {activetab === 'Billing' && (<h1>Billing Section</h1>)} */}
+ 
                     {activetab === 'My Profile' && (<AboutYourCompany hideNavigation={true} setActiveTab={setActiveTab} />)}
-
+ 
                 </div>
-
+ 
             </div>
             <LogoutModal show={showLogoutModal} onClose={() => setShowLogoutModal(false)} onConfirm={handleLogoutConfirm} />
             <Footer />
         </>
     );
 };
+ 

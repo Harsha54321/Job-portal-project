@@ -356,3 +356,53 @@ class CompanyProfileAdmin(admin.ModelAdmin):
                 'fields': ('created_at',)
             }),
         )  
+
+ # ==================== BILLING MODELS ADMIN ====================
+ 
+from .models import Plan, Subscription, Payment, Invoice, PaymentMethod
+ 
+@admin.register(Plan)
+ 
+ 
+class PlanAdmin(admin.ModelAdmin):
+    # Use 'monthly_price' instead of 'base_price'
+    list_display = ['id', 'name', 'monthly_price', 'duration_days']
+    list_editable = ['monthly_price', 'duration_days']
+    search_fields = ['name']
+ 
+ 
+ 
+ 
+@admin.register(Subscription)
+class SubscriptionAdmin(admin.ModelAdmin):
+    list_display = ['id', 'user', 'plan', 'status', 'start_date', 'end_date']
+    list_filter = ['status', 'plan']
+    search_fields = ['user__email', 'user__username']
+    raw_id_fields = ['user', 'plan']
+    readonly_fields = ['start_date', 'end_date']
+ 
+ 
+@admin.register(Payment)
+class PaymentAdmin(admin.ModelAdmin):
+    list_display = ['id', 'user', 'plan', 'amount', 'status', 'created_at']
+    list_filter = ['status', 'currency']
+    search_fields = ['user__email', 'razorpay_order_id', 'razorpay_payment_id']
+    readonly_fields = ['created_at', 'updated_at']
+    raw_id_fields = ['user', 'plan']
+ 
+ 
+@admin.register(Invoice)
+class InvoiceAdmin(admin.ModelAdmin):
+    list_display = ['invoice_number', 'user', 'plan_name', 'total', 'payment_status', 'invoice_date']
+    list_filter = ['payment_status', 'invoice_date']
+    search_fields = ['invoice_number', 'user__email', 'plan_name']
+    readonly_fields = ['invoice_date', 'created_at']
+ 
+ 
+@admin.register(PaymentMethod)
+class PaymentMethodAdmin(admin.ModelAdmin):
+    list_display = ['id', 'user', 'method_type', 'card_last4', 'is_default']
+    list_filter = ['method_type', 'is_default']
+    search_fields = ['user__email', 'card_holder_name']
+    raw_id_fields = ['user']
+ 

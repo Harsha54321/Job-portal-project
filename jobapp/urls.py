@@ -65,6 +65,10 @@ from .views import (
     VerifyPaymentView,
     CompanyProfileListView,
     CompanyProfileByIdView,
+    LinkToExistingCompanyView,
+    VerifyCompanyEmailOTPView,
+    SendCompanyEmailOTPView,
+
     # REMOVED: Company-related view imports (CompanyListView, CompanyDetailView, etc.)
 )
 from .webhooks import razorpay_webhook
@@ -185,6 +189,7 @@ urlpatterns = [
     path('company/profile/create/', CompanyProfileCreateView.as_view(), name='company-profile-create'),
     path('company/profile/', CompanyProfileDetailView.as_view(), name='company-profile-detail'),
     path('company/profile/update/', CompanyProfileUpdateView.as_view(), name='company-profile-update'),
+    path('company/link-to-existing/', LinkToExistingCompanyView.as_view(), name='link-to-existing-company'),
     
     # Company Profile Public Endpoints
     path('companies/', CompanyProfileListView.as_view(), name='company-profile-list'),
@@ -202,8 +207,17 @@ urlpatterns = [
     path("cancel/", CancelSubscriptionView.as_view(), name='cancel-subscription'),
     path("invoices/", InvoiceListView.as_view(), name='invoice-list'),
     path("invoice/<int:pk>/download/", InvoiceDownloadView.as_view(), name='invoice-download'),
+   
+    # Payment Methods - IMPORTANT: Detail route MUST come before list route
+    path("payment-methods/<int:pk>/", PaymentMethodView.as_view(), name='payment-method-detail'),
     path("payment-methods/", PaymentMethodView.as_view(), name='payment-methods'),
-    path("payment-methods/<int:pk>/", DeletePaymentMethodView.as_view(), name='delete-payment-method'),
+   
+    # Optional: Keep delete endpoint if needed for backward compatibility
+    # path("payment-methods/delete/<int:pk>/", DeletePaymentMethodView.as_view(), name='delete-payment-method'),
+   
     path("webhook/", razorpay_webhook, name='razorpay-webhook'),
     path("verify-payment/", VerifyPaymentView.as_view(), name='verify-payment'),
+
+    path('company/send-email-otp/', SendCompanyEmailOTPView.as_view(), name='send-company-email-otp'),
+    path('company/verify-email-otp/', VerifyCompanyEmailOTPView.as_view(), name='verify-company-email-otp'),
 ]

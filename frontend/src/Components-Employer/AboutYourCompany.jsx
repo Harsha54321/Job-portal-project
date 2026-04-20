@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect } from "react";
 import { Footer } from "../Components-LandingPage/Footer";
 import { EHeader } from "./EHeader";
@@ -17,6 +15,10 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
   const [backendError, setBackendError] = useState("");
   const [existingLogo, setExistingLogo] = useState(null);
   const [hasExistingProfile, setHasExistingProfile] = useState(false);
+  
+  // State for popup modal
+  const [showPopup, setShowPopup] = useState(false);
+  const [pendingCompanyName, setPendingCompanyName] = useState("");
 
   // Check if coming from signup
   const fromSignup = location.state?.fromSignup || false;
@@ -39,69 +41,14 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
 
   const [errors, setErrors] = useState({});
 
-  // ✅ Fetch existing profile only if NOT coming from signup
-  // useEffect(() => {
-  //   if (!fromSignup && !hideNavigation) {
-  //     fetchExistingProfile();
-  //   }
-  // }, [fromSignup, hideNavigation]);  
-
-  // ✅ Fetch existing profile when:
-  // - Not coming from signup (fromSignup = false)
-  // - And either in dashboard mode (hideNavigation = true) or standalone mode
   useEffect(() => {
-    // Always fetch if not from signup
     if (!fromSignup) {
       fetchExistingProfile();
     } else {
-      // Coming from signup - no need to fetch, it's a new profile
       console.log("Coming from signup, skipping profile fetch");
       setIsLoading(false);
     }
   }, [fromSignup]);
-
-  // const fetchExistingProfile = async () => {
-  //   try {
-  //     setIsLoading(true);
-  //     console.log("Fetching existing company profile...");
-
-  //     const response = await api.get("/company/profile/");
-  //     console.log("✅ Existing profile found:", response.data);
-
-  //     const profile = response.data;
-  //     setFormData({
-  //       companyName: profile.company_name || "",
-  //       companyMoto: profile.company_moto || "",
-  //       contactPerson: profile.contact_person || "",
-  //       contactNumber: profile.contact_number || "",
-  //       companyMail: profile.company_email || "",
-  //       website: profile.website || "",
-  //       companySize: profile.company_size || "",
-  //       address1: profile.address1 || "",
-  //       address2: profile.address2 || "",
-  //       about: profile.about || "",
-  //       companyLogo: null,
-  //     });
-
-  //     setExistingLogo(profile.company_logo);
-  //     setHasExistingProfile(true);
-  //   } catch (err) {
-  //     if (err.response?.status === 404) {
-  //       console.log("No existing profile found");
-  //       setHasExistingProfile(false);
-  //     } else if (err.response?.status === 401) {
-  //       console.log("Unauthorized - redirecting to login");
-  //       navigate("/Job-portal/employer/login");
-  //     } else {
-  //       console.error("Error fetching profile:", err);
-  //     }
-  //   } finally {
-  //     setIsLoading(false);
-  //   }
-  // };
-
-
-
 
   const fetchExistingProfile = async () => {
     try {
@@ -113,7 +60,8 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
 
       const profile = response.data;
       setFormData({
-
+        fullName: profile.full_name|| "",
+        employerId: profile.employee_id || "",
         companyName: profile.company_name || "",
         companyMoto: profile.company_moto || "",
         contactPerson: profile.contact_person || "",
@@ -135,7 +83,6 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
         console.log("No existing profile found");
         setHasExistingProfile(false);
         setExistingLogo(null);
-        // Don't redirect in dashboard mode, just show empty form
         if (!hideNavigation) {
           setBackendError("No company profile found. Please create one.");
         }
@@ -155,7 +102,6 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
     }
   };
 
-
   const validateForm = () => {
     const newErrors = {};
 
@@ -168,8 +114,6 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
     const fullNameRegex = /^[A-Za-z]+( [A-Za-z]+)+$/;
     const employerIdRegex = /^(?=.*[A-Za-z])[A-Za-z0-9](?:[A-Za-z0-9_-]{0,18}[A-Za-z0-9])?$/;
 
-    // --- VALIDATION LOGIC ---
-
     // Fullname
     if (!formData.fullName.trim()) {
       newErrors.fullName = "Please enter your full name";
@@ -179,7 +123,7 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
       newErrors.fullName = "Enter valid full name (First & Last name, only letters)";
     }
 
-    //Employee Id
+    // Employee Id
     if (!formData.employerId.trim()) {
       newErrors.employerId = "Employer ID is required";
     } else if (formData.employerId.length > 20) {
@@ -193,8 +137,6 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
     } else if (!employerIdRegex.test(formData.employerId)) {
       newErrors.employerId = "Invalid Employer ID format";
     }
-
-    // --- VALIDATION LOGIC ---
 
     // Company Name
     if (!formData.companyName?.trim()) {
@@ -254,7 +196,6 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
 
     setErrors(newErrors);
 
-    // Scroll to first error for better UX
     if (Object.keys(newErrors).length > 0) {
       window.scrollTo({ top: 100, behavior: 'smooth' });
     }
@@ -263,13 +204,10 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
   };
 
   const handleChange = (e) => {
-
-    // const {name, value, files} = e?.target;
     const target = e?.target;
     if (!target) return;
 
     const { name, value, files } = target;
-
 
     setErrors((prev) => ({ ...prev, [name]: "" }));
     setBackendError("");
@@ -295,7 +233,51 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
     }
   };
 
-  // ✅ Create new company profile
+  // ✅ Link to existing company (for multi-employer support)
+  const linkToExistingCompany = async (companyName) => {
+    setIsLoading(true);
+    setBackendError("");
+    
+    try {
+      const response = await api.post("/company/link-to-existing/", {
+        company_name: companyName
+      });
+      
+      console.log("✅ Linked to existing company:", response.data);
+      
+      setCompanyProfile({
+        ...formData,
+        id: response.data.company_id,
+        companyName: response.data.company_name,
+        isExisting: true
+      });
+      
+      return {
+        success: true,
+        data: {
+          ...response.data,
+          id: response.data.company_id,
+          is_existing: true
+        }
+      };
+    } catch (err) {
+      console.error("Link to company error:", err);
+      
+      if (err.response?.status === 404) {
+        setBackendError("Company not found. Please create a new company.");
+      } else if (err.response?.status === 400) {
+        setBackendError(err.response?.data?.error || "Cannot link to this company");
+      } else {
+        setBackendError("Failed to link to company. Please try again.");
+      }
+      
+      return { success: false, error: "Link failed" };
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // ✅ Create new company profile with popup handling
   const createCompanyProfile = async (data) => {
     setIsLoading(true);
     setBackendError("");
@@ -319,11 +301,23 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
       });
 
       console.log("✅ Company profile created:", response.data);
-      return { success: true, data: response.data };
+      return { success: true, data: { ...response.data, is_existing: false } };
     } catch (err) {
       console.error("Create profile error:", err);
-
+      
       if (err.response?.status === 400) {
+        const errorMsg = err.response?.data?.error || "";
+        
+        // ✅ Check if error is about duplicate company
+        if (errorMsg.includes("already exists")) {
+          // Show popup instead of window.confirm
+          setPendingCompanyName(data.companyName);
+          setShowPopup(true);
+          setIsLoading(false);
+          return { success: false, error: "duplicate_company", pending: true };
+        }
+        
+        // Handle other validation errors
         const backendErrors = err.response.data;
         const newErrors = {};
         const fieldMapping = {
@@ -344,7 +338,7 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
         setErrors(newErrors);
         return { success: false, error: "Validation failed" };
       }
-
+      
       return { success: false, error: err.response?.data?.error || "Network error" };
     } finally {
       setIsLoading(false);
@@ -407,7 +401,40 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
     }
   };
 
-  // ✅ Next button - Create or Update based on context
+  // ✅ Handle popup confirm (Join existing company)
+  const handleJoinExistingCompany = async () => {
+    setShowPopup(false);
+    const result = await linkToExistingCompany(pendingCompanyName);
+    
+    if (result.success) {
+      setCompanyProfile({
+        ...formData,
+        id: result.data.company_id,
+        companyLogo: result.data.company_logo
+      });
+
+      // Navigate to verification page
+      navigate("/Job-portal/Employer/about-your-company/company-verification", {
+        state: {
+          fromSignup: fromSignup,
+          profileId: result.data.company_id,
+          isExistingCompany: true,
+          companyName: pendingCompanyName
+        }
+      });
+    } else if (result.error !== "Validation failed") {
+      setBackendError(result.error || "Failed to link to company");
+    }
+  };
+
+  // ✅ Handle popup cancel
+  const handleCancelJoin = () => {
+    setShowPopup(false);
+    setPendingCompanyName("");
+    setErrors({ companyName: "Please use a different company name" });
+  };
+
+  // ✅ Next button - ALWAYS go to verification page
   const handleNext = async (e) => {
     e.preventDefault();
 
@@ -420,9 +447,10 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
     console.log("Saving company profile...");
 
     let result;
-    // If coming from signup OR no existing profile, create new
     if (fromSignup || !hasExistingProfile) {
       result = await createCompanyProfile(formData);
+      // If duplicate company detected and popup is shown, stop here
+      if (result.pending) return;
     } else {
       result = await updateCompanyProfile(formData);
     }
@@ -430,51 +458,24 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
     if (result.success) {
       setCompanyProfile({
         ...formData,
-        id: result.data.id,
+        id: result.data.id || result.data.company_id,
         companyLogo: result.data.company_logo
       });
 
-      // Navigate to verification page
       navigate("/Job-portal/Employer/about-your-company/company-verification", {
         state: {
           fromSignup: fromSignup,
-          profileId: result.data.id
+          profileId: result.data.id || result.data.company_id,
+          isExistingCompany: result.data.is_existing || false,
+          companyName: formData.companyName
         }
       });
-    } else if (result.error !== "Validation failed") {
+    } else if (result.error !== "Validation failed" && result.error !== "duplicate_company") {
       setBackendError(result.error || "Failed to save company profile");
     }
   };
 
-  // ✅ Save button for dashboard
-  // const handleSave = async (e) => {
-  //   e.preventDefault();
-
-  //   const isValid = validateForm();
-  //   if (!isValid) return;
-
-  //   let result;
-  //   if (hasExistingProfile) {
-  //     result = await updateCompanyProfile(formData);
-  //   } else {
-  //     result = await createCompanyProfile(formData);
-  //   }
-
-  //   if (result.success) {
-  //     setCompanyProfile({
-  //       ...formData,
-  //       id: result.data.id,
-  //       companyLogo: result.data.company_logo
-  //     });
-  //     alert("Company profile saved successfully!");
-  //     if (setActiveTab) setActiveTab("Dashboard");
-  //   } else if (result.error !== "Validation failed") {
-  //     setBackendError(result.error || "Failed to save");
-  //   }
-  // };  
-
-
-  // Save button (from Dashboard My Profile) - Save and stay in Dashboard
+  // Save button (from Dashboard My Profile)
   const handleSave = async (e) => {
     e.preventDefault();
 
@@ -497,18 +498,46 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
         companyLogo: result.data.company_logo
       });
 
-      // Update existing logo and profile flag
       setExistingLogo(result.data.company_logo);
       setHasExistingProfile(true);
 
       alert("Company profile saved successfully!");
-
-      // Stay on dashboard, just refresh the data
-      // setActiveTab("Dashboard"); // This is already called from EmployerDashboard
-
-    } else if (result.error !== "Validation failed") {
+    } else if (result.error !== "Validation failed" && result.error !== "duplicate_company") {
       setBackendError(result.error || "Failed to save");
     }
+  };
+
+  // Popup Modal Component
+  const PopupModal = () => {
+    return (
+      <div className="popup-modal-overlay">
+        <div className="popup-modal-content">
+          <div className="popup-modal-header">
+            <h3>Company Already Exists</h3>
+          </div>
+          <div className="popup-modal-body">
+            <p>
+              A company with the name <strong>"{pendingCompanyName}"</strong> already exists in our system.
+            </p>
+            <p>Do you want to join this existing company instead of creating a new one?</p>
+          </div>
+          <div className="popup-modal-footer">
+            <button 
+              className="popup-btn-cancel" 
+              onClick={handleCancelJoin}
+            >
+              No, Use Different Name
+            </button>
+            <button 
+              className="popup-btn-confirm" 
+              onClick={handleJoinExistingCompany}
+            >
+              Yes, Join Existing Company
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   // Loading state
@@ -529,6 +558,9 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
     <>
       {!hideNavigation && <EHeader />}
 
+      {/* Popup Modal */}
+      {showPopup && <PopupModal />}
+
       <div className="aboutcompany-container">
         <h2 className="aboutcompany-title">
           About Your Company
@@ -545,7 +577,7 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
         )}
 
         <form className="aboutcompany-form">
-            {/* Full Name */}
+          {/* Full Name */}
           <div className="aboutcompany-form-group">
             <label>Full Name *</label>
             <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
@@ -553,7 +585,7 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
                 className={errors.fullName ? "input-error" : ""}
                 type="text"
                 name="fullName"
-                placeholder="e.g., ch krishna kumar"
+                placeholder="e.g., John Doe"
                 value={formData.fullName}
                 onChange={handleChange}
                 disabled={isLoading}
@@ -561,7 +593,7 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
               {errors.fullName && <span className="error-msg">{errors.fullName}</span>}
             </div>
           </div>
- 
+
           {/* Employee Id */}
           <div className="aboutcompany-form-group">
             <label>Employee ID *</label>
@@ -570,7 +602,7 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
                 className={errors.employerId ? "input-error" : ""}
                 type="text"
                 name="employerId"
-                placeholder="e.g., ch krishna kumar"
+                placeholder="e.g., EMP001"
                 value={formData.employerId}
                 onChange={handleChange}
                 disabled={isLoading}
@@ -733,7 +765,6 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
             <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
               <select
                 className={errors.companySize ? "input-error" : ""}
-
                 name="companySize"
                 value={formData.companySize}
                 onChange={handleChange}
@@ -822,6 +853,105 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
       </div>
 
       {!hideNavigation && <Footer />}
+      
+      {/* Popup Modal CSS */}
+      <style>{`
+        .popup-modal-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background-color: rgba(0, 0, 0, 0.5);
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          z-index: 9999;
+        }
+        
+        .popup-modal-content {
+          background: white;
+          border-radius: 12px;
+          width: 450px;
+          max-width: 90%;
+          box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+          animation: modalFadeIn 0.3s ease;
+        }
+        
+        @keyframes modalFadeIn {
+          from {
+            opacity: 0;
+            transform: translateY(-20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        
+        .popup-modal-header {
+          padding: 20px 24px;
+          border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .popup-modal-header h3 {
+          margin: 0;
+          color: #d32f2f;
+          font-size: 20px;
+        }
+        
+        .popup-modal-body {
+          padding: 24px;
+        }
+        
+        .popup-modal-body p {
+          margin: 10px 0;
+          color: #333;
+          line-height: 1.5;
+        }
+        
+        .popup-modal-body strong {
+          color: #1e88e5;
+        }
+        
+        .popup-modal-footer {
+          padding: 16px 24px;
+          border-top: 1px solid #e0e0e0;
+          display: flex;
+          justify-content: flex-end;
+          gap: 12px;
+        }
+        
+        .popup-btn-cancel {
+          padding: 10px 20px;
+          background: white;
+          border: 1px solid #ccc;
+          border-radius: 6px;
+          cursor: pointer;
+          font-size: 14px;
+          color: #666;
+          transition: all 0.2s;
+        }
+        
+        .popup-btn-cancel:hover {
+          background: #f5f5f5;
+        }
+        
+        .popup-btn-confirm {
+          padding: 10px 20px;
+          background: #1e88e5;
+          border: none;
+          border-radius: 6px;
+          cursor: pointer;
+          font-size: 14px;
+          color: white;
+          transition: all 0.2s;
+        }
+        
+        .popup-btn-confirm:hover {
+          background: #1565c0;
+        }
+      `}</style>
     </>
   );
 };

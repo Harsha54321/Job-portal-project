@@ -13,6 +13,7 @@ from django.shortcuts import get_object_or_404
 from django.db import IntegrityError
 from django.db.models import Q, Count
 from datetime import timedelta
+import random
 
 from .serializers import (
     JobSeekerRegistrationSerializer,
@@ -64,10 +65,10 @@ from .models import (
     Conversation, Message, ChatMessage, HelpTopic, RaiseTicket,
     PasswordResetToken, EmailOTP, NewsletterSubscriber,
     CompanyVerification, CompanyProfile, Complaint, Plan, Subscription,
-    Invoice, PaymentMethod,
+    Invoice, PaymentMethod,CompanyEmailOTP,
 )
 from .permissions import IsAdminOrEmployer, IsEmployerOrAdmin, IsJobSeeker, IsAdminUserType
-from .utils import generate_otp, generate_4digit_otp, send_email_otp, generate_token, send_password_reset_email
+from .utils import generate_otp, generate_4digit_otp, send_email_otp, generate_token, send_password_reset_email,generate_company_otp, send_company_email_otp
 
 User = get_user_model()
 
@@ -1325,7 +1326,11 @@ class SubmitCompanyVerification(APIView):
                 "error": "You already submitted verification"
             })
  
-        serializer = CompanyVerificationSerializer(data=request.data)
+        # ✅ Pass the request context to serializer
+        serializer = CompanyVerificationSerializer(
+            data=request.data,
+            context={'request': request}
+        )
  
         if serializer.is_valid():
             serializer.save(employer=request.user)
@@ -1362,69 +1367,48 @@ class CompanyVerificationAction(APIView):
 # ============ COMPANY PROFILE VIEWS ============
  
 class CompanyProfileCreateView(APIView):
-
     permission_classes = [IsEmployerOrAdmin]
 
     def post(self, request):
-
-        # ✅ Check if employer already has a company through their profile
-
+        # Check if employer already has a company
         if hasattr(request.user, 'employer_profile') and request.user.employer_profile.company:
-
             return Response(
-
-                {"error": "You are already linked to a company. Only one company per employer is allowed."}, 
-
+                {"error": "You are already linked to a company"}, 
                 status=400
-
             )
 
-        # ✅ Check if company with same name already exists
-
+        # Check for duplicate company name
         company_name = request.data.get('company_name')
+        existing_company = CompanyProfile.objects.filter(company_name__iexact=company_name).first()
 
-        if company_name and CompanyProfile.objects.filter(company_name__iexact=company_name).exists():
-
+        if existing_company:
+            # ✅ Return 400 error to trigger popup in frontend
             return Response(
-
                 {"error": f"A company with the name '{company_name}' already exists. Please use a different name."}, 
-
                 status=400
-
             )
 
+        # Create new company
         serializer = CompanyProfileSerializer(
-
             data=request.data,
-
             context={'request': request}
-
         )
 
         if serializer.is_valid():
-
             company = serializer.save()
 
-            # ✅ Link the employer to this company
-
             if hasattr(request.user, 'employer_profile'):
-
                 request.user.employer_profile.company = company
-
                 request.user.employer_profile.save()
 
             return Response({
-
                 "message": "Company profile created successfully",
-
                 "company_id": company.id,
-
-                "company_name": company.company_name
-
+                "company_name": company.company_name,
+                "is_existing": False
             }, status=201)
 
         return Response(serializer.errors, status=400)
-
  
 class CompanyProfileDetailView(APIView):
 
@@ -1574,6 +1558,41 @@ class CompanyProfileByIdView(APIView):
                 status=404
 
             )
+        
+class LinkToExistingCompanyView(APIView):
+    permission_classes = [IsEmployerOrAdmin]
+    
+    def post(self, request):
+        company_name = request.data.get('company_name')
+        
+        if not company_name:
+            return Response({"error": "Company name is required"}, status=400)
+        
+        # Find existing company (case-insensitive)
+        company = CompanyProfile.objects.filter(company_name__iexact=company_name).first()
+        
+        if not company:
+            return Response({"error": "Company not found. Please create a new company."}, status=404)
+        
+        # Check if employer already has a company
+        if hasattr(request.user, 'employer_profile') and request.user.employer_profile.company:
+            return Response({
+                "error": f"You are already linked to company: {request.user.employer_profile.company.company_name}"
+            }, status=400)
+        
+        # Link employer to existing company
+        if hasattr(request.user, 'employer_profile'):
+            request.user.employer_profile.company = company
+            request.user.employer_profile.save()
+            
+            return Response({
+                "message": f"Successfully linked to existing company: {company.company_name}",
+                "company_id": company.id,
+                "company_name": company.company_name,
+                "is_existing": True
+            }, status=200)
+        
+        return Response({"error": "Employer profile not found"}, status=400)        
  
     
 
@@ -1751,170 +1770,492 @@ class AdminUpdateComplaintView(APIView):
 # ============ BILLING VIEWS ============
 
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.views import APIView
+from rest_framework.response import Response
 from django.http import FileResponse
+from django.shortcuts import get_object_or_404
+from django.conf import settings
+from django.utils.timezone import now
+from datetime import timedelta
+import razorpay
+from decimal import Decimal
+import random
+import string
+from datetime import datetime
+ 
 from .models import *
 from .serializers import *
 from .services import create_order
 from .utils import calculate_gst, generate_invoice_number, generate_invoice_pdf
-
+ 
+client = razorpay.Client(auth=(settings.RAZORPAY_KEY, settings.RAZORPAY_SECRET))
+ 
+ 
+from decimal import Decimal
+ 
 class PlanListView(APIView):
+    permission_classes = [IsAuthenticated]
+   
     def get(self, request):
-        return Response(PlanSerializer(Plan.objects.all(), many=True).data)
-
-
+        plans = Plan.objects.all()
+        duration = request.query_params.get('duration', 'monthly')
+       
+        data = []
+        for plan in plans:
+            pricing = self.calculate_pricing_with_discount(plan, duration)
+           
+            plan_data = {
+                'id': plan.id,
+                'name': plan.name,
+                'monthly_price': float(plan.monthly_price),
+                'duration_days': plan.duration_days,
+                'pricing': pricing
+            }
+            data.append(plan_data)
+       
+        return Response(data)
+   
+    def calculate_pricing_with_discount(self, plan, duration):
+        # Convert to Decimal
+        monthly_price = Decimal(str(plan.monthly_price))
+       
+        if duration == 'monthly':
+            multiplier = Decimal('1')
+            discount_percent = Decimal('0')
+            duration_days = plan.duration_days
+            duration_text = 'Monthly'
+           
+        elif duration == '6_months':
+            multiplier = Decimal('6')
+            discount_percent = Decimal('10')
+            duration_days = 180
+            duration_text = '6 Months'
+           
+        elif duration == 'yearly':
+            multiplier = Decimal('12')
+            discount_percent = Decimal('15')
+            duration_days = 365
+            duration_text = 'Yearly'
+           
+        else:
+            multiplier = Decimal('1')
+            discount_percent = Decimal('0')
+            duration_days = plan.duration_days
+            duration_text = 'Monthly'
+       
+        # All calculations using Decimal
+        original_price = monthly_price * multiplier
+        discount_amount = original_price * (discount_percent / Decimal('100'))
+        subtotal = original_price - discount_amount
+       
+        cgst = subtotal * Decimal('0.09')
+        sgst = subtotal * Decimal('0.09')
+        total = subtotal + cgst + sgst
+       
+        return {
+            'duration': duration_text,
+            'duration_days': duration_days,
+            'monthly_price': float(round(monthly_price, 2)),
+            'original_price': float(round(original_price, 2)),
+            'discount_percent': int(discount_percent),
+            'discount_amount': float(round(discount_amount, 2)),
+            'subtotal': float(round(subtotal, 2)),
+            'cgst': float(round(cgst, 2)),
+            'sgst': float(round(sgst, 2)),
+            'total': float(round(total, 2)),
+            'savings': float(round(original_price - subtotal, 2)) if discount_percent > 0 else None
+        }
+   
+ 
+from decimal import Decimal
+ 
 class CreateOrderView(APIView):
     permission_classes = [IsAuthenticated]
-
+ 
     def post(self, request):
         plan_id = request.data.get("plan_id")
+        duration = request.data.get("duration", "monthly")
+       
         plan = get_object_or_404(Plan, id=plan_id)
-
+        pricing = self.calculate_discounted_price(plan, duration)
+       
         order = client.order.create({
-            "amount": int(plan.price * 100),
+            "amount": int(pricing['total'] * 100),
             "currency": "INR",
-            "payment_capture": 1
+            "payment_capture": 1,
         })
-
+ 
         payment = Payment.objects.create(
             user=request.user,
             plan=plan,
             razorpay_order_id=order["id"],
-            amount=plan.price,
-            status="pending"
+            amount=Decimal(str(pricing['total'])),
+            status="pending",
         )
-
+ 
         return Response({
             "order_id": order["id"],
             "amount": order["amount"],
             "currency": order["currency"],
             "payment_db_id": payment.id,
-            "razorpay_key": settings.RAZORPAY_KEY
+            "razorpay_key": settings.RAZORPAY_KEY,
+            "duration": duration,
+            "duration_days": pricing['duration_days'],
+            "pricing": pricing
         })
-
-
+   
+    def calculate_discounted_price(self, plan, duration):
+        # Convert to Decimal - THIS IS KEY
+        monthly_price = Decimal(str(plan.monthly_price))
+       
+        if duration == 'monthly':
+            multiplier = Decimal('1')
+            discount_percent = Decimal('0')
+            duration_days = plan.duration_days
+           
+        elif duration == '6_months':
+            multiplier = Decimal('6')
+            discount_percent = Decimal('10')
+            duration_days = 180
+           
+        elif duration == 'yearly':
+            multiplier = Decimal('12')
+            discount_percent = Decimal('15')
+            duration_days = 365
+           
+        else:
+            multiplier = Decimal('1')
+            discount_percent = Decimal('0')
+            duration_days = plan.duration_days
+       
+        # All calculations using Decimal
+        original_price = monthly_price * multiplier
+        discount_amount = original_price * (discount_percent / Decimal('100'))
+        subtotal = original_price - discount_amount
+       
+        cgst = subtotal * Decimal('0.09')
+        sgst = subtotal * Decimal('0.09')
+        total = subtotal + cgst + sgst
+       
+        return {
+            'duration': duration,
+            'duration_days': duration_days,
+            'monthly_price': float(round(monthly_price, 2)),
+            'original_price': float(round(original_price, 2)),
+            'discount_percent': int(discount_percent),
+            'discount_amount': float(round(discount_amount, 2)),
+            'subtotal': float(round(subtotal, 2)),
+            'cgst': float(round(cgst, 2)),
+            'sgst': float(round(sgst, 2)),
+            'total': float(round(total, 2)),
+        }
+ 
 class CurrentSubscriptionView(APIView):
     permission_classes = [IsAuthenticated]
-
+ 
     def get(self, request):
         sub = Subscription.objects.filter(user=request.user, status='active').first()
         return Response(SubscriptionSerializer(sub).data if sub else {})
-
-
+ 
+ 
 class CancelSubscriptionView(APIView):
     permission_classes = [IsAuthenticated]
-
+ 
     def post(self, request):
         sub = Subscription.objects.filter(user=request.user, status='active').first()
         if sub:
             sub.status = "cancelled"
             sub.save()
         return Response({"message": "Cancelled"})
-
-
+ 
+ 
 class InvoiceListView(APIView):
     permission_classes = [IsAuthenticated]
-
+ 
     def get(self, request):
         invoices = Invoice.objects.filter(user=request.user)
         return Response(InvoiceSerializer(invoices, many=True).data)
-
-
+ 
+ 
 class InvoiceDownloadView(APIView):
     permission_classes = [IsAuthenticated]
-
+ 
     def get(self, request, pk):
         invoice = Invoice.objects.get(id=pk, user=request.user)
         file_path = generate_invoice_pdf(invoice)
         return FileResponse(open(file_path, 'rb'), content_type='application/pdf')
-
-
+ 
+ 
 class PaymentMethodView(APIView):
     permission_classes = [IsAuthenticated]
-
+ 
     def get(self, request):
-        return Response(PaymentMethodSerializer(
-            PaymentMethod.objects.filter(user=request.user), many=True).data)
-
+        methods = PaymentMethod.objects.filter(user=request.user)
+        serializer = PaymentMethodSerializer(methods, many=True)
+        return Response(serializer.data)
+ 
     def post(self, request):
         serializer = PaymentMethodSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save(user=request.user)
+            return Response(serializer.data, status=201)
+        return Response(serializer.errors, status=400)
+   
+    def patch(self, request, pk):
+        try:
+            payment_method = PaymentMethod.objects.get(id=pk, user=request.user)
+        except PaymentMethod.DoesNotExist:
+            return Response({"error": "Payment method not found"}, status=404)
+       
+        serializer = PaymentMethodSerializer(payment_method, data=request.data, partial=True)
+        if serializer.is_valid():
+            if request.data.get('is_default') == True:
+                PaymentMethod.objects.filter(user=request.user).exclude(id=pk).update(is_default=False)
+            serializer.save()
             return Response(serializer.data)
-        return Response(serializer.errors)
-
-
+        return Response(serializer.errors, status=400)
+   
+    def delete(self, request, pk):
+        try:
+            payment_method = PaymentMethod.objects.get(id=pk, user=request.user)
+            payment_method.delete()
+            return Response({"message": "Deleted successfully"})
+        except PaymentMethod.DoesNotExist:
+            return Response({"error": "Payment method not found"}, status=404)
+ 
+ 
 class DeletePaymentMethodView(APIView):
     permission_classes = [IsAuthenticated]
-
+ 
     def delete(self, request, pk):
         PaymentMethod.objects.filter(id=pk, user=request.user).delete()
-        return Response({"message": "Deleted"}) 
-
-# ============ PAYMENT VERIFICATION VIEW ============
-
-# jobapp/views.py
-from rest_framework.views import APIView
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
-from decimal import Decimal
-
-# Import your models
-from jobapp.models import Payment, Subscription, Invoice
-
-# Import utility functions - CHOOSE THE CORRECT ONE:
-try:
-    # Option 1: If functions are in utils.py
-    from jobapp.utils import calculate_gst, generate_invoice_number, generate_invoice_pdf
-except ImportError:
-    # Option 2: If functions are in the same file (views.py)
-    from jobapp.views import calculate_gst, generate_invoice_number, generate_invoice_pdf
-
+        return Response({"message": "Deleted"})
+ 
+ 
 class VerifyPaymentView(APIView):
     permission_classes = [IsAuthenticated]
-
+ 
     def post(self, request):
         data = request.data
+ 
+        try:
+            razorpay_order_id = data.get('razorpay_order_id')
+            razorpay_payment_id = data.get('razorpay_payment_id')
+            razorpay_signature = data.get('razorpay_signature')
+            duration = data.get('duration', 'monthly')
+            duration_days = data.get('duration_days', 30)
+            payment_method = data.get('payment_method', 'card')
+ 
+            # Verify payment signature
+            params_dict = {
+                'razorpay_order_id': razorpay_order_id,
+                'razorpay_payment_id': razorpay_payment_id,
+                'razorpay_signature': razorpay_signature
+            }
+ 
+            client.utility.verify_payment_signature(params_dict)
+ 
+            # Get the payment record
+            payment = Payment.objects.get(
+                razorpay_order_id=razorpay_order_id,
+                user=request.user
+            )
+ 
+            # Update payment details
+            payment.razorpay_payment_id = razorpay_payment_id
+            payment.razorpay_signature = razorpay_signature
+            payment.status = "success"
+            payment.payment_method = payment_method
+            payment.save()
+ 
+            # Cancel any existing active subscriptions
+            Subscription.objects.filter(
+                user=request.user,
+                status='active'
+            ).update(status='cancelled')
+ 
+            # Calculate end date based on duration
+            if duration == 'monthly':
+                end_date = now() + timedelta(days=30)
+            elif duration == '6_months':
+                end_date = now() + timedelta(days=180)
+            elif duration == 'yearly':
+                end_date = now() + timedelta(days=365)
+            else:
+                end_date = now() + timedelta(days=30)
+ 
+            # Create new subscription
+            subscription = Subscription.objects.create(
+                user=request.user,
+                plan=payment.plan,
+                status='active',
+                end_date=end_date
+            )
+ 
+            # Calculate GST (18%) - payment.amount already includes tax
+            subtotal = payment.amount / Decimal('1.18')
+            gst = payment.amount - subtotal
+ 
+            # Format duration text
+            if duration == 'monthly':
+                duration_text = '1 Month'
+            elif duration == '6_months':
+                duration_text = '6 Months'
+            elif duration == 'yearly':
+                duration_text = '1 Year'
+            else:
+                duration_text = '1 Month'
+ 
+            # Get company profile
+            try:
+                from jobapp.models import CompanyProfile
+                company_profile = CompanyProfile.objects.get(user=request.user)
+                company_name = company_profile.company_name
+                company_email = company_profile.company_email
+                company_phone = company_profile.contact_number
+               
+            except:
+                company_name = request.user.username
+                company_email = request.user.email
+                company_phone = ''
+ 
+            # Create invoice with correct company details
+            invoice = Invoice.objects.create(
+                user=request.user,
+                invoice_number=self.generate_invoice_number(),
+                company_name=company_name,
+                email=company_email,
+                phone=company_phone,
+                payment_method=payment_method.upper(),
+                transaction_id=razorpay_payment_id,
+                payment_status="Paid",
+                subtotal=round(subtotal, 2),
+                gst=round(gst, 2),
+                total=payment.amount,
+                plan_name=payment.plan.name,
+                duration=duration_text,
+                start_date=now(),
+                end_date=end_date
+            )
+ 
+            return Response({
+                "message": "Payment verified successfully",
+                "subscription_id": subscription.id,
+                "invoice_number": invoice.invoice_number,
+                "plan_name": payment.plan.name,
+                "duration": duration_text,
+                "amount": payment.amount,
+                "end_date": end_date
+            })
+ 
+        except Payment.DoesNotExist:
+            return Response({"error": "Payment not found"}, status=404)
+       
+        except razorpay.errors.SignatureVerificationError:
+            return Response({"error": "Invalid payment signature"}, status=400)
+       
+        except Exception as e:
+            return Response({"error": str(e)}, status=400)
+ 
+    def generate_invoice_number(self):
+        """Generate unique invoice number"""
+        date_part = datetime.now().strftime('%Y%m%d')
+        random_part = ''.join(random.choices(string.digits, k=4))
+        invoice_number = f"INV-{date_part}-{random_part}"
+       
+        while Invoice.objects.filter(invoice_number=invoice_number).exists():
+            random_part = ''.join(random.choices(string.digits, k=4))
+            invoice_number = f"INV-{date_part}-{random_part}"
+       
+        return invoice_number
+    
+# ============ COMPANY EMAIL OTP VIEWS ============
 
-        params_dict = {
-            'razorpay_order_id': data['razorpay_order_id'],
-            'razorpay_payment_id': data['razorpay_payment_id'],
-            'razorpay_signature': data['razorpay_signature']
-        }
-
-        client.utility.verify_payment_signature(params_dict)
-
-        payment = Payment.objects.get(
-            razorpay_order_id=data['razorpay_order_id']
+class SendCompanyEmailOTPView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def post(self, request):
+        email = request.data.get("email")
+        company_name = request.data.get("company_name")
+        
+        if not email:
+            return Response({"error": "Email is required"}, status=400)
+        
+        if not company_name:
+            return Response({"error": "Company name is required"}, status=400)
+        
+        # Check if email is already used by another company
+        if CompanyProfile.objects.filter(company_email=email).exists():
+            # If updating existing company, check if it's the same company
+            if hasattr(request.user, 'employer_profile') and request.user.employer_profile.company:
+                existing_company = request.user.employer_profile.company
+                if existing_company.company_email != email:
+                    return Response(
+                        {"error": "This email is already used by another company"}, 
+                        status=400
+                    )
+            else:
+                return Response(
+                    {"error": "This email is already registered with another company"}, 
+                    status=400
+                )
+        
+        # Delete existing OTPs for this email
+        CompanyEmailOTP.objects.filter(
+            email=email,
+            purpose='company_verification',
+            is_verified=False
+        ).delete()
+        
+        otp = generate_company_otp()
+        
+        CompanyEmailOTP.objects.create(
+            company_name=company_name,
+            email=email,
+            otp=otp,
+            purpose='company_verification',
+            expires_at=timezone.now() + timedelta(minutes=10)
         )
+        
+        # Send OTP email
+        try:
+            send_company_email_otp(email, otp, company_name)
+            print(f"📧 Company OTP sent to {email}: {otp}")  # For testing
+            return Response({
+                "message": "OTP sent to company email successfully",
+                "email": email
+            }, status=200)
+        except Exception as e:
+            return Response({
+                "error": f"Failed to send OTP: {str(e)}"
+            }, status=500)
 
-        payment.razorpay_payment_id = data['razorpay_payment_id']
-        payment.razorpay_signature = data['razorpay_signature']
-        payment.status = "success"
-        payment.save()
 
-        Subscription.objects.filter(
-            user=request.user,
-            status='active'
-        ).update(status='cancelled')
-
-        subscription = Subscription.objects.create(
-            user=request.user,
-            plan=payment.plan
-        )
-
-        gst, total = calculate_gst(payment.amount)
-
-        Invoice.objects.create(
-            user=request.user,
-            invoice_number=generate_invoice_number(),
-            transaction_id=payment.razorpay_payment_id,
-            subtotal=payment.amount,
-            gst=gst,
-            total=total,
-            payment_status="Paid",
-            plan_name=payment.plan.name,
-            start_date=subscription.start_date,
-            end_date=subscription.end_date
-        )
-
-        return Response({"message": "Payment verified successfully"})
+class VerifyCompanyEmailOTPView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def post(self, request):
+        email = request.data.get("email")
+        otp = request.data.get("otp")
+        
+        if not email or not otp:
+            return Response({"error": "Email and OTP are required"}, status=400)
+        
+        otp_obj = CompanyEmailOTP.objects.filter(
+            email=email,
+            otp=otp,
+            purpose='company_verification',
+            is_verified=False
+        ).last()
+        
+        if not otp_obj or not otp_obj.is_valid():
+            return Response({"error": "Invalid or expired OTP"}, status=400)
+        
+        # Mark OTP as verified
+        otp_obj.is_verified = True
+        otp_obj.save()
+        
+        return Response({
+            "message": "Email verified successfully",
+            "verified": True
+        }, status=200)    

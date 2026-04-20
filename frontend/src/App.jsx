@@ -107,6 +107,10 @@ import { PostedJobs } from './Components-Employer/PostedJobs'
 import { EditJob } from './Components-Employer/EditJob'
 import { FindTalent } from './Components-Employer/FindTalent'
 import { JsProfileOverview } from './Components-Employer/JsProfileOverview'
+import { PaymentMethods } from './Components-Employer/PaymentMethods'
+import { PlansBilling } from './Components-Employer/PlansBilling'
+import { MembershipPlans } from './Components-Employer/MembershipPlans'
+import { BillingSec } from './Components-Employer/BillingSec'
 
 
 /* ---------- LAYOUT ---------- */
@@ -329,6 +333,22 @@ const router = createBrowserRouter([
           {
             path: 'FindTalent/ProfileOverview/:id',
             element: <JsProfileOverview />
+          },
+          {
+            path: 'Billing',
+            element: <BillingSec />
+          },
+          {
+            path: 'Membership',
+            element: <MembershipPlans />
+          },
+          {
+            path: 'PlansBilling',
+            element: <PlansBilling />
+          },
+          {
+            path: 'PaymentMethods',
+            element: <PaymentMethods />
           },
           // {
           //   path: 'about-your-company/company-verification',
