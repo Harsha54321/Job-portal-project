@@ -13,7 +13,7 @@ export const BillingSec = ({ onUpgradeClick }) => {
   const navigate = useNavigate();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [planStatus, setPlanStatus] = useState('ACTIVE');
-  
+
   // ← CHANGE 3: New states for real data
   const [activePlan, setActivePlan] = useState(null);
   const [billingHistory, setBillingHistory] = useState([]);
@@ -30,15 +30,20 @@ export const BillingSec = ({ onUpgradeClick }) => {
     try {
       // 1. Get current subscription
       const subRes = await api.get('/subscription/');
+      console.log('price value:', subRes.data.plan.monthly_price);
+      console.log('type:', typeof subRes.data.plan.monthly_price);
+
+
+      console.log('SUB DATA:', subRes.data);
       if (subRes.data && subRes.data.plan) {
         setActivePlan({
           name: subRes.data.plan.name,
-          price: subRes.data.plan.price,
+          price: subRes.data.plan.monthly_price,
           status: subRes.data.status.toUpperCase(),
           endDate: subRes.data.end_date
         });
         setPlanStatus(subRes.data.status.toUpperCase());
-        
+
         // Calculate next invoice date
         const nextDate = new Date(subRes.data.end_date);
         setNextInvoiceDate(nextDate.toLocaleDateString('en-US', {
@@ -56,7 +61,16 @@ export const BillingSec = ({ onUpgradeClick }) => {
           }).toUpperCase(),
           price: `₹ ${inv.total} /-`,
           status: inv.payment_status.toUpperCase(),
-          invoice: inv.invoice_number
+          invoice: inv.invoice_number,
+          company_name: inv.company_name,
+          email: inv.email,
+          phone: inv.phone,
+          subtotal: inv.subtotal,
+          gst: inv.gst,
+          transaction_id: inv.transaction_id,
+          start_date: inv.start_date,
+          end_date: inv.end_date,
+          duration: inv.duration
         }));
         setBillingHistory(formattedHistory);
       }
@@ -238,7 +252,7 @@ export const BillingSec = ({ onUpgradeClick }) => {
               </p>
             </div>
             <div className="Billing-card-btn-group">
-              <button 
+              <button
                 className="Billing-btn Billing-btn-outline Billing-btn-sm"
                 onClick={handleChangeCard}
               >
@@ -287,10 +301,10 @@ export const BillingSec = ({ onUpgradeClick }) => {
                 </div>
                 <div className="Billing-col-invoice">
                   <span className="Billing-invoice-id">{item.invoice}</span>
-                  <img 
-                    src={FileIcon} 
-                    alt="Invoice Icon" 
-                    className="Billing-doc-icon-img" 
+                  <img
+                    src={FileIcon}
+                    alt="Invoice Icon"
+                    className="Billing-doc-icon-img"
                     style={{ cursor: 'pointer' }}
                   />
                 </div>

@@ -660,7 +660,7 @@ export const Esignup = () => {
               disabled={isLoading}
             />
             <span className="eye-icon" onClick={togglePasswordView}>
-              <img src={passwordShow ? eyeHide : eyeHide} className='show-icon' alt='show' />
+              <img src={passwordShow ? eyeHide : eye} className='show-icon' alt='show' />
             </span>
           </div>
           {errors.password && <span className="error-msg">{errors.password}</span>}

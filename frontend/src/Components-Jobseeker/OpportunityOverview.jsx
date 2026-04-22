@@ -343,9 +343,9 @@ export const OpportunityOverview = () => {
                 <div>
                   <p>Share This job</p>
                   <div className='opp-socials'>
-                    <div><img src={linkedin} className='opp-socials-icon' alt="linkedin" /></div>
-                    <div><img src={facebook} className='opp-socials-icon' alt="facebook" /></div>
-                    <div><img src={twitter} className='opp-socials-icon' alt="twitter" /></div>
+                    <div><img src={linkedin} className='opp-socials-icon' title='LinkedIn' alt="linkedin" /></div>
+                    <div><img src={facebook} className='opp-socials-icon' title='Facebook' alt="facebook" /></div>
+                    <div><img src={twitter} className='opp-socials-icon' title='Twitter' alt="twitter" /></div>
                   </div>
                 </div>
                 <button onClick={() => navigate(`/Job-portal/jobseeker/ReportAJob/${job.id}`)} className="opp-report-btn">Report this job</button>

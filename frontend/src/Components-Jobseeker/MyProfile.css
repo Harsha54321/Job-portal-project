@@ -576,4 +576,24 @@
     font-weight: bold;
     cursor: pointer;
 }
+
+input[type="file"] {
+  cursor: pointer;
+}
+ 
+input[type="file"]::file-selector-button {
+  cursor: pointer;
+}
+
+.date-of-birth:hover , .date-of-birth::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+}
+ 
+ .cursor-as-pointer::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+}
+   
+select, select:hover, select option {
+    cursor: pointer;
+}
  

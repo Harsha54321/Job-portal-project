@@ -9,6 +9,22 @@ export const MembershipPlans = ({ onSelectPlan }) => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
+    const normalizePlanName = (planName) => {
+        const upperName = planName.toUpperCase();
+        if (upperName.includes('STARTER')) return 'STARTER PLAN';
+        if (upperName.includes('BUSINESS')) return 'BUSINESS PLAN';
+        if (upperName.includes('ENTERPRISE')) return 'ENTERPRISE PLAN';
+        return planName.toUpperCase();
+    };
+
+    const getDisplayName = (planName) => {
+    const normalizedName = normalizePlanName(planName);
+    if (normalizedName === 'STARTER PLAN') return 'STARTER PLAN';
+    if (normalizedName === 'BUSINESS PLAN') return 'BUSINESS PLAN';
+    if (normalizedName === 'ENTERPRISE PLAN') return 'ENTERPRISE PLAN';
+    return planName.toUpperCase();
+};
+
     useEffect(() => {
         fetchPlans();
     }, [activeTab]);
@@ -23,7 +39,7 @@ export const MembershipPlans = ({ onSelectPlan }) => {
                 '6 Months': '6_months',
                 'yearly': 'yearly'
             };
-            
+
             const duration = durationMap[activeTab] || 'monthly';
             const response = await api.get(`/plans/?duration=${duration}`);
             setPlans(response.data);
@@ -35,8 +51,47 @@ export const MembershipPlans = ({ onSelectPlan }) => {
         }
     };
 
+    // const getFeaturesForPlan = (planName) => {
+    //     if (planName === 'STARTER PLAN') {
+    //         return [
+    //             { text: '3 Jobs Posting', isIncluded: true },
+    //             { text: 'Basic Employer Profile', isIncluded: true },
+    //             { text: 'Standard Support', isIncluded: true },
+    //             { text: 'Account Manager', isIncluded: false },
+    //             { text: 'Analytics', isIncluded: false },
+    //             { text: 'Candidate Search', isIncluded: false },
+    //             { text: 'Highlight Your Job Listing', isIncluded: false },
+    //         ];
+    //     }
+    //     if (planName === 'BUSINESS PLAN') {
+    //         return [
+    //             { text: '30 Jobs Posting', isIncluded: true },
+    //             { text: 'Featured Employer Profile', isIncluded: true },
+    //             { text: 'Resume Database Access', isIncluded: true },
+    //             { text: 'Priority Support', isIncluded: true },
+    //             { text: 'Basic Account Manager', isIncluded: true },
+    //             { text: 'Basic Analytics', isIncluded: true },
+    //             { text: 'Limited Candidate Search', isIncluded: true },
+    //             { text: 'Highlight Your Job Listing', isIncluded: false },
+    //         ];
+    //     }
+    //     // ENTERPRISE PLAN
+    //     return [
+    //         { text: 'Unlimited Jobs Posting', isIncluded: true },
+    //         { text: 'Premium Employer Profile', isIncluded: true },
+    //         { text: 'Full Resume Database Access', isIncluded: true },
+    //         { text: 'Priority Support', isIncluded: true },
+    //         { text: 'Dedicated Account Manager', isIncluded: true },
+    //         { text: 'Advanced Analytics', isIncluded: true },
+    //         { text: 'Unlimited Candidate Search', isIncluded: true },
+    //         { text: 'Highlight Your Job Listing', isIncluded: true },
+    //     ];
+    // };
+
     const getFeaturesForPlan = (planName) => {
-        if (planName === 'STARTER PLAN') {
+        const normalizedName = normalizePlanName(planName);
+
+        if (normalizedName === 'STARTER PLAN') {
             return [
                 { text: '3 Jobs Posting', isIncluded: true },
                 { text: 'Basic Employer Profile', isIncluded: true },
@@ -47,7 +102,7 @@ export const MembershipPlans = ({ onSelectPlan }) => {
                 { text: 'Highlight Your Job Listing', isIncluded: false },
             ];
         }
-        if (planName === 'BUSINESS PLAN') {
+        if (normalizedName === 'BUSINESS PLAN') {
             return [
                 { text: '30 Jobs Posting', isIncluded: true },
                 { text: 'Featured Employer Profile', isIncluded: true },
@@ -72,15 +127,45 @@ export const MembershipPlans = ({ onSelectPlan }) => {
         ];
     };
 
+    // const getPlanColor = (planName) => {
+    //     if (planName === 'STARTER PLAN') return 'blue';
+    //     if (planName === 'BUSINESS PLAN') return 'orange';
+    //     return 'purple';
+    // };
+
     const getPlanColor = (planName) => {
-        if (planName === 'STARTER PLAN') return 'blue';
-        if (planName === 'BUSINESS PLAN') return 'orange';
+        const normalizedName = normalizePlanName(planName);
+        if (normalizedName === 'STARTER PLAN') return 'blue';
+        if (normalizedName === 'BUSINESS PLAN') return 'orange';
         return 'purple';
     };
 
     const handleGetStarted = (plan) => {
-        const pricing = plan.pricing;
+
+         const normalizedName = normalizePlanName(plan.name);
+    
+    if (normalizedName === 'STARTER PLAN') {
+        const freePlanData = {
+            id: plan.id,
+            name: plan.name,
+            price: 0,
+            subtotal: 0,
+            cgst: 0,
+            sgst: 0,
+            discount_percent: 0,
+            original_price: 0,
+            savings: 0,
+            duration: activeTab,
+            duration_days: plan.pricing?.duration_days || 30
+        };
+        onSelectPlan(freePlanData, activeTab);
+        return;
+    }
         
+
+
+        const pricing = plan.pricing;
+
         const planData = {
             id: plan.id,
             name: plan.name,
@@ -94,7 +179,7 @@ export const MembershipPlans = ({ onSelectPlan }) => {
             duration: activeTab,
             duration_days: pricing.duration_days
         };
-        
+
         onSelectPlan(planData, activeTab);
     };
 
@@ -117,8 +202,15 @@ export const MembershipPlans = ({ onSelectPlan }) => {
     }
 
     // Filter out STARTER PLAN for 6 months and yearly tabs (since it's free only monthly)
+    // const displayPlans = plans.filter(plan => {
+    //     if (activeTab !== 'monthly' && plan.name === 'STARTER PLAN') {
+    //         return false;
+    //     }
+    //     return true;
+    // });
+
     const displayPlans = plans.filter(plan => {
-        if (activeTab !== 'monthly' && plan.name === 'STARTER PLAN') {
+        if (activeTab !== 'monthly' && normalizePlanName(plan.name) === 'STARTER PLAN') {
             return false;
         }
         return true;
@@ -148,27 +240,28 @@ export const MembershipPlans = ({ onSelectPlan }) => {
             <div className={`MembershipPlans-grid ${displayPlans.length === 2 ? 'two-cols' : ''}`}>
                 {displayPlans.map((plan, index) => {
                     const pricing = plan.pricing;
-                    const isPopular = plan.name === 'BUSINESS PLAN' && activeTab !== 'monthly';
-                    
+                    // const isPopular = plan.name === 'BUSINESS PLAN' && activeTab !== 'monthly';
+                    const isPopular = normalizePlanName(plan.name) === 'BUSINESS PLAN' && activeTab !== 'monthly';
+
                     return (
                         <div key={plan.id} className={`MembershipPlans-card ${isPopular ? 'popular' : ''}`}>
                             {/* {isPopular && (
                                 <div className="popular-badge">MOST POPULAR</div>
                             )} */}
                             <div className={`MembershipPlans-banner ${getPlanColor(plan.name)}`}>
-                                {plan.name}
+                                {getDisplayName(plan.name)}
                             </div>
                             <div className="MembershipPlans-content">
                                 <div className="MembershipPlans-price-box">
                                     <span className="MembershipPlans-amount">
-                                        {plan.name === 'STARTER PLAN' ? (
+                                        {normalizePlanName(plan.name) === 'STARTER PLAN' ? (
                                             'Free'
                                         ) : (
                                             <>
                                                 ₹ {Math.round(pricing.total)}
                                                 <small>
-                                                    /{activeTab === 'monthly' ? 'month' : 
-                                                      activeTab === '6 Months' ? '6 months' : 'year'}
+                                                    /{activeTab === 'monthly' ? 'month' :
+                                                        activeTab === '6 Months' ? '6 months' : 'year'}
                                                 </small>
                                             </>
                                         )}
@@ -184,8 +277,8 @@ export const MembershipPlans = ({ onSelectPlan }) => {
                                         </>
                                     )} */}
                                     <span className="MembershipPlans-subtitle">
-                                        {plan.name === 'STARTER PLAN' ? 'Limited Access' : 
-                                         plan.name === 'BUSINESS PLAN' ? 'Basic Plan' : 'Professional Plan'}
+                                        {normalizePlanName(plan.name) === 'STARTER PLAN' ? 'Limited Access' :
+                                            normalizePlanName(plan.name) === 'BUSINESS PLAN' ? 'Basic Plan' : 'Professional Plan'}
                                     </span>
                                 </div>
                                 <hr className="MembershipPlans-divider" />
@@ -204,9 +297,9 @@ export const MembershipPlans = ({ onSelectPlan }) => {
                                 <button
                                     className={`MembershipPlans-btn-start ${getPlanColor(plan.name)}`}
                                     onClick={() => handleGetStarted(plan)}
-                                    disabled={plan.name === 'STARTER PLAN' && activeTab !== 'monthly'}
+                                    disabled={normalizePlanName(plan.name) === 'STARTER PLAN' && activeTab !== 'monthly'}
                                 >
-                                    {plan.name === 'STARTER PLAN' ? 'Current Plan' : 'Get started'}
+                                    Get started
                                 </button>
                             </div>
                         </div>

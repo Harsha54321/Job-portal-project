@@ -19,8 +19,9 @@ export const Footer = () => {
       navigate(path, state);
     } else {
       // Redirect to the appropriate login based on the path context
-      if (path.toLowerCase().includes('Employer')) {
-      navigate('/Job-portal/employer/login');
+      if (path.toLowerCase().includes('employer')) {
+        navigate('/Job-portal/employer/login');
+ 
       } else {
         navigate('/Job-portal/jobseeker/login');
       }
@@ -31,7 +32,7 @@ export const Footer = () => {
     <footer className="footer-section">
       <div className="footer-top">
         <div className="footer-link-section">
-          <h2 className="footer-logo">job portal</h2>
+          <h2 className="footer-logo">Job portal</h2>
           <p className="tagline">Where Ambition Meets<br />Opportunity</p>
           <div>
             <i className="fab fa-linkedin-in social-icon"></i>
@@ -44,10 +45,10 @@ export const Footer = () => {
         <div className="footer-link-section">
           <h3>Quick Links</h3>
           <ul>
-            <li onClick={() => navigate('/Job-portal/jobseeker/aboutus')}>About Us</li>
-            <li onClick={() => navigate('/Job-portal/jobseeker/ContactUs')}>Contact Us</li>
-            <li onClick={() => { navigate('/Job-portal/jobseeker/FAQ') }} >FAQs</li>
-            <li onClick={() => { navigate('/Job-portal/jobseeker/Blogs') }}>Blog</li>
+            <li><span onClick={() => navigate('/Job-portal/jobseeker/aboutus')}>About Us</span></li>
+            <li><span onClick={() => navigate('/Job-portal/jobseeker/ContactUs')}>Contact Us</span></li>
+            <li><span onClick={() => { navigate('/Job-portal/jobseeker/FAQ') }} >FAQs</span></li>
+            <li><span onClick={() => { navigate('/Job-portal/jobseeker/Blogs') }}>Blog</span></li>
           </ul>
         </div>
  
@@ -56,10 +57,10 @@ export const Footer = () => {
           <div className="footer-link-section">
             <h3>Job Seekers</h3>
             <ul>
-              <li onClick={() => protectedNavigate('/Job-portal/jobseeker/myprofile')}>Create Profile</li>
-              <li onClick={() => protectedNavigate('/Job-portal/jobseeker/jobs')}>Browse Jobs</li>
-              <li onClick={() => protectedNavigate('/Job-portal/jobseeker/myjobs', { state: { activeTab: 'saved' } })}>Saved Jobs</li>
-              <li onClick={() => protectedNavigate('/Job-portal/jobseeker/myjobs', { state: { activeTab: 'applied' } })}> Applied Jobs </li>
+              <li><span onClick={() => protectedNavigate('/Job-portal/jobseeker/myprofile')}>Create Profile</span></li>
+              <li><span onClick={() => protectedNavigate('/Job-portal/jobseeker/jobs')}>Browse Jobs</span></li>
+              <li><span onClick={() => protectedNavigate('/Job-portal/jobseeker/myjobs', { state: { activeTab: 'saved' } })}>Saved Jobs</span></li>
+              <li><span onClick={() => protectedNavigate('/Job-portal/jobseeker/myjobs', { state: { activeTab: 'applied' } })}> Applied Jobs </span></li>
             </ul>
           </div>
         )}
@@ -68,9 +69,43 @@ export const Footer = () => {
           <div className="footer-link-section">
             <h3>Employers</h3>
             <ul>
-              <li onClick={() => protectedNavigate('/Job-portal/Employer/PostJob')}>Post a Job</li>
-              <li onClick={() => protectedNavigate('/Job-portal/Employer/FindTalent')}>Find Talent</li>
-              <li onClick={() => protectedNavigate('/Job-portal/Employer/Dashboard')}>Employer Dashboard</li>
+              <li><span onClick={() => {
+                if (isLoggedIn) {
+                  navigate('/Job-portal/Employer/Dashboard', {
+                    state: { fromFooter: true, targetTab: 'Post a Job' }
+                  });
+                } else {
+                  navigate('/Job-portal/employer/login', {
+                    state: { fromFooter: true, intendedPath: '/Job-portal/Employer/Dashboard', targetTab: 'Post a Job' }
+                  });
+                }
+              }}>Post a Job</span></li>
+ 
+              <li><span onClick={() => {
+                if (isLoggedIn) {
+                  navigate('/Job-portal/Employer/Dashboard', {
+                    state: { fromFooter: true, targetTab: 'Find Talent' }
+                  });
+                } else {
+                  navigate('/Job-portal/employer/login', {
+                    state: { fromFooter: true, intendedPath: '/Job-portal/Employer/Dashboard', targetTab: 'Find Talent' }
+                  });
+                }
+              }}>
+                Find Talent
+              </span></li>
+ 
+              <li><span onClick={() => {
+                if (isLoggedIn) {
+                  navigate('/Job-portal/Employer/Dashboard', {
+                    state: { fromFooter: true, targetTab: 'Dashboard' }
+                  });
+                } else {
+                  navigate('/Job-portal/employer/login', {
+                    state: { fromFooter: true, intendedPath: '/Job-portal/Employer/Dashboard', targetTab: 'Dashboard' }
+                  });
+                }
+              }}>Employer Dashboard</span></li>
             </ul>
           </div>
         )}

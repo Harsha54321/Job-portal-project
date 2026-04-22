@@ -261,3 +261,7 @@ ul {
   align-items: center;
   margin-top: 12px;
 }
+
+.opp-socials-icon {
+  cursor: pointer;
+}

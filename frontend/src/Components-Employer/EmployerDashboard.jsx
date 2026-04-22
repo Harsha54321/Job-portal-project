@@ -1,3 +1,4 @@
+ 
 import React, { useState, useEffect, useMemo } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import './EmployerDashboard.css'
@@ -108,23 +109,23 @@ export const EmployerDashboard = () => {
                 setLoadingStats(false);
             }
         };
-
+ 
         fetchApplications();
     }, []);
-
+ 
     // Calculate stats directly from applications data
     const jobStats = useMemo(() => {
         if (!PostedJob.length || !applications.length) {
             return { totalApps: 0, totalShortlisted: 0, totalInterview: 0 };
         }
-
+ 
         const employerJobIds = PostedJob.map(job => String(job.id));
-
+ 
         // Filter applications for employer's jobs
         const employerApplications = applications.filter(app =>
             employerJobIds.includes(String(app.job?.id))
         );
-
+ 
         const totalApps = employerApplications.length;
         const totalShortlisted = employerApplications.filter(app =>
             app.status?.toLowerCase() === 'shortlisted'
@@ -132,12 +133,12 @@ export const EmployerDashboard = () => {
         const totalInterview = employerApplications.filter(app =>
             app.status?.toLowerCase() === 'interview_called'
         ).length;
-
+ 
         console.log("Dashboard Stats:", { totalApps, totalShortlisted, totalInterview });
-
+ 
         return { totalApps, totalShortlisted, totalInterview };
     }, [applications, PostedJob]);
-
+ 
     // Get stats for each job
     const getJobApplicationStats = (jobId) => {
         if (!applications.length) {
@@ -159,40 +160,40 @@ export const EmployerDashboard = () => {
             rejected: jobApplications.filter(app => app.status?.toLowerCase() === 'rejected').length
         };
     };
-
+ 
     const activeJobsCount = PostedJob.length;
 
     const [activeMenu, setActiveMenu] = useState(null);
     const initialLetter = currentEmployer?.hrName?.charAt(0).toUpperCase() || "U";
-
+ 
     const handleLogoutConfirm = async () => {
         setShowLogoutModal(false);
-
+ 
         try {
             const refresh = localStorage.getItem("refresh");
-
+ 
             if (refresh) {
                 await api.post("logout/", { refresh });
             }
         } catch (err) {
             console.error("Logout failed:", err);
         } finally {
-
+ 
             localStorage.removeItem("access");
             localStorage.removeItem("refresh");
             localStorage.removeItem("userRole");
             localStorage.removeItem("user_id");
             localStorage.removeItem("user_type");
             localStorage.removeItem("profile_id");
-
+ 
             navigate('/');
         }
     };
-
+ 
     const [activetab, setActiveTab] = useState('Dashboard');
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
     const [selectedJob, setSelectedJob] = useState(null);
-
+ 
     const toggleMenu = (id) => {
         setActiveMenu(activeMenu === id ? null : id);
     };
@@ -209,82 +210,23 @@ export const EmployerDashboard = () => {
     //         return () => clearTimeout(timer);
     //     }
     // }, [fromVerify]);
-
+ 
+    useEffect(() => {
+        // If we redirected from Footer, switch the tab automatically
+        if (location.state?.targetTab) {
+            setActiveTab(location.state.targetTab);
+        }
+    }, [location.state]);
+ 
     const ToggleSidebar = () => {
         setIsSidebarOpen(!isSidebarOpen)
     }
-
+ 
     const handleViewApplicants = (job) => {
         setSelectedJob(job);
         setActiveTab('ViewApplicants');
     };
-
-    // // ✅ Get verification display message and style
-    // const getVerificationDisplay = () => {
-    //     if (verificationStatus === 'pending') {
-    //         return {
-    //             message: 'Your company verification is pending admin approval. You will be able to post jobs once approved.',
-    //             icon: '⏳',
-    //             bgColor: '#fff3cd',
-    //             borderColor: '#ffc107',
-    //             textColor: '#856404'
-    //         };
-    //     } else if (verificationStatus === 'rejected') {
-    //         return {
-    //             message: 'Your company verification was rejected. Please resubmit your verification documents.',
-    //             icon: '❌',
-    //             bgColor: '#f8d7da',
-    //             borderColor: '#dc3545',
-    //             textColor: '#721c24'
-    //         };
-    //     } else if (verificationStatus === 'approved') {
-    //         return {
-    //             message: 'Your company has been verified! You can now post jobs.',
-    //             icon: '✅',
-    //             bgColor: '#d4edda',
-    //             borderColor: '#28a745',
-    //             textColor: '#155724'
-    //         };
-    //     }
-    //     return null;
-    // };
-
-    // const verificationDisplay = getVerificationDisplay();
-
-    // // Show loading while checking status
-    // if (checkingStatus) {
-    //     return (
-    //         <>
-    //             <EHeader />
-    //             <div style={{ 
-    //                 display: 'flex', 
-    //                 justifyContent: 'center', 
-    //                 alignItems: 'center', 
-    //                 height: '80vh',
-    //                 flexDirection: 'column'
-    //             }}>
-    //                 <div className="onboarding-loader"></div>
-    //                 <p style={{ marginTop: '20px', color: '#666' }}>Loading your profile...</p>
-    //                 <style>{`
-    //                     .onboarding-loader {
-    //                         width: 50px;
-    //                         height: 50px;
-    //                         border: 5px solid #f3f3f3;
-    //                         border-top: 5px solid #1e88e5;
-    //                         border-radius: 50%;
-    //                         animation: spin 1s linear infinite;
-    //                     }
-    //                     @keyframes spin {
-    //                         0% { transform: rotate(0deg); }
-    //                         100% { transform: rotate(360deg); }
-    //                     }
-    //                 `}</style>
-    //             </div>
-    //             <Footer />
-    //         </>
-    //     );
-    // }
-
+ 
     return (
         <>
             <EHeader />
@@ -298,38 +240,44 @@ export const EmployerDashboard = () => {
                             </div>
                             <h3 className='Aside-Title'>Overview</h3>
                             <div className='ENavbar'>
-                                <div onClick={() => !verificationStatus.isLoading && !verificationStatus.isVerified ? null : setActiveTab('Dashboard')} className={activetab === 'Dashboard' ? "Active" : 'Navbox'} >
+                                <div onClick={() => !verificationStatus.isLoading && !verificationStatus.isVerified ? null : setActiveTab('Dashboard')} className={activetab === 'Dashboard' ? "Active" : 'Navbox'} title="Go to Dashboard Overview" >
                                     {activetab === 'Dashboard' ? <img src={DashboardIC} height={15} width={15} alt="Dashboard" /> : <img src={Dashboard} height={20} width={20} alt="Dashboard" />}
                                     <div className='Enav-item'>Dashboard</div>
                                 </div>
-                                <div onClick={() => verificationStatus.isVerified && setActiveTab('Post a Job')} className={activetab === 'Post a Job' ? "Active" : 'Navbox'} >
+                                <div
+                                    onClick={() => verificationStatus.isVerified && (
+                                        setActiveTab('Post a Job')
+                                    )}
+                                    className={activetab === 'Post a Job' ? "Active" : 'Navbox' }title="Post a new job opening"
+                                >
                                     {activetab === 'Post a Job' ? <img src={PostJobsAct} height={25} width={25} alt="Post a Job" /> : <img src={PostJobs} height={20} width={20} alt="Post a Job" />}
                                     <div className='Enav-item'>Post a Job</div>
                                 </div>
-                                <div onClick={() => verificationStatus.isVerified && setActiveTab('My job post')} className={activetab === 'My job post' ? "Active" : 'Navbox'} >
+ 
+                                <div onClick={() => verificationStatus.isVerified && setActiveTab('My job post')} className={activetab === 'My job post' ? "Active" : 'Navbox'}  title="View and manage your job posts">
                                     {activetab === 'My job post' ? <img src={MypostAct} height={35} width={20} alt="My Job Post" /> : <img src={Mypost} height={15} width={20} alt="My Job Post" />}
                                     <div className='Enav-item'>My Job Post</div>
                                 </div>
-                                <div onClick={() => verificationStatus.isVerified && setActiveTab('Find a Talent')} className={activetab === 'Find a Talent' ? "Active" : 'Navbox'} >
-                                    {activetab === 'Find a Talent' ? <img src={FindTalentAct} height={20} width={20} alt="Find Talent" /> : <img src={Findtalent} height={20} width={20} alt="Find Talent" />}
-                                    <div className='Enav-item'>Find a Talent</div>
+                                <div onClick={() => verificationStatus.isVerified && setActiveTab('Find Talent')} className={activetab === 'Find Talent' ? "Active" : 'Navbox'} title="Search and find talented candidates">
+                                    {activetab === 'Find Talent' ? <img src={FindTalentAct} height={20} width={20} alt="My Job Post" /> : <img src={Findtalent} height={20} width={20} alt="My Job Post" />}
+                                    <div className='Enav-item'>Find Talent</div>
                                 </div>
-                                <div onClick={() => verificationStatus.isVerified && setActiveTab('Analytics')} className={activetab === 'Analytics' ? "Active" : 'Navbox'} >
+                                <div onClick={() => verificationStatus.isVerified && setActiveTab('Analytics')} className={activetab === 'Analytics' ? "Active" : 'Navbox'} title="View recruitment analytics and insights">
                                     {activetab === 'Analytics' ? <img src={AnalyticsAct} height={20} width={20} alt="Analytics" /> : <img src={Analytics} height={20} width={20} alt="Analytics" />}
                                     <div className='Enav-item'>Analytics</div>
                                 </div>
-                                <div onClick={() => verificationStatus.isVerified && setActiveTab('Billing')} className={activetab === 'Billing' ? "Active" : 'Navbox'} >
+                                <div onClick={() => verificationStatus.isVerified && setActiveTab('Billing')} className={activetab === 'Billing' ? "Active" : 'Navbox'} title="Manage subscriptions and billing">
                                     {activetab === 'Billing' ? <img src={BillingAct} height={15} width={15} alt="Billing" /> : <img src={Billing} height={18} width={20} alt="Billing" />}
                                     <div className='Enav-item'>Billing</div>
                                 </div>
                             </div>
                             <h3 className='Aside-Title'>Settings</h3>
                             <div className='ENavbar'>
-                                <div onClick={() => setActiveTab('My Profile')} className={activetab === 'My Profile' ? "Active" : 'Navbox'} >
+                                <div onClick={() => setActiveTab('My Profile')} className={activetab === 'My Profile' ? "Active" : 'Navbox'} title="View and edit your profile" >
                                     {activetab === 'My Profile' ? <img src={ProfileAct} height={15} width={15} alt="My Profile" /> : <img src={Profile} height={15} width={15} alt="My Profile" />}
                                     <div className='Enav-item'>My Profile</div>
                                 </div>
-                                <div onClick={() => setShowLogoutModal(true)} className={activetab === 'Logout' ? "Active" : 'Navbox'}>
+                                <div onClick={() => setShowLogoutModal(true)} className={activetab === 'Logout' ? "Active" : 'Navbox'} title="Logout from your account">
                                     {activetab === 'Logout' ? <img src={LogoutAct} height={15} width={15} alt="Logout" /> : <img src={Logout} height={15} width={15} alt="Logout" />}
                                     <div className='Enav-item'>Logout</div>
                                 </div>
@@ -353,8 +301,8 @@ export const EmployerDashboard = () => {
                                 <div onClick={() => verificationStatus.isVerified && setActiveTab('My job post')} className={activetab === 'My job post' ? "Active1" : 'Navbox1'} >
                                     {activetab === 'My job post' ? <img src={MypostAct} height={20} width={20} alt="My Job Post" /> : <img src={Mypost} height={15} width={15} alt="My Job Post" />}
                                 </div>
-                                <div onClick={() => verificationStatus.isVerified && setActiveTab('Find a Talent')} className={activetab === 'Find a Talent' ? "Active1" : 'Navbox1'} >
-                                    {activetab === 'Find a Talent' ? <img src={FindTalentAct} height={15} width={15} alt="Find Talent" /> : <img src={Findtalent} height={15} width={15} alt="Find Talent" />}
+                                <div onClick={() => verificationStatus.isVerified && setActiveTab('Find Talent')} className={activetab === 'Find Talent' ? "Active1" : 'Navbox1'} >
+                                    {activetab === 'Find Talent' ? <img src={FindTalentAct} height={15} width={15} alt="Find Talent" /> : <img src={Findtalent} height={15} width={15} alt="Find Talent" />}
                                 </div>
                                 <div onClick={() => verificationStatus.isVerified && setActiveTab('Analytics')} className={activetab === 'Analytics' ? "Active1" : 'Navbox1'} >
                                     {activetab === 'Analytics' ? <img src={AnalyticsAct} height={15} width={15} alt="Analytics" /> : <img src={Analytics} height={15} width={15} alt="Analytics" />}
@@ -409,45 +357,56 @@ export const EmployerDashboard = () => {
                                                 </button>
                                             </div>
                                         </div>
+ 
                                     </div>
+ 
                                 ) : (
                                     <>
-                                        <div className='Welcome-Note'>
+                                        <div >
+                                            <div className='Welcome-Note'>
+                                                <div>
+                                                    <h2>Hi {currentEmployer?.hrName || "User"},</h2>
+                                                    <p style={{ fontWeight: "600" }}>Here's, What's Going on... </p>
+                                                </div>
+                                                <button
+                                                    className='post-job-btn'
+                                                    onClick={() => {
+                                                        setActiveTab('Post a Job');
+                                                        window.scrollTo(0, 0);
+                                                    }}
+                                                >
+                                                    + Post a Job
+                                                </button>
+                                            </div>
+ 
+                                            <div className='E-DashB-Over-View'>
+                                                <h2 style={{ marginLeft: "40px" }}>Overview</h2>
+                                                <div className='EDashB-Application-Counts'>
+                                                    <div className='E-DashB-No-Counts'>
+                                                        <div><img src={ActiveJobs} width={40} alt="" /></div>
+                                                        <div><p>{activeJobsCount}</p><p className='E-job-status'>Active Jobs</p></div>
+                                                    </div>
+                                                    <div className='E-DashB-No-Counts'>
+                                                        <div><img src={TotalAPP} width={40} alt="" /></div>
+                                                        <div><p>{jobStats.totalApps}</p><p className='E-job-status'>Total Applicants</p></div>
+                                                    </div>
+                                                    <div className='E-DashB-No-Counts'>
+                                                        <div><img src={Shortlist} width={40} alt="" /></div>
+                                                        <div><p>{jobStats.totalShortlisted}</p><p className='E-job-status'>ShortListed</p></div>
+                                                    </div>
+                                                    <div className='E-DashB-No-Counts'>
+                                                        <div><img src={InterviewS} width={40} alt="" /></div>
+                                                        <div><p>{jobStats.totalInterview}</p><p className='E-job-status'>Interview Schedules</p></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+ 
+                                            {/* Recently posted jobs */}
                                             <div>
-                                                <h2>Hi {currentEmployer?.hrName || "User"},</h2>
-                                                <p style={{ fontWeight: "600" }}>Here's, What's Going on... </p>
-                                            </div>
-                                            <button className='post-job-btn' onClick={() => { setActiveTab('Post a Job') }}>+ Post a Job</button>
-                                        </div>
-
-                                        <div className='E-DashB-Over-View'>
-                                            <h2 style={{ marginLeft: "40px" }}>Overview</h2>
-                                            <div className='EDashB-Application-Counts'>
-                                                <div className='E-DashB-No-Counts'>
-                                                    <div><img src={ActiveJobs} width={40} alt="" /></div>
-                                                    <div><p>{activeJobsCount}</p><p className='E-job-status'>Active Jobs</p></div>
-                                                </div>
-                                                <div className='E-DashB-No-Counts'>
-                                                    <div><img src={TotalAPP} width={40} alt="" /></div>
-                                                    <div><p>{jobStats.totalApps}</p><p className='E-job-status'>Total Applicants</p></div>
-                                                </div>
-                                                <div className='E-DashB-No-Counts'>
-                                                    <div><img src={Shortlist} width={40} alt="" /></div>
-                                                    <div><p>{jobStats.totalShortlisted}</p><p className='E-job-status'>ShortListed</p></div>
-                                                </div>
-                                                <div className='E-DashB-No-Counts'>
-                                                    <div><img src={InterviewS} width={40} alt="" /></div>
-                                                    <div><p>{jobStats.totalInterview}</p><p className='E-job-status'>Interview Schedules</p></div>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div>
-                                            <div className='ERecent-Post-Cont'>
-                                                <h3 style={{ marginLeft: "40px" }}>Recently Posted Jobs</h3>
-                                                <div className='ERecent-Post-Table-Container'>
-                                                    {PostedJob.length > 0 ? (
-                                                        <>
+                                                <div className='ERecent-Post-Cont'>
+                                                    <h3 style={{ marginleft: "40px" }}>Recently Posted Jobs</h3>
+                                                    <div className='ERecent-Post-Table-Container'>
+                                                        {PostedJob.length > 0 ? (<>
                                                             <div className="postedjobs-grid-layout postedjobs-table-header">
                                                                 <div />
                                                                 <span className="postedjobs-label">Applicants</span>
@@ -487,33 +446,55 @@ export const EmployerDashboard = () => {
                                                                 })}
                                                             </div>
                                                         </>
-                                                    ) : (
-                                                        <h2 style={{ display: "flex", justifyContent: "center", alignItems: "center", height: '50vh' }}>No Jobs posted by you</h2>
-                                                    )}
-                                                    {PostedJob.length > 0 && (
-                                                        <div style={{ textAlign: 'center', marginTop: '20px' }}>
-                                                            <button className="view-more-link" onClick={() => setActiveTab('My job post')}>
-                                                                View more...
-                                                            </button>
-                                                        </div>
-                                                    )}
+                                                         ) : (
+                                                            <>
+                                                                <h2 style={{ display: "flex", justifyContent: "center", alignItems: "center", height: '50vh' }}>No Jobs posted by you</h2>
+                                                            </>
+                                                        )}
+                                                        {PostedJob.length > 0 && (
+                                                            <div style={{ textAlign: 'center', marginTop: '20px' }}>
+                                                                <button className="view-more-link" onClick={() => setActiveTab('My job post')}>
+                                                                    View more...
+                                                                </button>
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
+ 
                                     </>
+ 
                                 )}
                             </div>
+ 
                         </>
                     )}
-
-                    {activetab === 'Post a Job' && verificationStatus.isVerified && (<PostJobForm onCancel={() => setActiveTab('Dashboard')} />)}
+ 
+                    {activetab === 'Post a Job' && verificationStatus.isVerified && ((
+                        <PostJobForm
+                            onCancel={() => setActiveTab('Dashboard')}
+                            showHomeIcon={location.state?.fromFooter}
+                        />)
+                    )}
+ 
                     {activetab === 'My job post' && verificationStatus.isVerified && (<PostedJobs onViewApplicants={(job) => { setSelectedJob(job); setActiveTab('ViewApplicants'); }} />)}
+ 
                     {activetab === 'ViewApplicants' && verificationStatus.isVerified && (<ViewApplicants job={selectedJob} onBack={() => setActiveTab('My job post')} />)}
-                    {activetab === 'Find a Talent' && verificationStatus.isVerified && (<FindTalent />)}
+ 
+                    {/* {activetab === 'Find Talent' && (<FindTalent />)} */}
+ 
+                    {activetab === 'Find Talent' && verificationStatus.isVerified && (
+                        <FindTalent showHomeIcon={location.state?.fromFooter} />
+                    )}
+ 
                     {activetab === 'Analytics' && verificationStatus.isVerified && (<AnalyticsPage />)}
-                    {activetab === 'Billing' && verificationStatus.isVerified && (<PlansBilling />)}
+ 
+                    {activetab === 'Billing' && verificationStatus.isVerified && (<PlansBilling />)} 
                     {activetab === 'My Profile' && (<AboutYourCompany hideNavigation={true} setActiveTab={setActiveTab} />)}
+ 
                 </div>
+ 
             </div>
             <LogoutModal show={showLogoutModal} onClose={() => setShowLogoutModal(false)} onConfirm={handleLogoutConfirm} />
             <Footer />

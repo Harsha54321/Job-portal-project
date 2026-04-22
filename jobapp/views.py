@@ -2140,26 +2140,34 @@ class VerifyPaymentView(APIView):
             else:
                 duration_text = '1 Month'
  
-            # Get company profile
+            #  FIXED: Get company details through EmployerProfile
+            company_name = request.user.username
+            company_email = request.user.email
+            company_phone = ''
+           
             try:
-                from jobapp.models import CompanyProfile
-                company_profile = CompanyProfile.objects.get(user=request.user)
-                company_name = company_profile.company_name
-                company_email = company_profile.company_email
-                company_phone = company_profile.contact_number
-               
-            except:
-                company_name = request.user.username
-                company_email = request.user.email
-                company_phone = ''
+                if hasattr(request.user, 'employer_profile'):
+                    employer_profile = request.user.employer_profile
+                    if employer_profile.company:
+                        company = employer_profile.company
+                        company_name = company.company_name
+                        company_email = company.company_email
+                        company_phone = company.contact_number
+                        print(f" Found company: {company_name}, Email: {company_email}, Phone: {company_phone}")
+                    else:
+                        print(f" Employer has no company linked")
+                else:
+                    print(f" User is not an employer")
+            except Exception as e:
+                print(f" Error getting company: {e}")
  
-            # Create invoice with correct company details
+            # Create invoice with CORRECT company details
             invoice = Invoice.objects.create(
                 user=request.user,
                 invoice_number=self.generate_invoice_number(),
-                company_name=company_name,
-                email=company_email,
-                phone=company_phone,
+                company_name=company_name,      #  Now this will be actual company name
+                email=company_email,             #  Now this will be actual company email
+                phone=company_phone,             #  Now this will be actual company phone
                 payment_method=payment_method.upper(),
                 transaction_id=razorpay_payment_id,
                 payment_status="Paid",
@@ -2202,6 +2210,7 @@ class VerifyPaymentView(APIView):
             invoice_number = f"INV-{date_part}-{random_part}"
        
         return invoice_number
+ 
     
 # ============ COMPANY EMAIL OTP VIEWS ============
 

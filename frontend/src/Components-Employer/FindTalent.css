@@ -86,6 +86,17 @@
   font-size: 14px;
   text-transform: uppercase;
   color: #64748b;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  padding: 5px 0;
+  display: inline-block;
+}
+ 
+.FindTalent-filter-label:hover {
+  color: #007bff;
+  transform: translateX(2px);
 }
 
 .FindTalent-clear-btn {

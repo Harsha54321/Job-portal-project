@@ -13,6 +13,7 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
   const { setCompanyProfile } = useJobs();
   const [isLoading, setIsLoading] = useState(false);
   const [backendError, setBackendError] = useState("");
+  const [errorType, setErrorType] = useState(""); 
   const [existingLogo, setExistingLogo] = useState(null);
   const [hasExistingProfile, setHasExistingProfile] = useState(false);
 
@@ -50,118 +51,159 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
     }
   }, [fromSignup]);
 
-//   // const fetchExistingProfile = async () => {
-//   //   try {
-//   //     setIsLoading(true);
-//   //     console.log("Fetching existing company profile for dashboard...");
+  // const fetchExistingProfile = async () => {
+  //   try {
+  //     setIsLoading(true);
+  //     console.log("Fetching existing company profile for dashboard...");
 
-//   //     const response = await api.get("/company/profile/");
-//   //     console.log("✅ Existing profile found:", response.data);
+  //     const response = await api.get("/company/profile/");
+  //     console.log("✅ Existing profile found:", response.data);
 
-//   //     const profile = response.data;
-//   //     setFormData({
-//   //       fullName: profile.full_name|| "",
-//   //       employerId: profile.employee_id || "",
-//   //       companyName: profile.company_name || "",
-//   //       companyMoto: profile.company_moto || "",
-//   //       contactPerson: profile.contact_person || "",
-//   //       contactNumber: profile.contact_number || "",
-//   //       companyMail: profile.company_email || "",
-//   //       website: profile.website || "",
-//   //       companySize: profile.company_size || "",
-//   //       address1: profile.address1 || "",
-//   //       address2: profile.address2 || "",
-//   //       about: profile.about || "",
-//   //       companyLogo: null,
-//   //     });
+  //     const profile = response.data;
+  //     setFormData({
+  //       fullName: profile.full_name|| "",
+  //       employerId: profile.employee_id || "",
+  //       companyName: profile.company_name || "",
+  //       companyMoto: profile.company_moto || "",
+  //       contactPerson: profile.contact_person || "",
+  //       contactNumber: profile.contact_number || "",
+  //       companyMail: profile.company_email || "",
+  //       website: profile.website || "",
+  //       companySize: profile.company_size || "",
+  //       address1: profile.address1 || "",
+  //       address2: profile.address2 || "",
+  //       about: profile.about || "",
+  //       companyLogo: null,
+  //     });
 
-//   //     setExistingLogo(profile.company_logo);
-//   //     setHasExistingProfile(true);
+  //     setExistingLogo(profile.company_logo);
+  //     setHasExistingProfile(true);
 
-    // } catch (err) {
-    //   if (err.response?.status === 404) {
-    //     console.log("No existing profile found");
-    //     setHasExistingProfile(false);
-    //     setExistingLogo(null);
-    //     if (!hideNavigation) {
-    //       setBackendError("No company profile found. Please create one.");
-    //     }
-    //   } else if (err.response?.status === 401) {
-    //     console.log("Unauthorized - redirecting to login");
-    //     if (!hideNavigation) {
-    //       navigate("/Job-portal/employer/login");
-    //     } else {
-    //       setBackendError("Session expired. Please login again.");
-    //     }
-    //   } else {
-    //     console.error("Error fetching profile:", err);
-    //     setBackendError("Failed to load company profile");
-    //   }
-    // } finally {
-    //   setIsLoading(false);
-    // }
-//   }; 
+  //   } catch (err) {
+  //     if (err.response?.status === 404) {
+  //       console.log("No existing profile found");
+  //       setHasExistingProfile(false);
+  //       setExistingLogo(null);
+  //       if (!hideNavigation) {
+  //         setBackendError("No company profile found. Please create one.");
+  //       }
+  //     } else if (err.response?.status === 401) {
+  //       console.log("Unauthorized - redirecting to login");
+  //       if (!hideNavigation) {
+  //         navigate("/Job-portal/employer/login");
+  //       } else {
+  //         setBackendError("Session expired. Please login again.");
+  //       }
+  //     } else {
+  //       console.error("Error fetching profile:", err);
+  //       setBackendError("Failed to load company profile");
+  //     }
+  //   } finally {
+  //     setIsLoading(false);
+  //   }
+  // }; 
 
   const fetchExistingProfile = async () => {
-  try {
-    setIsLoading(true);
+    try {
+      setIsLoading(true);
+      setBackendError(""); // ✅ fix
 
-    const [employerRes, companyRes] = await Promise.allSettled([
-      api.get("/profile/employer/"),
-      api.get("/company/profile/")
-    ]);
+      let errorMsg = ""; // ✅ collect errors
 
-    // ✅ 401 check -when token expired 
-    if (employerRes.status === "rejected") {
-      const status = employerRes.reason?.response?.status;
-      if (status === 401) {
-        if (!hideNavigation) {
-          navigate("/Job-portal/employer/login");
-        } else {
-          setBackendError("Session expired. Please login again.");
+      // ---------- Employer API ----------
+      let employerData = null;
+      try {
+        const res = await api.get("/profile/employer/");
+        employerData = res.data;
+      } catch (err) {
+        console.error("Employer error:", err);
+
+        if (err.response?.status === 401) {
+          if (!hideNavigation) {
+            navigate("/Job-portal/employer/login");
+          } else {
+            setBackendError("Session expired. Please login again.");
+          }
+          return;
         }
-        return;
+
+        if (err.code === "ERR_NETWORK") {
+          setBackendError("Network error. Please check your connection.");
+          return; // ✅ stop everything
+        }
+
+        errorMsg = "Failed to load employer data.";
       }
+
+      // ---------- Company API ----------
+      let companyData = null;
+      try {
+        const res = await api.get("/company/profile/");
+        companyData = res.data;
+
+        setHasExistingProfile(true);
+        setExistingLogo(companyData.company_logo || companyData.logo_url);
+
+      } catch (err) {
+        
+        console.error("Company error:", err);
+
+        if (err.response?.status === 401) {
+          if (!hideNavigation) {
+            navigate("/Job-portal/employer/login");
+          } else {
+            setBackendError("Session expired. Please login again.");
+          }
+          return;
+        }
+
+        if (err.code === "ERR_NETWORK") {
+          setBackendError("Network error. Please check your connection.");
+          return;
+        }
+
+        if (err.response?.status === 404) {
+          setHasExistingProfile(false);
+          setExistingLogo(null);
+          setBackendError("No company profile found. Please create one.");
+        } else {
+          setHasExistingProfile(false);
+          setExistingLogo(null);
+          errorMsg = errorMsg || "Failed to load company profile.";
+        }
+      }
+
+      // ---------- Set form safely ----------
+      setFormData(prev => ({
+        ...prev,
+        ...(employerData && {
+          fullName: employerData.full_name || "",
+          employerId: employerData.employee_id || "",
+        }),
+        ...(companyData && {
+          companyName: companyData.company_name || "",
+          companyMoto: companyData.company_moto || "",
+          contactPerson: companyData.contact_person || "",
+          contactNumber: companyData.contact_number || "",
+          companyMail: companyData.company_email || "",
+          website: companyData.website || "",
+          companySize: companyData.company_size || "",
+          address1: companyData.address1 || "",
+          address2: companyData.address2 || "",
+          about: companyData.about || "",
+        })
+      }));
+
+      // ✅ set combined error
+      if (errorMsg) {
+        setBackendError(errorMsg);
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+
+    } finally {
+      setIsLoading(false);
     }
-
-    const employerData = employerRes.status === "fulfilled" ? employerRes.value.data : null;
-    const companyData = companyRes.status === "fulfilled" ? companyRes.value.data : null;
-
-    // ✅ Company profile 
-    if (companyData) {
-      setHasExistingProfile(true);
-      setExistingLogo(companyData.company_logo || companyData.logo_url);
-    } else {
-      // ✅ New user - company profile లేదు
-      setHasExistingProfile(false);
-      setExistingLogo(null);
-    }
-
-    setFormData({
-      fullName: employerData?.full_name || "",
-      employerId: employerData?.employee_id || "",
-      companyName: companyData?.company_name || "",
-      companyMoto: companyData?.company_moto || "",
-      contactPerson: companyData?.contact_person || "",
-      contactNumber: companyData?.contact_number || "",
-      companyMail: companyData?.company_email || "",
-      website: companyData?.website || "",
-      companySize: companyData?.company_size || "",
-      address1: companyData?.address1 || "",
-      address2: companyData?.address2 || "",
-      about: companyData?.about || "",
-      companyLogo: null,
-    });
-
-  } catch (err) {
-    // ✅ Unexpected errors మాత్రమే ఇక్కడికి వస్తాయి
-    console.error("Unexpected error fetching profile:", err);
-    setBackendError("Failed to load profile. Please refresh.");
-  } finally {
-    setIsLoading(false);
-  }
-};
-
+  };
 
   const validateForm = () => {
     const newErrors = {};
@@ -339,9 +381,77 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
   };
 
   // ✅ Create new company profile with popup handling
+  // const createCompanyProfile = async (data) => {
+  //   setIsLoading(true);
+  //   setBackendError("");
+
+  //   try {
+  //     const formDataToSend = new FormData();
+  //     formDataToSend.append("company_name", data.companyName);
+  //     formDataToSend.append("company_moto", data.companyMoto);
+  //     formDataToSend.append("contact_person", data.contactPerson);
+  //     formDataToSend.append("contact_number", data.contactNumber);
+  //     formDataToSend.append("company_email", data.companyMail);
+  //     formDataToSend.append("website", data.website);
+  //     formDataToSend.append("company_size", data.companySize);
+  //     formDataToSend.append("address1", data.address1);
+  //     if (data.address2) formDataToSend.append("address2", data.address2);
+  //     formDataToSend.append("about", data.about);
+  //     if (data.companyLogo) formDataToSend.append("company_logo", data.companyLogo);
+
+  //     const response = await api.post("/company/profile/create/", formDataToSend, {
+  //       headers: { "Content-Type": "multipart/form-data" },
+  //     });
+
+  //     console.log("✅ Company profile created:", response.data);
+  //     return { success: true, data: { ...response.data, is_existing: false } };
+  //   } catch (err) {
+  //     console.error("Create profile error:", err);
+
+  //     if (err.response?.status === 400) {
+  //       const errorMsg = err.response?.data?.error || "";
+
+  //       // ✅ Check if error is about duplicate company
+  //       if (errorMsg.includes("already exists")) {
+  //         // Show popup instead of window.confirm
+  //         setPendingCompanyName(data.companyName);
+  //         setShowPopup(true);
+  //         setIsLoading(false);
+  //         return { success: false, error: "duplicate_company", pending: true };
+  //       }
+
+  //       // Handle other validation errors
+  //       const backendErrors = err.response.data;
+  //       const newErrors = {};
+  //       const fieldMapping = {
+  //         company_name: "companyName", company_moto: "companyMoto",
+  //         contact_person: "contactPerson", contact_number: "contactNumber",
+  //         company_email: "companyMail", website: "website",
+  //         company_size: "companySize", address1: "address1",
+  //         about: "about", company_logo: "companyLogo",
+  //       };
+
+  //       Object.keys(backendErrors).forEach((key) => {
+  //         const frontendKey = fieldMapping[key];
+  //         if (frontendKey) {
+  //           newErrors[frontendKey] = Array.isArray(backendErrors[key])
+  //             ? backendErrors[key][0] : backendErrors[key];
+  //         }
+  //       });
+  //       setErrors(newErrors);
+  //       return { success: false, error: "Validation failed" };
+  //     }
+
+  //     return { success: false, error: err.response?.data?.error || "Network error" };
+  //   } finally {
+  //     setIsLoading(false);
+  //   }
+  // };
+
   const createCompanyProfile = async (data) => {
     setIsLoading(true);
     setBackendError("");
+    setErrors({}); // ✅ reset old errors
 
     try {
       const formDataToSend = new FormData();
@@ -355,52 +465,102 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
       formDataToSend.append("address1", data.address1);
       if (data.address2) formDataToSend.append("address2", data.address2);
       formDataToSend.append("about", data.about);
-      if (data.companyLogo) formDataToSend.append("company_logo", data.companyLogo);
-
-      const response = await api.post("/company/profile/create/", formDataToSend, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-
-      console.log("✅ Company profile created:", response.data);
-      return { success: true, data: { ...response.data, is_existing: false } };
-    } catch (err) {
-      console.error("Create profile error:", err);
-
-      if (err.response?.status === 400) {
-        const errorMsg = err.response?.data?.error || "";
-
-        // ✅ Check if error is about duplicate company
-        if (errorMsg.includes("already exists")) {
-          // Show popup instead of window.confirm
-          setPendingCompanyName(data.companyName);
-          setShowPopup(true);
-          setIsLoading(false);
-          return { success: false, error: "duplicate_company", pending: true };
-        }
-
-        // Handle other validation errors
-        const backendErrors = err.response.data;
-        const newErrors = {};
-        const fieldMapping = {
-          company_name: "companyName", company_moto: "companyMoto",
-          contact_person: "contactPerson", contact_number: "contactNumber",
-          company_email: "companyMail", website: "website",
-          company_size: "companySize", address1: "address1",
-          about: "about", company_logo: "companyLogo",
-        };
-
-        Object.keys(backendErrors).forEach((key) => {
-          const frontendKey = fieldMapping[key];
-          if (frontendKey) {
-            newErrors[frontendKey] = Array.isArray(backendErrors[key])
-              ? backendErrors[key][0] : backendErrors[key];
-          }
-        });
-        setErrors(newErrors);
-        return { success: false, error: "Validation failed" };
+      if (data.companyLogo) {
+        formDataToSend.append("company_logo", data.companyLogo);
       }
 
-      return { success: false, error: err.response?.data?.error || "Network error" };
+      const response = await api.post(
+        "/company/profile/create/",
+        formDataToSend,
+        { headers: { "Content-Type": "multipart/form-data" } }
+      );
+
+      console.log(" Company profile created:", response.data);
+
+      return {
+        success: true,
+        data: { ...response.data, is_existing: false }
+      };
+
+    } catch (err) {
+      console.error(" Create profile error:", err);
+
+      // ✅ Network error
+      if (err.code === "ERR_NETWORK") {
+        setBackendError("Network error. Please check your connection.");
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        return { success: false, error: "network" };
+      }
+
+      // ✅ Unauthorized
+      if (err.response?.status === 401) {
+        setBackendError("Session expired. Please login again.");
+        return { success: false, error: "unauthorized" };
+      }
+
+      // ✅ Validation / duplicate
+      if (err.response?.status === 400) {
+        const errorData = err.response.data;
+        const errorMsg = errorData?.error || "";
+
+        // 🔥 Duplicate company
+        if (errorMsg.includes("already exists")) {
+          setBackendError("Company already exists.");
+          setPendingCompanyName(data.companyName);
+          setShowPopup(true);
+
+          return {
+            success: false,
+            error: "duplicate_company",
+            pending: true
+          };
+        }
+
+        // ✅ Field mapping
+        const fieldMapping = {
+          company_name: "companyName",
+          company_moto: "companyMoto",
+          contact_person: "contactPerson",
+          contact_number: "contactNumber",
+          company_email: "companyMail",
+          website: "website",
+          company_size: "companySize",
+          address1: "address1",
+          about: "about",
+          company_logo: "companyLogo",
+        };
+
+        const newErrors = {};
+
+        Object.keys(errorData).forEach((key) => {
+          const frontendKey = fieldMapping[key];
+          if (frontendKey) {
+            newErrors[frontendKey] = Array.isArray(errorData[key])
+              ? errorData[key][0]
+              : errorData[key];
+          }
+        });
+
+        if (Object.keys(newErrors).length > 0) {
+          setErrors(prev => ({ ...prev, ...newErrors }));
+          window.scrollTo({ top: 100, behavior: "smooth" });
+
+          return { success: false, error: "validation" };
+        }
+
+        // fallback
+        setBackendError(errorMsg || "Invalid data provided.");
+        return { success: false, error: "validation" };
+      }
+
+      // ✅ Other errors
+      setBackendError(
+        err.response?.data?.error ||
+        "Something went wrong. Please try again."
+      );
+
+      return { success: false, error: "failed" };
+
     } finally {
       setIsLoading(false);
     }
@@ -408,105 +568,411 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
 
 
   const updateEmployerProfile = async (data) => {
+  setIsLoading(true);
+  setBackendError("");
+  setErrorType("");
+
   try {
+    // Add timeout protection
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+
     await api.patch("/profile/employer/", {
       full_name: data.fullName,
       employee_id: data.employerId,
+    }, {
+      signal: controller.signal,
     });
+
+    clearTimeout(timeoutId);
+    
     console.log("✅ Employer profile updated");
-    return true;
+    
+    // Clear any existing errors on success
+    setErrors(prev => {
+      const { employerId, fullName, ...rest } = prev;
+      return rest;
+    });
+    setBackendError("");
+    setErrorType("");
+    
+    return { success: true };
 
   } catch (err) {
     console.error("Employer profile update error:", err);
 
+    // ============================================
+    // 1 NETWORK ERROR
+    // ============================================
+    if (err.code === 'ERR_NETWORK' || err.message === 'Network Error') {
+      const errorMsg = "No internet connection. Please check your network and try again.";
+      setBackendError(errorMsg);
+      setErrorType("NETWORK_ERROR");
+      return { success: false, error: errorMsg, errorType: "NETWORK_ERROR" };
+    }
+
+    // ============================================
+    // 2 TIMEOUT ERROR
+    // ============================================
+    if (err.name === 'AbortError') {
+      const errorMsg = "Request is taking too long. Please check your connection and try again.";
+      setBackendError(errorMsg);
+      setErrorType("TIMEOUT_ERROR");
+      return { success: false, error: errorMsg, errorType: "TIMEOUT_ERROR" };
+    }
+
+    // ============================================
+    // 3 VALIDATION ERROR (400)
+    // ============================================
     if (err.response?.status === 400) {
       const errorData = err.response.data;
       const newErrors = {};
+      let specificErrorMsg = "";
 
-      // map of exact errors from
+      // Employee ID error
       if (errorData.employee_id) {
-        newErrors.employerId = Array.isArray(errorData.employee_id)
-          ? errorData.employee_id[0]  // "This Employee ID is already in use."
+        const errorMsg = Array.isArray(errorData.employee_id)
+          ? errorData.employee_id[0]
           : errorData.employee_id;
+        
+        newErrors.employerId = errorMsg;
+        
+        if (!specificErrorMsg) {
+          specificErrorMsg = errorMsg;
+        }
       }
 
+      // Full name error
       if (errorData.full_name) {
-        newErrors.fullName = Array.isArray(errorData.full_name)
+        const errorMsg = Array.isArray(errorData.full_name)
           ? errorData.full_name[0]
           : errorData.full_name;
+        
+        newErrors.fullName = errorMsg;
+        
+        if (!specificErrorMsg) {
+          specificErrorMsg = errorMsg;
+        }
+      }
+
+      // Generic 400 error
+      if (errorData.error && !specificErrorMsg) {
+        specificErrorMsg = errorData.error;
       }
 
       if (Object.keys(newErrors).length > 0) {
         setErrors(prev => ({ ...prev, ...newErrors }));
+        
+        // Show specific error message to user
+        if (specificErrorMsg) {
+          setBackendError(specificErrorMsg);
+          setErrorType("VALIDATION_ERROR");
+        } else {
+          setBackendError("Please check your information and try again.");
+          setErrorType("VALIDATION_ERROR");
+        }
+        
         window.scrollTo({ top: 100, behavior: "smooth" });
-        return false;
+        return { 
+          success: false, 
+          errorType: "VALIDATION_ERROR", 
+          validationErrors: newErrors,
+          error: specificErrorMsg || "Validation failed"
+        };
       }
+      
+      // No field-specific errors, but 400 response
+      const errorMsg = errorData?.error || errorData?.message || "Invalid data. Please check your inputs.";
+      setBackendError(errorMsg);
+      setErrorType("BAD_REQUEST");
+      return { success: false, error: errorMsg, errorType: "BAD_REQUEST" };
     }
 
+    // ============================================
+    // 4 SESSION EXPIRED (401)
+    // ============================================
     if (err.response?.status === 401) {
-      setBackendError("Session expired. Please login again.");
-      return false;
+      const errorMsg = "Your session has expired. Please login again to continue.";
+      setBackendError(errorMsg);
+      setErrorType("AUTH_ERROR");
+      
+      // Auto redirect to login after 2 seconds
+      setTimeout(() => {
+        navigate("/Job-portal/employer/login");
+      }, 2000);
+      
+      return { success: false, error: errorMsg, errorType: "AUTH_ERROR" };
     }
 
-    return true;
+    // ============================================
+    // 5 PERMISSION DENIED (403)
+    // ============================================
+    if (err.response?.status === 403) {
+      const errorMsg = "You don't have permission to update your profile. Please contact support.";
+      setBackendError(errorMsg);
+      setErrorType("PERMISSION_ERROR");
+      return { success: false, error: errorMsg, errorType: "PERMISSION_ERROR" };
+    }
+
+    // ============================================
+    // 6 NOT FOUND (404)
+    // ============================================
+    if (err.response?.status === 404) {
+      const errorMsg = "Profile not found. Please refresh the page and try again.";
+      setBackendError(errorMsg);
+      setErrorType("NOT_FOUND_ERROR");
+      return { success: false, error: errorMsg, errorType: "NOT_FOUND_ERROR" };
+    }
+
+    // ============================================
+    // 7 RATE LIMIT (429)
+    // ============================================
+    if (err.response?.status === 429) {
+      const errorMsg = "Too many attempts. Please wait a moment and try again.";
+      setBackendError(errorMsg);
+      setErrorType("RATE_LIMIT_ERROR");
+      return { success: false, error: errorMsg, errorType: "RATE_LIMIT_ERROR" };
+    }
+
+    // ============================================
+    // 8 SERVER ERROR (500+)
+    // ============================================
+    if (err.response?.status >= 500 && err.response?.status < 600) {
+      const errorMsg = "Server error. Our team has been notified. Please try again later.";
+      setBackendError(errorMsg);
+      setErrorType("SERVER_ERROR");
+      console.error("Server Error:", err.response.status, err.response.data);
+      return { success: false, error: errorMsg, errorType: "SERVER_ERROR" };
+    }
+
+    // ============================================
+    // 9 UNKNOWN ERROR
+    // ============================================
+    const errorMsg = "An unexpected error occurred. Please try again or contact support.";
+    setBackendError(errorMsg);
+    setErrorType("UNKNOWN_ERROR");
+    console.error("Unknown error:", err);
+    return { success: false, error: errorMsg, errorType: "UNKNOWN_ERROR" };
+
+  } finally {
+    setIsLoading(false);
   }
 };
 
   // ✅ Update existing company profile
+  // const updateCompanyProfile = async (data) => {
+  //   setIsLoading(true);
+  //   setBackendError("");
+
+  //   try {
+  //     const formDataToSend = new FormData();
+  //     formDataToSend.append("company_name", data.companyName);
+  //     formDataToSend.append("company_moto", data.companyMoto);
+  //     formDataToSend.append("contact_person", data.contactPerson);
+  //     formDataToSend.append("contact_number", data.contactNumber);
+  //     formDataToSend.append("company_email", data.companyMail);
+  //     formDataToSend.append("website", data.website);
+  //     formDataToSend.append("company_size", data.companySize);
+  //     formDataToSend.append("address1", data.address1);
+  //     if (data.address2) formDataToSend.append("address2", data.address2);
+  //     formDataToSend.append("about", data.about);
+  //     if (data.companyLogo) formDataToSend.append("company_logo", data.companyLogo);
+
+  //     const response = await api.patch("/company/profile/update/", formDataToSend, {
+  //       headers: { "Content-Type": "multipart/form-data" },
+  //     });
+
+  //     console.log("✅ Company profile updated:", response.data);
+  //     return { success: true, data: response.data };
+  //   } catch (err) {
+  //     console.error("Update profile error:", err);
+
+  //     if (err.response?.status === 400) {
+  //       const backendErrors = err.response.data;
+  //       const newErrors = {};
+  //       const fieldMapping = {
+  //         company_name: "companyName", company_moto: "companyMoto",
+  //         contact_person: "contactPerson", contact_number: "contactNumber",
+  //         company_email: "companyMail", website: "website",
+  //         company_size: "companySize", address1: "address1",
+  //         about: "about", company_logo: "companyLogo",
+  //       };
+
+  //       Object.keys(backendErrors).forEach((key) => {
+  //         const frontendKey = fieldMapping[key];
+  //         if (frontendKey) {
+  //           newErrors[frontendKey] = Array.isArray(backendErrors[key])
+  //             ? backendErrors[key][0] : backendErrors[key];
+  //         }
+  //       });
+  //       setErrors(newErrors);
+  //       return { success: false, error: "Validation failed" };
+  //     }
+
+  //     return { success: false, error: err.response?.data?.error || "Network error" };
+  //   } finally {
+  //     setIsLoading(false);
+  //   }
+  // }; 
+
+
   const updateCompanyProfile = async (data) => {
-    setIsLoading(true);
+  setIsLoading(true);
+  setBackendError("");
+  setErrorType(""); // Add this state if not exists
+
+  try {
+    const formDataToSend = new FormData();
+    formDataToSend.append("company_name", data.companyName);
+    formDataToSend.append("company_moto", data.companyMoto);
+    formDataToSend.append("contact_person", data.contactPerson);
+    formDataToSend.append("contact_number", data.contactNumber);
+    formDataToSend.append("company_email", data.companyMail);
+    formDataToSend.append("website", data.website);
+    formDataToSend.append("company_size", data.companySize);
+    formDataToSend.append("address1", data.address1);
+    if (data.address2) formDataToSend.append("address2", data.address2);
+    formDataToSend.append("about", data.about);
+    if (data.companyLogo) formDataToSend.append("company_logo", data.companyLogo);
+
+    // Add timeout protection
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+
+    const response = await api.patch("/company/profile/update/", formDataToSend, {
+      headers: { "Content-Type": "multipart/form-data" },
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    console.log("✅ Company profile updated:", response.data);
+    setErrors({});
     setBackendError("");
+    setErrorType("");
+    
+    return { success: true, data: response.data };
+    
+  } catch (err) {
+    console.error("Update profile error:", err);
 
-    try {
-      const formDataToSend = new FormData();
-      formDataToSend.append("company_name", data.companyName);
-      formDataToSend.append("company_moto", data.companyMoto);
-      formDataToSend.append("contact_person", data.contactPerson);
-      formDataToSend.append("contact_number", data.contactNumber);
-      formDataToSend.append("company_email", data.companyMail);
-      formDataToSend.append("website", data.website);
-      formDataToSend.append("company_size", data.companySize);
-      formDataToSend.append("address1", data.address1);
-      if (data.address2) formDataToSend.append("address2", data.address2);
-      formDataToSend.append("about", data.about);
-      if (data.companyLogo) formDataToSend.append("company_logo", data.companyLogo);
-
-      const response = await api.patch("/company/profile/update/", formDataToSend, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-
-      console.log("✅ Company profile updated:", response.data);
-      return { success: true, data: response.data };
-    } catch (err) {
-      console.error("Update profile error:", err);
-
-      if (err.response?.status === 400) {
-        const backendErrors = err.response.data;
-        const newErrors = {};
-        const fieldMapping = {
-          company_name: "companyName", company_moto: "companyMoto",
-          contact_person: "contactPerson", contact_number: "contactNumber",
-          company_email: "companyMail", website: "website",
-          company_size: "companySize", address1: "address1",
-          about: "about", company_logo: "companyLogo",
-        };
-
-        Object.keys(backendErrors).forEach((key) => {
-          const frontendKey = fieldMapping[key];
-          if (frontendKey) {
-            newErrors[frontendKey] = Array.isArray(backendErrors[key])
-              ? backendErrors[key][0] : backendErrors[key];
-          }
-        });
-        setErrors(newErrors);
-        return { success: false, error: "Validation failed" };
-      }
-
-      return { success: false, error: err.response?.data?.error || "Network error" };
-    } finally {
-      setIsLoading(false);
+    //  1. NETWORK ERROR - Internet ledu
+    if (err.code === 'ERR_NETWORK' || err.message === 'Network Error') {
+      const errorMsg = "No internet connection. Please check your network and try again.";
+      setBackendError(errorMsg);
+      setErrorType("NETWORK_ERROR");
+      return { success: false, error: errorMsg, errorType: "NETWORK_ERROR" };
     }
-  };
+
+    // 2. TIMEOUT ERROR - Request took too long
+    if (err.name === 'AbortError') {
+      const errorMsg = "Request is taking too long. Please check your connection and try again.";
+      setBackendError(errorMsg);
+      setErrorType("TIMEOUT_ERROR");
+      return { success: false, error: errorMsg, errorType: "TIMEOUT_ERROR" };
+    }
+
+    //  3. VALIDATION ERROR - Form data problem (400)
+    if (err.response?.status === 400) {
+      const backendErrors = err.response.data;
+      const newErrors = {};
+      const fieldMapping = {
+        company_name: "companyName", company_moto: "companyMoto",
+        contact_person: "contactPerson", contact_number: "contactNumber",
+        company_email: "companyMail", website: "website",
+        company_size: "companySize", address1: "address1",
+        address2: "address2", about: "about", company_logo: "companyLogo",
+      };
+
+      // Map backend errors to frontend fields
+      Object.keys(backendErrors).forEach((key) => {
+        const frontendKey = fieldMapping[key];
+        if (frontendKey) {
+          newErrors[frontendKey] = Array.isArray(backendErrors[key])
+            ? backendErrors[key][0] : backendErrors[key];
+        }
+      });
+      
+      setErrors(newErrors);
+      
+      // ✅ Show SPECIFIC error message, not "Validation failed"
+      const firstErrorField = Object.keys(newErrors)[0];
+      if (firstErrorField) {
+        const specificError = newErrors[firstErrorField];
+        setBackendError(specificError); // Example: "Company name is required"
+        setErrorType("VALIDATION_ERROR");
+      } else {
+        setBackendError("Please check the form for errors and try again.");
+        setErrorType("VALIDATION_ERROR");
+      }
+      
+      return { success: false, errorType: "VALIDATION_ERROR", validationErrors: newErrors };
+    }
+
+    //  4. SESSION EXPIRED (401) - Login again
+    if (err.response?.status === 401) {
+      const errorMsg = "Your session has expired. Please login again to continue.";
+      setBackendError(errorMsg);
+      setErrorType("AUTH_ERROR");
+      // Auto redirect to login
+      setTimeout(() => {
+        navigate("/Job-portal/employer/login");
+      }, 2000);
+      return { success: false, error: errorMsg, errorType: "AUTH_ERROR" };
+    }
+
+    //  5. PERMISSION DENIED (403)
+    if (err.response?.status === 403) {
+      const errorMsg = "You don't have permission to update this profile. Please contact support.";
+      setBackendError(errorMsg);
+      setErrorType("PERMISSION_ERROR");
+      return { success: false, error: errorMsg, errorType: "PERMISSION_ERROR" };
+    }
+
+    //  6. PROFILE NOT FOUND (404)
+    if (err.response?.status === 404) {
+      const errorMsg = "Company profile not found. Please refresh the page and try again.";
+      setBackendError(errorMsg);
+      setErrorType("NOT_FOUND_ERROR");
+      return { success: false, error: errorMsg, errorType: "NOT_FOUND_ERROR" };
+    }
+
+    //  7. FILE TOO LARGE (413)
+    if (err.response?.status === 413) {
+      const errorMsg = "File is too large. Please compress your image to under 5MB and try again.";
+      setErrors({ companyLogo: errorMsg });
+      setBackendError(errorMsg);
+      setErrorType("FILE_SIZE_ERROR");
+      return { success: false, error: errorMsg, errorType: "FILE_SIZE_ERROR" };
+    }
+
+    //  8. TOO MANY REQUESTS (429)
+    if (err.response?.status === 429) {
+      const errorMsg = "Too many attempts. Please wait a moment and try again.";
+      setBackendError(errorMsg);
+      setErrorType("RATE_LIMIT_ERROR");
+      return { success: false, error: errorMsg, errorType: "RATE_LIMIT_ERROR" };
+    }
+
+    //  9. SERVER ERROR (500+)
+    if (err.response?.status >= 500 && err.response?.status < 600) {
+      const errorMsg = "Server error. Our team has been notified. Please try again later.";
+      setBackendError(errorMsg);
+      setErrorType("SERVER_ERROR");
+      console.error("Server Error:", err.response.status, err.response.data);
+      return { success: false, error: errorMsg, errorType: "SERVER_ERROR" };
+    }
+
+    //  10. UNKNOWN ERROR
+    const errorMsg = "An unexpected error occurred. Please try again or contact support if the problem continues.";
+    setBackendError(errorMsg);
+    setErrorType("UNKNOWN_ERROR");
+    return { success: false, error: errorMsg, errorType: "UNKNOWN_ERROR" };
+
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   // ✅ Handle popup confirm (Join existing company)
   const handleJoinExistingCompany = async () => {
@@ -526,7 +992,9 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
           fromSignup: fromSignup,
           profileId: result.data.company_id,
           isExistingCompany: true,
-          companyName: pendingCompanyName
+          companyName: pendingCompanyName,
+          fromCompanyProfile: true  
+          
         }
       });
     } else if (result.error !== "Validation failed") {
@@ -542,85 +1010,207 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
   };
 
   //  Next button - ALWAYS go to verification page
+  // const handleNext = async (e) => {
+  //   e.preventDefault();
+
+  //   const isValid = validateForm();
+  //   if (!isValid) {
+  //     console.log("Form has errors");
+  //     return;
+  //   }
+
+  //   console.log("Saving company profile...");
+
+  //   //  First update employer profile (full_name + employee_id)
+  //   const employerUpdated = await updateEmployerProfile(formData);
+  //   if (!employerUpdated) return;
+
+  //   let result;
+  //   if (fromSignup || !hasExistingProfile) {
+  //     result = await createCompanyProfile(formData);
+  //     // If duplicate company detected and popup is shown, stop here
+  //     if (result.pending) return;
+  //   } else {
+  //     result = await updateCompanyProfile(formData);
+  //   }
+
+  //   if (result.success) {
+  //     setCompanyProfile({
+  //       ...formData,
+  //       id: result.data.id || result.data.company_id,
+  //       companyLogo: result.data.company_logo
+  //     });
+
+  //     navigate("/Job-portal/Employer/about-your-company/company-verification", {
+  //       state: {
+  //         fromSignup: fromSignup,
+  //         profileId: result.data.id || result.data.company_id,
+  //         isExistingCompany: result.data.is_existing || false,
+  //         companyName: formData.companyName
+  //       }
+  //     });
+  //   } else if (result.error !== "Validation failed" && result.error !== "duplicate_company") {
+  //     setBackendError(result.error || "Failed to save company profile");
+  //   }
+  // };
+
   const handleNext = async (e) => {
-    e.preventDefault();
+  e.preventDefault();
 
-    const isValid = validateForm();
-    if (!isValid) {
-      console.log("Form has errors");
-      return;
-    }
+  const isValid = validateForm();
+  if (!isValid) {
+    console.log("Form has errors");
+    return;
+  }
 
-    console.log("Saving company profile...");
+  console.log("Saving company profile...");
 
-    //  First update employer profile (full_name + employee_id)
-    const employerUpdated = await updateEmployerProfile(formData);
-    if (!employerUpdated) return;
+  // ✅ Update employer profile - Check properly
+  const employerResult = await updateEmployerProfile(formData);
+  if (!employerResult.success) {
+    // Error already set in the function
+    console.log("Employer update failed:", employerResult.error);
+    // Scroll to top to show error
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    return;
+  }
 
-    let result;
-    if (fromSignup || !hasExistingProfile) {
-      result = await createCompanyProfile(formData);
-      // If duplicate company detected and popup is shown, stop here
-      if (result.pending) return;
-    } else {
-      result = await updateCompanyProfile(formData);
-    }
+  let result;
+  if (fromSignup || !hasExistingProfile) {
+    result = await createCompanyProfile(formData);
+    // If duplicate company detected and popup is shown, stop here
+    if (result.pending) return;
+  } else {
+    result = await updateCompanyProfile(formData);
+  }
 
-    if (result.success) {
-      setCompanyProfile({
-        ...formData,
-        id: result.data.id || result.data.company_id,
-        companyLogo: result.data.company_logo
-      });
+  if (result.success) {
+    console.log("🔍 Navigating with state:", {
+    fromSignup: fromSignup,
+    profileId: result.data.id || result.data.company_id,
+    companyName: formData.companyName,
+    fromCompanyProfile: true
+  })
+    setCompanyProfile({
+      ...formData,
+      id: result.data.id || result.data.company_id,
+      companyLogo: result.data.company_logo
+    });
 
-      navigate("/Job-portal/Employer/about-your-company/company-verification", {
-        state: {
-          fromSignup: fromSignup,
-          profileId: result.data.id || result.data.company_id,
-          isExistingCompany: result.data.is_existing || false,
-          companyName: formData.companyName
-        }
-      });
+    navigate("/Job-portal/Employer/about-your-company/company-verification", {
+      state: {
+        fromSignup: fromSignup,
+        profileId: result.data.id || result.data.company_id,
+        isExistingCompany: result.data.is_existing || false,
+        companyName: formData.companyName,
+        fromCompanyProfile: true  
+      }
+    });
+  } else {
+    // ✅ Different handling based on error type
+    if (result.errorType === "VALIDATION_ERROR") {
+      // Errors already shown on fields, just scroll
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } else if (result.errorType === "NETWORK_ERROR") {
+      // Network error - show retry option? Already shown in UI
+      console.log("Network error - check connection");
+    } else if (result.errorType === "AUTH_ERROR") {
+      // Will redirect automatically
+      console.log("Auth error - redirecting to login");
     } else if (result.error !== "Validation failed" && result.error !== "duplicate_company") {
-      setBackendError(result.error || "Failed to save company profile");
+      // Only set if not already set by the function
+      if (!backendError) {
+        setBackendError(result.error || "Failed to save company profile");
+      }
     }
-  };
+  }
+};
 
   // Save button (from Dashboard My Profile)
+  // const handleSave = async (e) => {
+  //   e.preventDefault();
+
+  //   const isValid = validateForm();
+  //   if (!isValid) return;
+
+  //   console.log("Saving Company Profile from Dashboard:", formData);
+
+  //   //  First update employer profile (full_name + employee_id)
+  //   const employerUpdated = await updateEmployerProfile(formData);
+  //   if (!employerUpdated) return;
+
+  //   let result;
+  //   if (hasExistingProfile) {
+  //     result = await updateCompanyProfile(formData);
+  //   } else {
+  //     result = await createCompanyProfile(formData);
+  //   }
+
+  //   if (result.success) {
+  //     setCompanyProfile({
+  //       ...formData,
+  //       id: result.data.id,
+  //       companyLogo: result.data.company_logo
+  //     });
+
+  //     setExistingLogo(result.data.company_logo);
+  //     setHasExistingProfile(true);
+
+  //     alert("Company profile saved successfully!");
+  //   } else if (result.error !== "Validation failed" && result.error !== "duplicate_company") {
+  //     setBackendError(result.error || "Failed to save");
+  //   }
+  // };
+
   const handleSave = async (e) => {
-    e.preventDefault();
+  e.preventDefault();
 
-    const isValid = validateForm();
-    if (!isValid) return;
+  const isValid = validateForm();
+  if (!isValid) return;
 
-    console.log("Saving Company Profile from Dashboard:", formData);
+  console.log("Saving Company Profile from Dashboard:", formData);
 
-    //  First update employer profile (full_name + employee_id)
-    const employerUpdated = await updateEmployerProfile(formData);
-    if (!employerUpdated) return;
+  // ✅ Update employer profile - Check properly
+  const employerResult = await updateEmployerProfile(formData);
+  if (!employerResult.success) {
+    console.log("Employer update failed:", employerResult.error);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    return;
+  }
 
-    let result;
-    if (hasExistingProfile) {
-      result = await updateCompanyProfile(formData);
-    } else {
-      result = await createCompanyProfile(formData);
-    }
+  let result;
+  if (hasExistingProfile) {
+    result = await updateCompanyProfile(formData);
+  } else {
+    result = await createCompanyProfile(formData);
+  }
 
-    if (result.success) {
-      setCompanyProfile({
-        ...formData,
-        id: result.data.id,
-        companyLogo: result.data.company_logo
-      });
+  if (result.success) {
+    setCompanyProfile({
+      ...formData,
+      id: result.data.id,
+      companyLogo: result.data.company_logo
+    });
 
-      setExistingLogo(result.data.company_logo);
-      setHasExistingProfile(true);
+    setExistingLogo(result.data.company_logo);
+    setHasExistingProfile(true);
 
-      alert("Company profile saved successfully!");
+    alert("Company profile saved successfully!");
+  } else {
+    // ✅ Different handling based on error type
+    if (result.errorType === "VALIDATION_ERROR") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } else if (result.errorType === "NETWORK_ERROR") {
+      console.log("Network error - check connection");
+    } else if (result.errorType === "AUTH_ERROR") {
+      console.log("Auth error - redirecting to login");
     } else if (result.error !== "Validation failed" && result.error !== "duplicate_company") {
-      setBackendError(result.error || "Failed to save");
+      if (!backendError) {
+        setBackendError(result.error || "Failed to save");
+      }
     }
-  };
+  }
+};
 
   // Popup Modal Component
   const PopupModal = () => {

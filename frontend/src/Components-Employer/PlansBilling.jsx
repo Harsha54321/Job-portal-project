@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import './PlansBilling.css';
 import FileIcon from '../assets/Billing/File_icon.png';
@@ -23,26 +22,45 @@ export const PlansBilling = () => {
     const [billingHistory, setBillingHistory] = useState([]);
     const [activePlan, setActivePlan] = useState(null);
     const [savedCards, setSavedCards] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
         fetchRealData();
     }, []);
-   
+
+    // Normalize plan names helper
+    const normalizePlanName = (name) => {
+        if (!name) return '';
+        const upperName = name.toUpperCase();
+        
+        // Handle all variations
+        if (upperName === 'ENTERPRISE PLAN' || upperName.includes('ENTERPRISE') || upperName.includes('ENTERIC')) {
+            return 'ENTERPRISE PLAN';
+        }
+        if (upperName === 'BUSINESS PLAN' || upperName.includes('BUSINESS')) {
+            return 'BUSINESS PLAN';
+        }
+        if (upperName === 'STARTER PLAN' || upperName.includes('STARTER')) {
+            return 'STARTER PLAN';
+        }
+        
+        return upperName;
+    };
 
     const fetchRealData = async () => {
+        setIsLoading(true);
         try {
             // 1. Get current subscription
             const subRes = await api.get('/subscription/');
+            console.log('Subscription data:', subRes.data);
 
             // 2. Get invoices/billing history
             const invRes = await api.get('/invoices/');
-            let latestPaidPrice = null;
-            let latestPaidPlan = null;
-
+            
             if (invRes.data && invRes.data.length > 0) {
                 const formatted = invRes.data.map(inv => ({
                     id: inv.invoice_number,
-                    plan: inv.plan_name,
+                    plan: normalizePlanName(inv.plan_name),
                     date: new Date(inv.invoice_date).toLocaleDateString('en-US', {
                         month: 'long', day: 'numeric', year: 'numeric'
                     }).toUpperCase(),
@@ -59,67 +77,79 @@ export const PlansBilling = () => {
                     duration: inv.duration,
                     start_date: inv.start_date,
                     end_date: inv.end_date,
-                    db_id: inv.id  // 
+                    db_id: inv.id
                 }));
                 setBillingHistory(formatted);
-
-                // ✅ Get latest paid invoice by database ID
-                const paidInvoices = formatted.filter(inv => inv.status === 'PAID');
-                if (paidInvoices.length > 0) {
-                    paidInvoices.sort((a, b) => b.db_id - a.db_id);
-                    const latestPaid = paidInvoices[0];
-                    latestPaidPrice = latestPaid.price;
-                    latestPaidPlan = latestPaid.plan;
-                }
             }
 
-
-            // 3. Set active plan - USE LATEST PAID PRICE
+            // 3. Set active plan from subscription API
             if (subRes.data && subRes.data.plan) {
-                setActivePlan({
-                    id: subRes.data.plan.id,
-                    name: subRes.data.plan.name,
-                    price: latestPaidPrice || subRes.data.plan.price,  // ✅ Use latest paid price
+                const currentPlan = subRes.data.plan;
+                
+                // Safely parse price
+                let currentPlanPrice = 0;
+                if (currentPlan.price !== undefined && currentPlan.price !== null) {
+                    currentPlanPrice = typeof currentPlan.price === 'string' 
+                        ? parseFloat(currentPlan.price) 
+                        : currentPlan.price;
+                }
+                if (isNaN(currentPlanPrice)) {
+                    currentPlanPrice = 0;
+                }
+                
+                const normalizedPlanName = normalizePlanName(currentPlan.name);
+                
+                console.log('Current plan from API:', {
+                    originalName: currentPlan.name,
+                    normalizedName: normalizedPlanName,
+                    price: currentPlanPrice,
+                    status: subRes.data.status
+                });
+                
+                const activePlanData = {
+                    id: currentPlan.id,
+                    name: normalizedPlanName,
+                    price: currentPlanPrice,
                     status: subRes.data.status.toUpperCase(),
                     nextInvoice: new Date(subRes.data.end_date).toLocaleDateString('en-US', {
                         month: 'long', day: 'numeric', year: 'numeric'
                     }),
-                    planType: subRes.data.plan.duration_days === 30 ? 'Monthly' : 'Yearly'
-                });
+                    planType: currentPlan.duration_days === 30 ? 'Monthly' : 
+                              currentPlan.duration_days === 180 ? '6 Months' : 'Yearly'
+                };
+                
+                setActivePlan(activePlanData);
                 setPlanStatus(subRes.data.status.toUpperCase());
+                
+                // 4. Set next invoice based on current plan
+                const isPaidPlan = normalizedPlanName !== 'STARTER PLAN' && currentPlanPrice > 0;
+                
+                console.log('Is paid plan:', isPaidPlan, 'Price:', currentPlanPrice);
+                
+                if (isPaidPlan && subRes.data.status === 'ACTIVE') {
+                    const nextBillingDate = new Date(subRes.data.end_date);
+                    
+                    setPendingInvoices([{
+                        id: `INV-NEXT-${Date.now()}`,
+                        plan: normalizedPlanName,
+                        price: currentPlanPrice,
+                        dueDate: nextBillingDate.toLocaleDateString('en-US', {
+                            month: 'long', day: 'numeric', year: 'numeric'
+                        })
+                    }]);
+                    console.log('Next invoice set:', currentPlanPrice);
+                } else {
+                    setPendingInvoices([]);
+                    console.log('No next invoice (free plan)');
+                }
+            } else {
+                setActivePlan(null);
+                setPendingInvoices([]);
             }
-
-            // 4. Set next invoice
-            if (latestPaidPrice) {
-                setPendingInvoices([{
-                    id: `INV-NEXT-${Date.now()}`,
-                    plan: latestPaidPlan,
-                    price: latestPaidPrice,
-                    dueDate: new Date(new Date().setMonth(new Date().getMonth() + 1)).toLocaleDateString('en-US', {
-                        month: 'long', day: 'numeric', year: 'numeric'
-                    })
-                }]);
-            }
-
-            // 5. Get payment methods
-            // const payRes = await api.get('/payment-methods/');
-            // if (payRes.data && payRes.data.length > 0) {
-            //     const cards = payRes.data.map(m => ({
-            //         id: m.id,
-            //         name: m.card_holder_name || 'Card Holder',
-            //         number: `**** ${m.card_last4 || '0000'}`,
-            //         expiry: m.expiry_date || 'N/A',
-            //         type: m.method_type,
-            //         isDefault: m.is_default
-            //     }));
-            //     setSavedCards(cards);
-            // }  
-
 
             // 5. Get payment methods
             const payRes = await api.get('/payment-methods/');
             if (payRes.data && payRes.data.length > 0) {
-                // ✅ Filter only card type and remove duplicates
                 const uniqueCards = [];
                 const seenLast4 = new Set();
 
@@ -144,10 +174,17 @@ export const PlansBilling = () => {
 
             // 6. Get available plans
             const plansRes = await api.get('/plans/');
-            setAvailablePlans(plansRes.data);
+            const normalizedPlans = plansRes.data.map(plan => ({
+                ...plan,
+                name: normalizePlanName(plan.name),
+                price: typeof plan.price === 'string' ? parseFloat(plan.price) : plan.price
+            }));
+            setAvailablePlans(normalizedPlans);
 
         } catch (error) {
             console.error('Error fetching billing data:', error);
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -167,7 +204,6 @@ export const PlansBilling = () => {
         const textWhite = [255, 255, 255];
         const darkGrey = [40, 40, 40];
 
-        // Helper function to format dates
         const formatDate = (dateStr) => {
             if (!dateStr) return 'N/A';
             return new Date(dateStr).toLocaleDateString('en-US', {
@@ -249,7 +285,7 @@ export const PlansBilling = () => {
             startY: 133,
             head: [['Plan name', 'Duration', 'Start Date', 'End Date', 'Amount']],
             body: [[
-                data.plan,
+                normalizePlanName(data.plan),
                 data.duration || '1 Month',
                 formatDate(data.start_date),
                 formatDate(data.end_date),
@@ -276,9 +312,36 @@ export const PlansBilling = () => {
         doc.save(`${data.id}_Invoice.pdf`);
     };
 
-    
     const handleUpgrade = async (newPlan, billingCycle) => {
-        // Calculate next invoice date
+        const normalizedName = normalizePlanName(newPlan.name);
+        const isStarterPlan = normalizedName === 'STARTER PLAN' || newPlan.price === 0;
+        
+        if (isStarterPlan) {
+            setIsProcessing(true);
+            
+            const activePlanData = {
+                id: newPlan.id,
+                name: 'STARTER PLAN',
+                price: 0,
+                status: 'ACTIVE',
+                planType: billingCycle === 'monthly' ? 'Monthly' : 
+                          billingCycle === '6 Months' ? '6 Months' : 'Yearly',
+                nextInvoice: new Date(Date.now() + 30*24*60*60*1000).toLocaleDateString('en-US', {
+                    month: 'long', day: 'numeric', year: 'numeric'
+                })
+            };
+            
+            setActivePlan(activePlanData);
+            setPlanStatus('ACTIVE');
+            setPendingInvoices([]);
+            
+            alert('✅ STARTER PLAN activated successfully!');
+            setView('overview');
+            setIsProcessing(false);
+            await fetchRealData();
+            return;
+        }
+        
         const calculateNextInvoice = (cycle) => {
             const date = new Date();
             if (cycle === 'Yearly') date.setFullYear(date.getFullYear() + 1);
@@ -287,9 +350,8 @@ export const PlansBilling = () => {
             return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
         };
 
-        // Store plan details
         setAdditionalPlan({
-            name: newPlan.name,
+            name: normalizedName,
             price: newPlan.price,
             subtotal: newPlan.subtotal,
             cgst: newPlan.cgst,
@@ -298,23 +360,16 @@ export const PlansBilling = () => {
             nextInvoice: calculateNextInvoice(billingCycle)
         });
 
-        // Navigate to payment methods page
         setView('payment');
         setIsCardOnly(false);
         setPaymentTab('card');
     };
 
-
-
-
-    
     const processPaymentWithRazorpay = async (paymentMethodType) => {
         setIsProcessing(true);
-
         try {
-            // Find plan from available plans
-            const plan = availablePlans.find(p =>
-                p.name.toLowerCase().includes(additionalPlan.name.toLowerCase())
+            const plan = availablePlans.find(p => 
+                normalizePlanName(p.name) === normalizePlanName(additionalPlan.name)
             );
 
             if (!plan) {
@@ -326,7 +381,7 @@ export const PlansBilling = () => {
             let durationParam = 'monthly';
             if (additionalPlan.planType === '6 Months') {
                 durationParam = '6_months';
-            } else if (additionalPlan.planType === 'yearly') {
+            } else if (additionalPlan.planType === 'Yearly') {
                 durationParam = 'yearly';
             }
 
@@ -389,15 +444,11 @@ export const PlansBilling = () => {
         }
     };
 
-
     const handleProcessPayment = async (paymentData) => {
-        // Process payment without saving payment method
         if (additionalPlan) {
             await processPaymentWithRazorpay(paymentData.method_type);
         }
     };
-
-
 
     const handleSaveNewCard = async (paymentData) => {
         try {
@@ -420,15 +471,12 @@ export const PlansBilling = () => {
             return;
         }
 
-        // ✅ Process payment after card is saved
         if (additionalPlan) {
             await processPaymentWithRazorpay(paymentData.method_type);
         } else {
             setView('overview');
         }
     };
-
-
 
     const handleAddCardOnly = () => { setIsCardOnly(true); setPaymentTab('card'); setView('payment'); };
     const handleAddCard = () => { setPaymentTab('card'); setView('payment'); };
@@ -474,6 +522,17 @@ export const PlansBilling = () => {
     };
 
     const defaultCard = savedCards.find(c => c.isDefault) || savedCards[0];
+
+    if (isLoading) {
+        return (
+            <div className="PlansBilling-container">
+                <div className="PlansBilling-header-box">
+                    <h1 className="PlansBilling-main-title">Plans & Billing</h1>
+                    <p className="PlansBilling-sub-title">Loading...</p>
+                </div>
+            </div>
+        );
+    }
 
     if (view === 'payment') {
         return (
@@ -543,21 +602,29 @@ export const PlansBilling = () => {
             </div>
 
             <div className="PlansBilling-grid-row">
-                <div className="PlansBilling-card PlansBilling-invoice-box" style={{ position: 'relative' }}>
+                <div className="PlansBilling-card PlansBilling-invoice-box">
                     <h3 className="PlansBilling-section-title">Next Invoices</h3>
-                    <p className="PlansBilling-invoice-price">
-                        ₹ {pendingInvoices.length > 0 ? pendingInvoices[0].price : activePlan?.price || "0.00"}/-
-                    </p>
-                    <div className="PlansBilling-invoice-details">
-                        <div className="PlansBilling-detail-item">
-                            <span className="PlansBilling-detail-label">Plan Type</span>
-                            <span className="PlansBilling-detail-value">: {activePlan?.name || '-'}</span>
-                        </div>
-                        <div className="PlansBilling-detail-item">
-                            <span className="PlansBilling-detail-label">Next Date</span>
-                            <span className="PlansBilling-detail-value">: {activePlan?.nextInvoice || 'N/A'}</span>
-                        </div>
-                    </div>
+                    {pendingInvoices.length > 0 ? (
+                        <>
+                            <p className="PlansBilling-invoice-price">
+                                ₹ {pendingInvoices[0].price}/-
+                            </p>
+                            <div className="PlansBilling-invoice-details">
+                                <div className="PlansBilling-detail-item">
+                                    <span className="PlansBilling-detail-label">Plan Type</span>
+                                    <span className="PlansBilling-detail-value">: {pendingInvoices[0].plan || activePlan?.name || '-'}</span>
+                                </div>
+                                <div className="PlansBilling-detail-item">
+                                    <span className="PlansBilling-detail-label">Next Date</span>
+                                    <span className="PlansBilling-detail-value">: {pendingInvoices[0].dueDate || activePlan?.nextInvoice || 'N/A'}</span>
+                                </div>
+                            </div>
+                        </>
+                    ) : (
+                        <p className="PlansBilling-no-invoice" style={{ textAlign: 'center', padding: '20px', color: '#666' }}>
+                            No upcoming invoices. You are on free plan.
+                        </p>
+                    )}
                 </div>
 
                 <div className="PlansBilling-card PlansBilling-payment-box">
@@ -595,12 +662,18 @@ export const PlansBilling = () => {
                 <div className="PlansBilling-history-content">
                     <table className="History-Table">
                         <thead>
-                            <tr><th>PLAN</th><th>DATE</th><th>PRICE</th><th>STATUS</th><th>INVOICE</th></tr>
+                            <tr>
+                                <th>PLAN</th>
+                                <th>DATE</th>
+                                <th>PRICE</th>
+                                <th>STATUS</th>
+                                <th>INVOICE</th>
+                            </tr>
                         </thead>
                         <tbody>
                             {billingHistory.map((item, index) => (
                                 <tr key={index}>
-                                    <td className="plan-cell"><strong>{item.plan}</strong></td>
+                                    <td className="plan-cell"><strong>{normalizePlanName(item.plan)}</strong></td>
                                     <td>{item.date}</td>
                                     <td>₹ {item.price} /-</td>
                                     <td>

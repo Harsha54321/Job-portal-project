@@ -32,7 +32,7 @@ const EditableListItem = ({ title, onEdit }) => (
     <div className="skill-item">
         <span>{title}</span>
         <button type="button" onClick={onEdit} className="edit-skill-btn">
-            <img className="edit-icon-btn" src={editIcon} alt="edit" />
+            <img className="edit-icon-btn" src={editIcon} alt="edit" title="Edit" />
         </button>
     </div>
 );
@@ -502,7 +502,7 @@ const Profile = ({ data, onChange, onReset, onNext, setProfilePhoto, setRemovePh
                             min={minString}
                             max={maxString}
                             onChange={handleChange}
-                            className={errors.dob ? "input-error" : ""}
+                            className={errors.dob ? "input-error" : "", "cursor-as-pointer"}
                         />
                         {errors.dob && <span className="error-message">{errors.dob}</span>}
                     </div>
@@ -559,18 +559,44 @@ const Profile = ({ data, onChange, onReset, onNext, setProfilePhoto, setRemovePh
 
 const CurrentDetails = ({ data, onChange, onReset, onNext }) => {
     const [errors, setErrors] = useState({});
+    const [isFresher, setIsFresher] = useState(false);
 
     const AlphaOnlyWithSpace = /^[A-Za-z\s]*$/;
+
     const handleChange = (e) => {
         const { name, value } = e.target;
 
-        if (name === "jobTitle" || name === "company") {
-
+        if (name === "jobTitle") {
+ 
             if (!AlphaOnlyWithSpace.test(value)) return;
         }
-
+        if (name === "company") {
+ 
+        if (value !== "" && !/^[A-Za-z0-9\s\.\-\'\,\&\(\)]*$/.test(value)) return;
+    }
+ 
         if ((name === "currentLocation" || name === "prefLocation") && !AlphaOnlyWithSpace.test(value)) {
             return;
+        }
+
+        if (name === "experienceType") {
+            setIsFresher(value === "fresher");
+            if (value === "fresher") {
+                // Clear experience field and keep it as 0 for freshers
+                onChange({
+                    target: {
+                        name: "experience",
+                        value: "0"
+                    }
+                });
+            } else {
+                onChange({
+                    target: {
+                        name: "experience",
+                        value: ""
+                    }
+                });
+            }
         }
 
         if (errors[name]) {
@@ -584,12 +610,21 @@ const CurrentDetails = ({ data, onChange, onReset, onNext }) => {
         e.preventDefault();
 
         const newErrors = {};
-        if (!data.jobTitle?.trim()) newErrors.jobTitle = "*Job Title is required";
-        if (!data.company?.trim()) newErrors.company = "*Company name is required";
-        if (!data.experience) newErrors.experience = "*Experience is required";
-        if (data.noticePeriod === "Select" || !data.noticePeriod) newErrors.noticePeriod = "*Please select a notice period";
-        if (!data.currentLocation?.trim()) newErrors.currentLocation = "*Current location is required";
-        if (!data.prefLocation?.trim()) newErrors.prefLocation = "prefLocation location is required";
+
+        if (!isFresher) {
+            if (!data.jobTitle?.trim()) newErrors.jobTitle = "*Job Title is required";
+            if (!data.company?.trim()) newErrors.company = "*Company name is required";
+            if (!data.experience) newErrors.experience = "*Experience is required";
+            if (data.noticePeriod === "Select" || !data.noticePeriod) newErrors.noticePeriod = "*Please select a notice period";
+            if (!data.currentLocation?.trim()) newErrors.currentLocation = "*Current location is required";
+            if (!data.prefLocation?.trim()) newErrors.prefLocation = "Preferred location is required";
+        }
+        // For freshers, only validate that they selected fresher option
+        else {
+            if (!data.experienceType || data.experienceType !== "fresher") {
+                newErrors.experienceType = "*Please select your experience status";
+            }
+        }
 
         setErrors(newErrors);
 
@@ -610,62 +645,89 @@ const CurrentDetails = ({ data, onChange, onReset, onNext }) => {
                     onClick={() => {
                         onReset();
                         setErrors({});
+                        setIsFresher(false);
                     }}
                 >
                     Reset
                 </button>
             </div>
             <div className="form-grid">
+                {/* Experience Type Dropdown */}
                 <div className="form-group">
+                    <label>Experience Status</label>
+                    <select
+                        name="experienceType"
+                        value={data.experienceType || ""}
+                        onChange={handleChange}
+                        className={errors.experienceType ? "input-error" : ""}
+                    >
+                        <option value="">Select</option>
+                        <option value="experienced">Experienced</option>
+                        <option value="fresher">Fresher</option>
+                    </select>
+                    {errors.experienceType && <span className="error-message">{errors.experienceType}</span>}
+                </div>
+
+                {/* Total Experience Field - Only show for experienced */}
+                {!isFresher && (
+                    <div className="form-group">
+                        <label>Total Experience (Years)</label>
+                        <input
+                            type="text"
+                            name="experience"
+                            min="0"
+                            step="0.1"
+                            placeholder="e.g. 2.5"
+                            value={data.experience || ""}
+                            onChange={(e) => {
+                                const val = e.target.value;
+                                // Allow digits and one decimal point for experience
+                                if (val === "" || /^\d{0,2}(\.\d{0,1})?$/.test(val)) {
+                                    handleChange(e);
+                                }
+                            }}
+                            className={errors.experience ? "input-error" : ""}
+                        />
+                        {errors.experience && <span className="error-message">{errors.experience}</span>}
+                    </div>
+                )}
+
+                {/* Experienced Fields - Disabled for freshers */}
+                <div className={!isFresher ? "form-group" : "form-group disabled-field"}>
                     <label>Current Job Title</label>
                     <input
                         type="text"
                         name="jobTitle"
                         value={data.jobTitle || ""}
                         onChange={handleChange}
+                        disabled={isFresher}
                         className={errors.jobTitle ? "input-error" : ""}
                         placeholder="e.g., Software Engineer"
                     />
                     {errors.jobTitle && <span className="error-message">{errors.jobTitle}</span>}
                 </div>
-                <div className="form-group">
+
+                <div className={!isFresher ? "form-group" : "form-group disabled-field"}>
                     <label>Current Company</label>
                     <input
                         type="text"
                         name="company"
                         value={data.company || ""}
                         onChange={handleChange}
+                        disabled={isFresher}
                         className={errors.company ? "input-error" : ""}
                         placeholder="e.g., XYZ Company"
                     />
                     {errors.company && <span className="error-message">{errors.company}</span>}
                 </div>
-                <div className="form-group">
-                    <label>Total Experience (Years)</label>
-                    <input
-                        type="text"
-                        name="experience"
-                        min="0"
-                        step="0.1"
-                        placeholder="e.g. 2.5"
-                        value={data.experience || ""}
-                        onChange={(e) => {
-                            const val = e.target.value;
-                            // Allow digits and one decimal point for experience
-                            if (val === "" || /^\d{0,2}(\.\d{0,1})?$/.test(val)) {
-                                handleChange(e);
-                            }
-                        }}
-                        className={errors.experience ? "input-error" : ""}
-                    />
-                    {errors.experience && <span className="error-message">{errors.experience}</span>}
-                </div>
-                <div className="form-group">
+
+                <div className={!isFresher ? "form-group" : "form-group disabled-field"}>
                     <label>Notice Period</label>
                     <select
                         name="noticePeriod"
                         value={data.noticePeriod || "Select"}
                         onChange={handleChange}
+                        disabled={isFresher}
                         className={errors.noticePeriod ? "input-error" : ""}
                     >
                         <option value="Select">Select</option>
@@ -676,7 +738,8 @@ const CurrentDetails = ({ data, onChange, onReset, onNext }) => {
                     </select>
                     {errors.noticePeriod && <span className="error-message">{errors.noticePeriod}</span>}
                 </div>
-                <div className="form-group full-width">
+
+                <div className={!isFresher ? "form-group full-width" : "form-group full-width disabled-field"}>
                     <label>Current Location</label>
                     <input
                         type="text"
@@ -687,12 +750,14 @@ const CurrentDetails = ({ data, onChange, onReset, onNext }) => {
                                 handleChange(e);
                             }
                         }}
+                        disabled={isFresher}
                         className={errors.currentLocation ? "input-error" : ""}
                         placeholder="e.g., Bangalore"
                     />
                     {errors.currentLocation && <span className="error-message">{errors.currentLocation}</span>}
                 </div>
-                <div className="form-group full-width">
+
+                <div className={!isFresher ? "form-group full-width" : "form-group full-width disabled-field"}>
                     <label>Preferred Location(s)</label>
                     <input
                         type="text"
@@ -703,6 +768,7 @@ const CurrentDetails = ({ data, onChange, onReset, onNext }) => {
                                 handleChange(e);
                             }
                         }}
+                        disabled={isFresher}
                         className={errors.prefLocation ? "input-error" : ""}
                         placeholder="e.g., Bangalore, Chennai, Coimbatore"
                     />
@@ -717,6 +783,7 @@ const CurrentDetails = ({ data, onChange, onReset, onNext }) => {
         </form>
     );
 };
+
 
 const ContactDetails = ({ data, onChange, onReset, onNext }) => {
     const [errors, setErrors] = useState({});
@@ -1006,7 +1073,7 @@ const ResumeSection = ({
         if (window.confirm("Are you sure you want to remove this resume?")) {
             onChange({
                 target: {
-                    name: "resume_file", // Change this to match your data structure
+                    name: "resume_file",
                     value: null,
                 },
             });
@@ -1035,6 +1102,9 @@ const ResumeSection = ({
             window.open(existingResume, "_blank");
         }
     };
+
+
+
     const handleSubmit = (e) => {
         e.preventDefault();
         const newErrors = {};
@@ -1067,14 +1137,7 @@ const ResumeSection = ({
             className="content-card" onSubmit={handleSubmit} >
             <div className="profile-header">
                 <h2>Resume</h2>
-                <button
-                    type="button"
-                    className="reset-link"
-                    onClick={() => {
-                        onReset();
-                        setErrors({});
-                    }}
-                >
+                <button type="button" className="reset-link" onClick={() => { onReset(); setErrors({}); }}>
                     Reset
                 </button>
             </div>
@@ -1148,8 +1211,8 @@ const ResumeSection = ({
                 <label>Portfolio/Website Link</label>
                 <input
                     type="url"
-                    name="portfolio_link"  // ← name ని portfolio_link గా మార్చండి
-                    value={data.portfolio_link || ""}  // ← portfolio నుండి portfolio_link కి మార్చండి
+                    name="portfolio_link"
+                    value={data.portfolio_link || ""}
                     onChange={onChange}
                     placeholder="e.g., https://yourportfolio.com"
                     className={errors.portfolio_link ? "input-error" : ""}
@@ -1445,7 +1508,7 @@ const EducationDetails = ({
                                         name="year"
                                         value={data.sslc.year || ""}
                                         onChange={(e) => handleInputChange(e, 'sslc')}
-                                        className={errors.sslcyear ? "input-error" : ""}
+                                        className={errors.sslcyear ? "input-error" : "", "cursor-as-pointer"}
                                     />
                                     {errors.sslcyear && (
                                         <span className="error-msg">{errors.sslcyear}</span>
@@ -1534,7 +1597,7 @@ const EducationDetails = ({
                                         name="year"
                                         value={data.hsc.year || ""}
                                         onChange={(e) => handleInputChange(e, 'hsc')}
-                                        className={errors.hscyear ? "input-error" : ""}
+                                        className={errors.hscyear ? "input-error" : "", "cursor-as-pointer"}
 
                                     />
                                     {errors.hscyear && (
@@ -1672,7 +1735,7 @@ const EducationDetails = ({
                                             name="startYear"
                                             value={grad.startYear}
                                             onChange={(e) => handleInputChange(e, 'grad', grad.id)}
-                                            className={errors[`gradstartYear${grad.id}`] ? "input-error" : ""}
+                                            className={errors[`gradstartYear${grad.id}`] ? "input-error" : "", "cursor-as-pointer"}
                                         />
                                         {errors[`gradstartYear${grad.id}`] && <span className="error-message">{errors[`gradstartYear${grad.id}`]}</span>}
                                     </div>
@@ -1683,7 +1746,7 @@ const EducationDetails = ({
                                             name="endYear"
                                             value={grad.endYear}
                                             onChange={(e) => handleInputChange(e, 'grad', grad.id)}
-                                            className={errors[`gradendYear${grad.id}`] ? "input-error" : ""}
+                                            className={errors[`gradendYear${grad.id}`] ? "input-error" : "", "cursor-as-pointer"}
                                         />
                                         {errors[`gradendYear${grad.id}`] && <span className="error-message">{errors[`gradendYear${grad.id}`]}</span>}
                                     </div>
@@ -1770,6 +1833,26 @@ const WorkExperience = ({
 
     const [errors, setErrors] = useState({});
     const AlphaOnlyreg = /^[A-Za-z]+(?: [A-Za-z]+)*$/;
+
+    const handleDateChangeWithValidation = (entryId, fieldName, dateValue, currentEntry) => {
+        if (!dateValue) {
+            const syntheticEvent = { target: { name: fieldName, value: '' } };
+            onUpdateEntry(entryId, syntheticEvent);
+            return;
+        }
+
+        const [year, month, day] = dateValue.split('-');
+
+        // Check if year has exactly 4 digits
+        if (year && year.length !== 4) {
+            alert("Please enter a valid year with 4 digits (e.g., 2024)");
+            return;
+        }
+
+        const syntheticEvent = { target: { name: fieldName, value: dateValue } };
+        onUpdateEntry(entryId, syntheticEvent);
+    };
+
     const handleEntryChange = (id, e) => {
         const { name, value } = e.target;
 
@@ -1872,7 +1955,7 @@ const WorkExperience = ({
         if (Object.keys(newErrors).length === 0) {
             onNext();
         } else {
-            alert("Please fix the errors in your work experience.");
+            alert("Please fill all required fields.");
         }
     };
 
@@ -1919,7 +2002,7 @@ const WorkExperience = ({
                             <div style={{ display: "flex", justifyContent: "space-between" }}>
                                 <h4>{data.status === "Experienced" ? "Company" : "Internship"} {index + 1}</h4>
                                 <button type="button" onClick={() => onRemoveEntry(entry.id)} style={{ background: "none", border: "none", cursor: "pointer" }}>
-                                    <img className="upload-icon-btn" src={deleteIcon} alt="delete" />
+                                    <img className="upload-icon-btn" src={deleteIcon} alt="delete" title="Remove" />
                                 </button>
                             </div>
                             <div className="form-grid">
@@ -1950,9 +2033,10 @@ const WorkExperience = ({
                                     <input
                                         type="date"
                                         name="startDate"
-                                        value={entry.startDate}
-                                        onChange={(e) => handleEntryChange(entry.id, e)}
-                                        className={errors[`startDate_${entry.id}`] ? "input-error" : ""}
+                                        value={entry.startDate || ""}
+                                        onChange={(e) => handleDateChangeWithValidation(entry.id, 'startDate', e.target.value, entry)}
+                                        className={errors[`startDate_${entry.id}`] ? "input-error" : "", "cursor-as-pointer"}
+
                                     />
                                     {errors[`startDate_${entry.id}`] && <span className="error-message">{errors[`startDate_${entry.id}`]}</span>}
                                 </div>
@@ -1961,9 +2045,10 @@ const WorkExperience = ({
                                     <input
                                         type="date"
                                         name="endDate"
-                                        value={entry.endDate}
-                                        onChange={(e) => handleEntryChange(entry.id, e)}
-                                        className={errors[`endDate_${entry.id}`] ? "input-error" : ""}
+                                        value={entry.endDate || ""}
+                                        onChange={(e) => handleDateChangeWithValidation(entry.id, 'endDate', e.target.value, entry)}
+                                        className={errors[`endDate_${entry.id}`] ? "input-error" : "", "cursor-as-pointer"}
+
                                     />
                                     {errors[`endDate_${entry.id}`] && <span className="error-message">{errors[`endDate_${entry.id}`]}</span>}
                                 </div>
@@ -2015,7 +2100,7 @@ const WorkExperience = ({
                                 </div>
                                 <div className="form-group">
                                     <label>Key Responsibilities / Achievements</label>
-                                    <textarea
+                                    <input
                                         name="responsibilities"
                                         value={entry.responsibilities || ""}
                                         onChange={(e) => handleEntryChange(entry.id, e)}
@@ -2047,6 +2132,7 @@ const WorkExperience = ({
     );
 };
 
+
 const KeySkills = ({ skills, onAdd, onUpdate, onDelete, onReset, onNext }) => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editIndex, setEditIndex] = useState(null);
@@ -2076,6 +2162,11 @@ const KeySkills = ({ skills, onAdd, onUpdate, onDelete, onReset, onNext }) => {
     };
 
     const handleSave = () => {
+        // const value = currentSkill.trim();
+        // if(!value) {
+        //     setError("Key Skills field is Mandatory");
+        //     return;
+        // }
         const isDuplicate = skills.some((skill, index) =>
             skill.toLowerCase() === currentSkill.toLowerCase() && index !== editIndex
         );
@@ -2084,12 +2175,12 @@ const KeySkills = ({ skills, onAdd, onUpdate, onDelete, onReset, onNext }) => {
             alert("This skill is already in your list.");
             return;
         }
-        const value = currentSkill.trim();
 
-        if (!isValidValue(value)) {
-            setError("Enter valid skill (only letters, no junk values)");
-            return;
-        }
+
+        // if (!isValidValue(value)) {
+        //     setError("Enter valid skill (only letters, no junk values)");
+        //     return;
+        // }
 
         if (editIndex !== null) onUpdate(editIndex, value);
         else onAdd(value);
@@ -2296,7 +2387,7 @@ const LanguagesKnown = ({
                     {error}
                 </div>
             )}
-            <div className="skills-list">
+            <div className="skills-list" >
                 {languages.map((lang, index) => (
                     <EditableListItem
                         key={index}
@@ -2351,6 +2442,7 @@ const Certifications = ({
     onUpdate,
     onDelete,
     onReset,
+    setError,
     onNext,
 }) => {
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -2475,13 +2567,20 @@ const Certifications = ({
         }
     };
 
+    const handleContinue = (e) => {
+        e.preventDefault();
+        if (certs.length === 0) {
+            setError("*At least one skill is required to proceed.");
+        } else {
+            setError("");
+            onNext();
+        }
+    };
+
     return (
         <form
             className="content-card"
-            onSubmit={(e) => {
-                e.preventDefault();
-                onNext();
-            }}
+            onSubmit={handleContinue}
         >
             <div className="profile-header">
                 <h2>Certifications</h2>
@@ -2498,7 +2597,7 @@ const Certifications = ({
                             onClick={() => openEdit(index)}
                             className="edit-skill-btn"
                         >
-                            <img className="edit-icon-btn" src={editIcon} alt="edit" />
+                            <img className="edit-icon-btn" title="Edit" src={editIcon} alt="edit" />
                         </button>
                     </div>
                 ))}
@@ -2540,9 +2639,7 @@ const Certifications = ({
                         accept=".pdf,.png,.jpg,.jpeg"
                         onChange={handleFileChange}
                     />
-                    <div className="choose-file-container" onClick={() => document.getElementById("certUpload").click()}>
-                        The Chosen File:
-                    </div>
+
 
                     {errors.file && <span className="error-message" style={{ display: 'block', marginTop: '5px' }}>{errors.file}</span>}
 
@@ -2657,6 +2754,9 @@ const Preferences = ({ data, onChange, onReset, onSubmitFinal, saving }) => {
 
         if (Object.keys(newErrors).length === 0) {
             onSubmitFinal();
+        }
+        else {
+            alert("Please fill all required fields.");
         }
     };
 

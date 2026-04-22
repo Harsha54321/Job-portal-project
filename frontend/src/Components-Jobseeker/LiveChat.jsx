@@ -19,6 +19,7 @@ const TypingDots = () => {
  
 export const LiveChat = () => {
   const chatBodyRef = useRef(null);
+  const inputRef = useRef(null);
   const [step, setStep] = useState("INIT");
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
@@ -28,6 +29,11 @@ export const LiveChat = () => {
   const [rating, setRating] = useState(0);
   const [feedback, setFeedback] = useState("");
  
+  useEffect(() => {
+  if (step === "CHAT" && !isTyping) {
+    inputRef.current?.focus();
+  }
+}, [step, isTyping]);
  
   useEffect(() => {
     if (chatBodyRef.current) {
@@ -37,15 +43,19 @@ export const LiveChat = () => {
   }, [messages, isTyping, step]);
  
  
-  const startConversation = () => {
-    setStep("CHAT");
-    setMessages([
-      {
-        from: "bot",
-        text: "Hi, How can I help you..."
-      }
-    ]);
-  };
+    const startConversation = () => {
+      setStep("CHAT");
+      setMessages([
+        {
+          from: "bot",
+          text: "Hi, How can I help you..."
+        }
+      ]);
+ 
+      setTimeout(() => {
+        inputRef.current?.focus();
+      }, 1);
+    };
  
   const handleSend = () => {
     if (!input.trim() || isTyping) return;
@@ -79,13 +89,14 @@ export const LiveChat = () => {
   //       { from: "bot", text: reply }
   //     ]);
   //   }, 1500);
-  // };
+    // };
  
+    setTimeout(() => {
+      inputRef.current?.focus();
+    }, 0);
       sendToBackend(input);
   };
  
- 
-  // ✅ NEW FUNCTION → Backend Chat API
   const sendToBackend = async (text) => {
     try {
       setIsTyping(true);
@@ -176,12 +187,20 @@ export const LiveChat = () => {
               {step === "CHAT" && (
                 <div className="Livechat-chat-input">
                   <input
+                    ref={inputRef}
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     placeholder="Type your message..."
                     disabled={isTyping}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault(); // prevents newline / unwanted behavior
+                        handleSend();
+                      }
+                    }}
                   />
-                  <button onClick={handleSend}>
+                  <button onClick={handleSend}
+                  >
                     Send <img className="Livechat-send-icon" src={SendIcon} />
                   </button>
                   <button className="Livechat-end-btn" onClick={endConversation}>
@@ -233,7 +252,8 @@ export const LiveChat = () => {
                 onChange={(e) => setFeedback(e.target.value)}
               />
  
-              <button onClick={handleFeedbackSubmit}>
+              <button
+              onClick={handleFeedbackSubmit}>
                 Submit
               </button>
             </div>
@@ -245,4 +265,5 @@ export const LiveChat = () => {
     </>
   );
 };
+ 
  

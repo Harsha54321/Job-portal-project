@@ -4,16 +4,24 @@ import fileIcon from "../assets/Employer/fileIcon.png"
 import "./CompanyVerify.css";
 import { EHeader } from "./EHeader";
 import { useNavigate } from "react-router-dom";
-import api from "../api/axios";  
+import api from "../api/axios";
 import emailIcon from '../assets/icon_email_otp.png'
 import mobileIcon from '../assets/icon_mobile_otp.png'
 import Verified from '../assets/verified-otpimage.png'
+import { useLocation } from "react-router-dom";
+
 
 export const CompanyVerify = () => {
 
+
   const navigate = useNavigate();
-  const [isLoading, setIsLoading] = useState(false);  
-  const [backendError, setBackendError] = useState("");  
+  const [isLoading, setIsLoading] = useState(false);
+  const [backendError, setBackendError] = useState("");
+
+  const location = useLocation();
+  const isFirstTime = location.state?.fromCompanyProfile === true;
+  console.log("🔍 location.state:", location.state);
+  console.log("🔍 isFirstTime:", isFirstTime);
 
 
   const [errors, setErrors] = useState({}); // error message 
@@ -152,6 +160,7 @@ export const CompanyVerify = () => {
   };
 
   // --- TIMER LOGIC ---
+  // TIMER LOGIC
   useEffect(() => {
     let interval;
     if (timer > 0) {
@@ -160,6 +169,36 @@ export const CompanyVerify = () => {
     return () => clearInterval(interval);
   }, [timer]);
 
+  // ✅ Verification status effect
+  useEffect(() => {
+    if (isFirstTime) {
+      console.log("First time user - skipping verification status check");
+      return;
+    }
+
+    const fetchVerificationStatus = async () => {
+      try {
+        const response = await api.get('/company/verification-status/');
+        console.log("Verification status:", response.data);
+        if (response.data.message) {
+          setBackendError(response.data.message);
+        }
+      } catch (err) {
+        console.error("Error fetching status:", err);
+        if (err.response?.status === 404) {
+          setBackendError("No verification request found. Please submit company verification.");
+        } else if (err.code === 'ERR_NETWORK') {
+          setBackendError("Network error. Please check your connection.");
+        } else {
+          setBackendError("Unable to check verification status. Please try again.");
+        }
+      }
+    };
+
+    fetchVerificationStatus(); // ✅ Call it here
+  }, [isFirstTime]);
+
+  // ✅ formatTime function - OUTSIDE useEffect
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -186,15 +225,15 @@ export const CompanyVerify = () => {
       setErrors({ ...errors, officialEmail: "Please enter a valid email address" });
       return;
     }
-    
+
     setIsLoading(true);
     try {
       // ✅ Use company-specific OTP endpoint
-      const response = await api.post('/company/send-email-otp/', { 
+      const response = await api.post('/company/send-email-otp/', {
         email: email,
         company_name: formData.legalName
       });
-      
+
       if (response.status === 200) {
         alert(`OTP sent to ${email}`);
         setTimer(180);
@@ -205,8 +244,8 @@ export const CompanyVerify = () => {
     } catch (err) {
       console.error("Send OTP error:", err);
       alert(err.response?.data?.error || "Failed to send OTP. Please try again.");
-    } finally { 
-      setIsLoading(false); 
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -215,25 +254,25 @@ export const CompanyVerify = () => {
       alert("Enter 6-digit OTP");
       return;
     }
-    
+
     setIsLoading(true);
     try {
       // ✅ Use company-specific verification endpoint
-      const response = await api.post('/company/verify-email-otp/', { 
-        email: emailForOtp, 
-        otp: otpValues.emailOtp 
+      const response = await api.post('/company/verify-email-otp/', {
+        email: emailForOtp,
+        otp: otpValues.emailOtp
       });
-      
+
       if (response.status === 200 && response.data.verified) {
         setIsEmailVerified(true);
         setTimeout(() => setShowEmailOtp(false), 1500);
         alert("Email verified successfully!");
       }
-    } catch (err) { 
+    } catch (err) {
       console.error("Verify OTP error:", err);
       alert(err.response?.data?.error || "Invalid OTP");
-    } finally { 
-      setIsLoading(false); 
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -252,8 +291,8 @@ export const CompanyVerify = () => {
     if (otpValues.mobileOtp === "123456") { // Testing OTP - Replace with actual API
       setIsMobileVerified(true);
       setTimeout(() => setShowMobileOtp(false), 1500);
-    } else { 
-      alert("Invalid OTP"); 
+    } else {
+      alert("Invalid OTP");
     }
   };
 
@@ -446,9 +485,10 @@ export const CompanyVerify = () => {
       <div className="company-verify-container">
         <h2 className="company-verify-title">Company Verify</h2>
 
-        {/* Show error if any */}
+        {/* Show backend error only */}
         {backendError && (
-          <div style={{ color: "red", marginBottom: "10px", textAlign: "center" }}>
+          <div style={{backgroundColor: "#ffebee", color: "#d32f2f",
+            padding: "10px", borderRadius: "5px", marginBottom: "20px", textAlign: "center"}}>
             {backendError}
           </div>
         )}
@@ -523,10 +563,10 @@ export const CompanyVerify = () => {
                 disabled={isLoading || isEmailVerified}
               />
               {!isEmailVerified && formData.officialEmail.length > 0 && (
-                <button 
-                  type="button" 
-                  className="company-small-verify-btn" 
-                  onClick={sendCompanyEmailOtp} 
+                <button
+                  type="button"
+                  className="company-small-verify-btn"
+                  onClick={sendCompanyEmailOtp}
                   disabled={isLoading}
                 >
                   {isLoading ? "Sending..." : "Verify"}
@@ -550,10 +590,10 @@ export const CompanyVerify = () => {
                 disabled={isLoading}
               />
               {!isMobileVerified && formData.phoneNumber.length === 10 && (
-                <button 
-                  type="button" 
-                  className="company-small-verify-btn" 
-                  onClick={sendMobileOtp} 
+                <button
+                  type="button"
+                  className="company-small-verify-btn"
+                  onClick={sendMobileOtp}
                   disabled={isLoading}
                 >
                   Verify
