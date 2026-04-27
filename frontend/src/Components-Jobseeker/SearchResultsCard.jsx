@@ -57,6 +57,18 @@ export function SearchResultsCard({ job }) {
         </div>
     );
 
+    const formatLocation = (location) => {
+
+        if (!location) return "Location not specified";
+
+        if (Array.isArray(location)) {
+            return location.join(", ");
+        }
+        return location;
+    };
+
+    const locationDisplay = formatLocation(job.location);
+
     return (
         <div className="SearchResults-job-card">
             <div onClick={handleCardClick}>
@@ -88,7 +100,7 @@ export function SearchResultsCard({ job }) {
                         {job.experience || "Experience not specified"} years of experience
                         <span className="SearchResults-job-card-divider">|</span>
                         <img src={place} className="SearchResults-job-card-icons" alt="location" />
-                        {job.location || "Location not specified"}
+                        {locationDisplay || "Location not specified"}
                     </p>
 
                     <p className="SearchResults-job-card-detail-line">

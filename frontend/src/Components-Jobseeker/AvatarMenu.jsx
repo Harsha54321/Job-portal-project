@@ -53,12 +53,13 @@ export const AvatarMenu = () => {
   }, []);
 
   return (
-    <div className="avatar-container" ref={menuRef} title="Menu">
+    <div className="avatar-container" ref={menuRef} >
 
       <img
         src={avatarIcon}
         alt="avatar"
         className="avatar-icon"
+        title="Menu"
         onClick={() => setOpen(!open)}
       />
 

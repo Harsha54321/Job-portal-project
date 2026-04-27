@@ -18,7 +18,7 @@ export const Header = () => {
   // const [notificationsData, setNotificationsData] = useState([]);
 
   // ✅ Get notifications from JobContext
-  const {  notificationsData,  showNotification,  setShowNotification, fetchNotifications  } = useJobs();
+  const { notificationsData, showNotification, setShowNotification, fetchNotifications } = useJobs();
 
   const newNotificationsCount = Array.isArray(notificationsData)
     ? notificationsData.filter(n => !n.is_read).length
@@ -59,9 +59,9 @@ export const Header = () => {
 
   const refreshNotifications = async () => {
     if (fetchNotifications) {
-        await fetchNotifications();
+      await fetchNotifications();
     }
-};
+  };
 
   // useEffect(() => {
   //   if (isLoggedIn) {
@@ -70,11 +70,11 @@ export const Header = () => {
   // }, [isLoggedIn]);  
 
 
-useEffect(() => {
+  useEffect(() => {
     if (isLoggedIn && fetchNotifications) {
-        fetchNotifications();
+      fetchNotifications();
     }
-}, [isLoggedIn]);
+  }, [isLoggedIn]);
 
 
   ///const handleNavClick = (e) => {
@@ -93,7 +93,9 @@ useEffect(() => {
   return (
     <header className="header">
       <div className="logo-container">
-        <div className="logo">Job portal</div>
+        <Link to="/" className="logo">
+          <span className="logo-text">Job portal</span>
+        </Link>
         {!isLoggedIn && (
           <div
             className="hamburger"

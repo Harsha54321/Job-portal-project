@@ -109,7 +109,8 @@ export const Jlogin = () => {
 
       const response = await api.post('send-login-otp/', {
         email: formValues.username,
-        purpose: 'login'
+        purpose: 'login',
+
       });
 
       console.log('OTP Response:', response.data);
@@ -221,7 +222,15 @@ export const Jlogin = () => {
 
       const response = await api.post('login/', loginData);
 
+
       console.log('✅ Login Response:', response.data);
+      if (response.data.user.user_type !== 'jobseeker') {
+        setErrors({ general: "Please use employer login" });
+        setLoading(false);
+        return;
+      }
+
+
 
       // Store tokens
       if (response.data.access && response.data.refresh) {
@@ -366,6 +375,13 @@ export const Jlogin = () => {
             </button>
           )}
           <h2>Login to continue</h2>
+
+          {errors.general && (
+            <span className="error-msg" style={{ color: 'red', marginBottom: '10px', display: 'block' }}>
+              {errors.general}
+            </span>
+          )}
+
 
           {/* VIEW 1: DEFAULT USERNAME & PASSWORD */}
           {view === 'default' && (

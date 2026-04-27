@@ -1,5 +1,5 @@
 import React from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import './FHeader.css'
 import backicon from "../assets/curved-go-back.png";
 
@@ -11,7 +11,9 @@ export function FHeader() {
   };
   return (
     <div className="header">
-      <div className="logo">Job portal</div>
+      <Link to="/" className="logo">
+        <span className="logo-text">Job portal</span>
+      </Link>
 
       <div className="Fheader-back-btn" onClick={handleBack} title="Go Back">
         <img src={backicon} alt="back" />

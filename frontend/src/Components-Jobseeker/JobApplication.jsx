@@ -333,6 +333,17 @@ export const JobApplication = () => {
     );
   }
 
+  const formatLocation = (location) => {
+
+        if (!location) return "Location not specified";
+
+        if (Array.isArray(location)) {
+            return location.join(", ");
+        }
+        return location;
+    };
+
+    const locationDisplay = formatLocation(job.location);
 
   return (
     <>
@@ -363,7 +374,7 @@ export const JobApplication = () => {
 
             <span>
               <img src={place} className="apply-form-card-icons" />
-              {job.location}
+              {locationDisplay}
             </span>
           </div>
         </div>

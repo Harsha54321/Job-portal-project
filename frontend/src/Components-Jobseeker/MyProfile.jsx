@@ -2162,11 +2162,11 @@ const KeySkills = ({ skills, onAdd, onUpdate, onDelete, onReset, onNext }) => {
     };
 
     const handleSave = () => {
-        // const value = currentSkill.trim();
-        // if(!value) {
-        //     setError("Key Skills field is Mandatory");
-        //     return;
-        // }
+        const value = currentSkill.trim();
+        if(!value) {
+            setError("Key Skills field is Mandatory");
+            return;
+        }
         const isDuplicate = skills.some((skill, index) =>
             skill.toLowerCase() === currentSkill.toLowerCase() && index !== editIndex
         );
@@ -2177,10 +2177,10 @@ const KeySkills = ({ skills, onAdd, onUpdate, onDelete, onReset, onNext }) => {
         }
 
 
-        // if (!isValidValue(value)) {
-        //     setError("Enter valid skill (only letters, no junk values)");
-        //     return;
-        // }
+        if (!isValidValue(value)) {
+            setError("Enter valid skill (only letters, no junk values)");
+            return;
+        }
 
         if (editIndex !== null) onUpdate(editIndex, value);
         else onAdd(value);
@@ -2442,7 +2442,6 @@ const Certifications = ({
     onUpdate,
     onDelete,
     onReset,
-    setError,
     onNext,
 }) => {
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -2492,7 +2491,7 @@ const Certifications = ({
         setEditIndex(index);
         setErrors({});
         setCurrentCert({
-            id: certToEdit.id || null,  // ✅ Make sure this is set
+            id: certToEdit.id || null,  // Make sure this is set
             name: certToEdit.name,
             file: null,
             existingFile: certToEdit.existingFile || certToEdit.file || null
@@ -2543,7 +2542,7 @@ const Certifications = ({
                 existingFile: currentCert.existingFile
             };
 
-            // ✅ IMPORTANT: Preserve ID when editing
+            // IMPORTANT: Preserve ID when editing
             if (currentCert.id) {
                 certData.id = currentCert.id;
                 console.log(`Saving certification with ID: ${currentCert.id}`);
@@ -2567,20 +2566,13 @@ const Certifications = ({
         }
     };
 
-    const handleContinue = (e) => {
-        e.preventDefault();
-        if (certs.length === 0) {
-            setError("*At least one skill is required to proceed.");
-        } else {
-            setError("");
-            onNext();
-        }
-    };
-
     return (
         <form
             className="content-card"
-            onSubmit={handleContinue}
+            onSubmit={(e) => {
+                e.preventDefault();
+                onNext();
+            }}
         >
             <div className="profile-header">
                 <h2>Certifications</h2>

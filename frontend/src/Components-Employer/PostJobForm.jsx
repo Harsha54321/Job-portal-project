@@ -11,7 +11,7 @@ const availableSkills = ["UI & UX", "UI/UX Design", "UI Design", "UX Design", "U
   "SQL", "MySQL", "PostgreSQL", "SQLite", "MongoDB", "Mongoose", "Redis", "Cassandra", "DynamoDB", "Firebase", "Oracle", "Microsoft SQL Server", "GraphQL", "REST API", "Prisma",
   "AWS", "Azure", "Google Cloud Platform (GCP)", "Docker", "Kubernetes", "Linux", "Unix", "Ubuntu", "CentOS", "Jenkins", "Travis CI", "CircleCI", "GitLab CI/CD", "Terraform", "Ansible", "Puppet", "Chef", "Bash", "Shell Scripting", "Nginx", "Apache",
   "Data Analysis", "Data Science", "Machine Learning", "Artificial Intelligence", "Deep Learning", "NLP", "Computer Vision", "Pandas", "NumPy", "Matplotlib", "Seaborn", "Scikit-Learn", "TensorFlow", "Keras", "PyTorch", "Tableau", "Power BI", "Excel", "R", "Hadoop", "Spark", "Kafka",
-  "Android SDK", "iOS Development", "Flutter", "Dart", "Objective-C", "Xamarin", "Ionic",
+  "Android SDK", "iOS Development", "Flutter", "Dart", "Objective-C", "Xamarin", "Ionic", "Service Now", "Automation Testing", "Manual Testing", "Test Cases", "Test Plans",
   "Agile", "Scrum", "Kanban", "Jira", "Trello", "Asana", "Git", "GitHub", "GitLab", "Bitbucket", "Postman", "Swagger",
   "Cybersecurity", "Penetration Testing", "Ethical Hacking", "Cryptography", "Blockchain", "Web3", "Smart Contracts", "Solidity", "QA Testing", "Selenium", "Jest", "Mocha", "Chai", "Cypress", "Puppeteer", "Project Management", "Product Management", "Digital Marketing", "SEO", "SEM", "Content Writing", "Copywriting", "Sales", "Business Development", "Customer Success", "Technical Support"];
 
@@ -39,21 +39,21 @@ export const PostJobForm = ({ onCancel }) => {
   ];
 
   const [formData, setFormData] = useState({
-    job_title: '',  // Changed from jobTitle to match backend
-    industry_type: [],  // Changed from category to match backend
+    job_title: '',  
+    industry_type: [],  
     department: [],
     education: [],
-    work_type: '',  // Changed from workType to match backend
+    work_type: '', 
     shift: '',
-    work_duration: '',  // Changed from workDuration to match backend
+    work_duration: '', 
     salary: '',
     experience: '',
-    location: [],  // Changed to array
+    location: [],  
     openings: '',
-    job_category: '',  // Changed from jobCategory to string (not array)
-    key_skills: [],  // Changed from keySkills to array
-    job_highlights: [''],  // Changed from jobHighlights to match backend
-    job_description: '',  // Changed from jobDescription to match backend
+    job_category: '',  
+    key_skills: [],  
+    job_highlights: [''], 
+    job_description: '',  
     responsibilities: ['']
 
   });
@@ -118,7 +118,7 @@ export const PostJobForm = ({ onCancel }) => {
     const openingsRegex = /^[1-9][0-9]{0,2}$/;
 
     const contentRegex = /^(?=.*[a-zA-Z])[a-zA-Z0-9\s.,-]{5,}$/;
-    const expRegex = /^([1-9][0-9]?|100)$/;
+    const expRegex = /^[0-9]+(\.[0-9]+)?(-[0-9]+(\.[0-9]+)?)?$/;
 
     // --- VALIDATION LOGIC ---
 
@@ -159,12 +159,66 @@ export const PostJobForm = ({ onCancel }) => {
       }
     }
 
-    // Experience Validation (Strict 1-100)
-    const expStr = formData.experience.trim();
+
+    const expStr = formData.experience.trim().toLowerCase();
+
     if (!expStr) {
       newErrors.experience = "Experience is required";
-    } else if (!expRegex.test(expStr)) {
-      newErrors.experience = "Enter a number between 1 and 100 (no symbols)";
+    }
+    else {
+      // 1. BLOCKS PLAIN NUMBERS (e.g., "3")
+      if (/^\d+$/.test(expStr)) {
+        newErrors.experience = "Please specify unit (e.g., '3.0 years' or '2-4 years')";
+      }
+
+      // 2. BLOCKS PLAIN RANGES WITHOUT "years" (e.g., "2-4")
+      else if (/^\d+-\d+$/.test(expStr)) {
+        newErrors.experience = "Please specify unit (e.g., '2-4 years')";
+      }
+
+      // 3. VALIDATE CORRECT RANGE FORMAT (e.g., "2-4 years")
+      else if (expStr.includes('-')) {
+        // Regex to check for: number-number followed by "years"
+        const rangeWithUnitRegex = /^(\d+)-(\d+)\s*years?$/;
+
+        if (!rangeWithUnitRegex.test(expStr)) {
+          newErrors.experience = "Invalid range format. Use '2-4 years'";
+        } else {
+          const match = expStr.match(rangeWithUnitRegex);
+          const start = parseFloat(match[1]);
+          const end = parseFloat(match[2]);
+
+          if (end <= start) {
+            newErrors.experience = "End year must be greater than start year";
+          } else {
+            newErrors.experience_label = `${start}-${end} Years (Range)`;
+          }
+        }
+      }
+
+      // 4. VALIDATE DECIMAL FORMAT (e.g., "2.5 years")
+      else if (expStr.includes('.') || expStr.includes('years')) {
+        const decimalWithUnitRegex = /^(\d+(\.\d+)?)\s*years?$/;
+
+        if (!decimalWithUnitRegex.test(expStr)) {
+          newErrors.experience = "Invalid format. Use '2.5 years' or '3.0 years'";
+        } else {
+          const val = expStr.replace(/[^0-9.]/g, '');
+          if (val.includes('.')) {
+            const parts = val.split('.');
+            const y = parseInt(parts[0] || 0);
+            const m = parseInt(parts[1] || 0);
+
+            if (m >= 12) {
+              newErrors.experience = "Months cannot be 12 or more";
+            } else {
+              newErrors.experience_label = `${y > 0 ? y + ' Years, ' : ''}${m} Months`;
+            }
+          } else {
+            newErrors.experience_label = `${val} Years`;
+          }
+        }
+      }
     }
 
     // Openings
@@ -500,9 +554,9 @@ export const PostJobForm = ({ onCancel }) => {
                           type="checkbox"
                           onChange={() => {
                             if (locationList.length === locationsList.length) {
-                              setLocationList([]); 
+                              setLocationList([]);
                             } else {
-                              setLocationList(locationsList); 
+                              setLocationList(locationsList);
                             }
                             setErrors({ ...errors, location: "" });
                           }}

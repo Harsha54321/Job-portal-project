@@ -79,25 +79,6 @@ export const JobProvider = ({ children }) => {
         setTimeout(() => setShowNotification(false), 3000);
     };
 
-    // ================= EMPLOYER NOTIFICATIONS =================
-    // const fetchEmployerNotifications = async () => {
-    //     try {
-    //         const res = await api.get("notifications/");
-    //         setEmployerNotifications(res.data);
-    //     } catch (err) {
-    //         console.error("Employer notifications error:", err);
-    //     }
-    // };
-
-    // const addEmployerNotification = async (text) => {
-    //     try {
-    //         await api.post("notifications/", { message: text });
-    //         fetchEmployerNotifications();
-    //     } catch (err) {
-    //         console.error(err);
-    //     }
-    // };  
-
     const fetchNotifications = useCallback(async () => {
         try {
             const res = await api.get("/notifications/");
@@ -113,7 +94,6 @@ export const JobProvider = ({ children }) => {
                     minute: '2-digit',
                     hour12: true
                 }),
-
                 targetId: notification.user
             }));
 
@@ -129,9 +109,8 @@ export const JobProvider = ({ children }) => {
         }
     }, []);
 
-
     // ================= FETCH JOB DATA =================
-    const fetchAllJobs = async () => {
+    const fetchAllJobs = useCallback(async () => {
         try {
             const [jobsRes, savedRes, appliedRes] = await Promise.all([
                 api.get("/jobs/all/"),
@@ -151,11 +130,11 @@ export const JobProvider = ({ children }) => {
             }
         }
         finally {
-            setLoading(false); // ✅ ADD THIS
+            setLoading(false);
         }
-    };
+    }, []);
 
-    const fetchEmployerJobs = async () => {
+    const fetchEmployerJobs = useCallback(async () => {
         try {
             const res = await api.get("/jobs/my-jobs/");
             return res.data;
@@ -163,7 +142,7 @@ export const JobProvider = ({ children }) => {
             console.error(err);
             return [];
         }
-    };
+    }, []);
 
     // ================= JOB ACTIONS =================
     const isJobSaved = (jobId) => {
@@ -223,31 +202,6 @@ export const JobProvider = ({ children }) => {
     };
 
     // ================= EMPLOYER JOB ACTIONS =================
-
-
-
-    //     const postJob = async (jobData) => {
-    //     try {
-    //         // Step 1: Create job preview
-    //         const previewResponse = await api.post("/jobs/preview/", jobData);
-    //         const jobId = previewResponse.data.id;
-
-    //         // Step 2: Publish the job (PATCH, not POST)
-    //         const publishResponse = await api.patch(`/jobs/publish/${jobId}/`);
-
-    //         await fetchAllJobs();
-    //         addEmployerNotification(`Job "${jobData.job_title}" posted successfully!`);
-    //         addNotification("Job posted successfully!");
-
-    //         return publishResponse.data;
-
-    //     } catch (err) {
-    //         console.error("Error posting job:", err);
-    //         throw err;
-    //     }
-    // };  
-
-
     const postJob = async (jobData) => {
         try {
             console.log('📤 Sending job data to PostAJob endpoint:', JSON.stringify(jobData, null, 2));
@@ -289,25 +243,12 @@ export const JobProvider = ({ children }) => {
         }
     };
 
-
-    // const editJob = async (jobId, data) => {
-    //     try {
-    //         await api.patch(`/jobs/update/${jobId}/`, data);
-    //         await fetchAllJobs();
-    //         addNotification("Job updated successfully!");
-    //     } catch (err) {
-    //         console.error(err);
-    //         throw err;
-    //     }
-    // };   
-
     const editJob = async (jobId, data) => {
         try {
             const response = await api.patch(`/jobs/update/${jobId}/`, data);
             await fetchAllJobs();
             addNotification("Job updated successfully!");
-
-            return {  // ← RETURN add cheyyi
+            return {
                 success: true,
                 data: response.data
             };
@@ -322,14 +263,13 @@ export const JobProvider = ({ children }) => {
             await api.delete(`/jobs/delete/${jobId}/`);
             await fetchAllJobs();
             addNotification("Job deleted successfully!");
-            // addEmployerNotification("Job posting deleted!");
         } catch (err) {
             console.error(err);
             throw err;
         }
     };
 
-    // ================= CHAT =================
+    // ================= CHAT FUNCTIONS =================
     const fetchChats = useCallback(async () => {
         try {
             const token = localStorage.getItem('access');
@@ -369,12 +309,8 @@ export const JobProvider = ({ children }) => {
 
             console.log("API Response:", res.data);
 
-            // Add user to sidebar
             addChatToSidebar(userId);
-
-            // Fetch updated chats
             await fetchChats();
-
             addNotification("Conversation started successfully");
 
             return res.data.conversation_id;
@@ -412,7 +348,6 @@ export const JobProvider = ({ children }) => {
             }
 
             const conversation = chats.find(c => c.id === conversationId);
-
             let receiverId = null;
 
             if (conversation) {
@@ -420,15 +355,12 @@ export const JobProvider = ({ children }) => {
                 receiverId = receiver?.id;
             }
 
-            // 🔥 FALLBACK
             if (!receiverId) {
                 console.warn("Conversation not in state, using fallback API call");
-
                 const res = await api.post("chat/messages/send/", {
                     conversation_id: conversationId,
                     content: content
                 });
-
                 return { success: true, data: res.data };
             }
 
@@ -448,19 +380,93 @@ export const JobProvider = ({ children }) => {
             ));
 
             return { success: true, data: response.data };
-
         } catch (err) {
             console.error("Error sending message:", err.response?.data || err);
             return { success: false, error: err.response?.data };
         }
     };
 
-
     const addChatToSidebar = (userId) => {
         if (!activeSidebarUsers.includes(parseInt(userId))) {
             setActiveSidebarUsers(prev => [...prev, parseInt(userId)]);
         }
     };
+
+    // ================= EMPLOYER DATA FETCH =================
+    const fetchEmployerData = useCallback(async () => {
+        try {
+            console.log("📡 Fetching employer data...");
+            const employerRes = await api.get("profile/employer/");
+            const employerData = employerRes.data;
+
+            let companyData = null;
+            try {
+                const companyRes = await api.get("company/profile/");
+                companyData = companyRes.data;
+                console.log("✅ Company profile loaded");
+            } catch (err) {
+                console.log("No company profile found:", err.response?.status);
+            }
+
+            const employerJobs = await fetchEmployerJobs();
+            console.log(`📋 Loaded ${employerJobs.length} jobs`);
+
+            let allJobseekers = [];
+            try {
+                const jobseekersRes = await api.get("/jobseekers/");
+                const allData = jobseekersRes.data;
+                const jobseekersOnly = allData.filter(item => item.user?.user_type === "jobseeker");
+                setAlluser(jobseekersOnly);
+            } catch (err) {
+                console.error("Error fetching jobseekers:", err);
+                setAlluser([]);
+            }
+
+            const employer = {
+                id: employerData.user?.id,
+                companyId: companyData?.id || "",
+                company: companyData?.company_name || "",
+                hrName: employerData.full_name || employerData.user?.username || "Employer",
+                email: employerData.user?.email || "",
+                role: employerData.user?.user_type || "",
+                companyLogo: companyData?.company_logo || "",
+                companyOverview: companyData?.about || "",
+                jobPosted: employerJobs || [],
+                messages: [],
+            };
+
+            setCurrentEmployer(employer);
+            setCompanyProfile(companyData);
+            
+            console.log("✅ Employer data set:", employer.hrName);
+            return employer;
+        } catch (err) {
+            console.error("Employer fetch error:", err);
+            throw err;
+        }
+    }, [fetchEmployerJobs]);
+
+    // ================= REFRESH EMPLOYER DATA (ONLY FOR EMPLOYER) =================
+    const refreshEmployerData = useCallback(async () => {
+        const userType = localStorage.getItem("user_type");
+        
+        // Only refresh if user is employer
+        if (userType !== "employer") {
+            console.log("Not employer, skipping refresh");
+            return;
+        }
+        
+        try {
+            console.log("🔄 Refreshing employer data only...");
+            await fetchEmployerData();
+            await fetchAllJobs();
+            await fetchNotifications();
+            await fetchChats();
+            console.log("✅ Employer data refreshed successfully");
+        } catch (err) {
+            console.error("Refresh error:", err);
+        }
+    }, [fetchEmployerData, fetchAllJobs, fetchNotifications, fetchChats]);
 
     // ================= JOB STATS =================
     const getJobStats = (jobId) => {
@@ -487,73 +493,7 @@ export const JobProvider = ({ children }) => {
         };
     };
 
-    // ================= EMPLOYER PROFILE =================
-    const fetchEmployerData = async () => {
-        try {
-            const employerRes = await api.get("profile/employer/");
-            const employerData = employerRes.data;
-
-            let companyData = null;
-            try {
-                const companyRes = await api.get("company/profile/");
-                companyData = companyRes.data;
-            } catch {
-                console.log("No company profile");
-            }
-
-            const employerJobs = await fetchEmployerJobs();
-
-            // Fetch all jobseekers for employer
-            // let allJobseekers = [];
-            // try {
-            //     const jobseekersRes = await api.get("/jobseekers/");
-            //     allJobseekers = jobseekersRes.data;
-            //     console.log("✅ Fetched jobseekers:", allJobseekers.length);
-            //     setAlluser(allJobseekers);
-            // } catch (err) {
-            //     console.error("Error fetching jobseekers:", err);
-            //     setAlluser([]);
-            // } 
-
-
-            let allJobseekers = [];
-            try {
-                const jobseekersRes = await api.get("/jobseekers/");
-                const allData = jobseekersRes.data;
-
-               
-                const jobseekersOnly = allData.filter(item => item.user?.user_type === "jobseeker");
-
-                console.log("✅ Total records:", allData.length);
-                console.log("✅ Jobseekers only:", jobseekersOnly.length);
-                setAlluser(jobseekersOnly);
-            } catch (err) {
-                console.error("Error fetching jobseekers:", err);
-                setAlluser([]);
-            }
-
-            const employer = {
-                id: employerData.user?.id,
-                companyId: companyData?.id || "",
-                company: companyData?.company_name || "",
-                hrName: employerData.full_name || employerData.user?.username || "Employer",
-                email: employerData.user?.email || "",
-                role: employerData.user?.user_type || "",
-                companyLogo: companyData?.company_logo || "",
-                companyOverview:companyData?.about||"",
-                jobPosted: employerJobs || [],
-                messages: [],
-            };
-
-            setCurrentEmployer(employer);
-            setCompanyProfile(companyData);
-
-        } catch (err) {
-            console.error("Employer fetch error:", err);
-        }
-    };
-
-    // ================= INITIAL LOAD =================
+    // ================= INITIAL LOAD (Without breaking jobseeker) =================
     useEffect(() => {
         const token = localStorage.getItem("access");
         const userType = localStorage.getItem("user_type");
@@ -565,6 +505,9 @@ export const JobProvider = ({ children }) => {
 
         const load = async () => {
             try {
+                console.log("🚀 Initial data load starting...");
+                setLoading(true);
+                
                 await fetchAllJobs();
                 await fetchChats();
                 await fetchNotifications();
@@ -572,22 +515,24 @@ export const JobProvider = ({ children }) => {
                 if (userType === "jobseeker") {
                     const res = await api.get("profile/jobseeker/");
                     setCurrentUser(res.data);
+                    console.log("✅ Jobseeker data loaded");
                 }
 
                 if (userType === "employer") {
                     await fetchEmployerData();
-                    // await fetchEmployerNotifications();
+                    console.log("✅ Employer data loaded");
                 }
-
+                
+                console.log("✅ Initial data load complete");
             } catch (err) {
-                console.error(err);
+                console.error("Initial load error:", err);
             } finally {
                 setLoading(false);
             }
         };
 
         load();
-    }, [fetchChats, fetchNotifications]);
+    }, []); // Empty dependency array - runs only once on mount
 
     // ================= PROVIDER =================
     return (
@@ -612,13 +557,12 @@ export const JobProvider = ({ children }) => {
             currentEmployer, setCurrentEmployer,
             companyProfile, setCompanyProfile,
             employerNotifications, setEmployerNotifications,
-            // fetchEmployerNotifications,
-            // addEmployerNotification,
             fetchEmployerJobs,
             postJob,
             editJob,
             deleteJob,
             getJobStats,
+            refreshEmployerData,  // ← Added only for employer
 
             // All users
             Alluser, setAlluser,

@@ -38,14 +38,14 @@ export const Elogin = () => {
   const handleForm = (e) => {
     const { name, value } = e.target;
     setFormValues({ ...formValues, [name]: value });
-    setErrors({ ...errors, [name]: "" });
+    setErrors({ ...errors, [name]: "", general: "" });
   };
 
   const validateForm = () => {
     const newErrors = {};
 
     if (!formValues.username.trim()) {
-      newErrors.username = "Username is required";
+      newErrors.username = "Username or Email is required";
     }
 
     if (!formValues.password.trim()) {
@@ -56,38 +56,47 @@ export const Elogin = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  // Function to check onboarding status and redirect
+  // Function to check onboarding status and redirect with auto-refresh
   const checkAndRedirect = async () => {
     try {
+      console.log("🔍 Checking onboarding status after login...");
+      
       const response = await api.get('/employer/onboarding-status/');
       console.log("Onboarding status:", response.data);
-      
+
       const { has_company_profile, has_verification, verification_status } = response.data;
-      
-      // Redirect based on status
+
       if (!has_company_profile) {
-        // No company profile - go to About Your Company
-        navigate('/Job-portal/Employer/about-your-company', { 
+        navigate('/Job-portal/Employer/about-your-company', {
+          replace: true,
           state: { fromSignup: false, fromLoginRedirect: true }
         });
       } else if (!has_verification) {
-        // Has company but no verification - go to Company Verify
         navigate('/Job-portal/Employer/about-your-company/company-verification', {
+          replace: true,
           state: { fromLoginRedirect: true }
         });
       } else if (verification_status === 'rejected') {
-        // Verification rejected - go to Company Verify to resubmit
         navigate('/Job-portal/Employer/about-your-company/company-verification', {
+          replace: true,
           state: { fromLoginRedirect: true, rejected: true }
         });
       } else {
-        // Has company and verification (pending or approved) - go to Dashboard
-        navigate('/Job-portal/employer/dashboard');
+        // ✅ Add justLoggedIn: true to trigger auto-refresh in dashboard
+        setTimeout(() => {
+          navigate('/Job-portal/employer/dashboard', { 
+            replace: true,
+            state: { justLoggedIn: true }
+          });
+        }, 100);
       }
     } catch (error) {
       console.error("Error checking status:", error);
-      // On error, still go to dashboard
-      navigate('/Job-portal/employer/dashboard');
+      // ✅ Add justLoggedIn: true to trigger auto-refresh in dashboard
+      navigate('/Job-portal/employer/dashboard', { 
+        replace: true,
+        state: { justLoggedIn: true }
+      });
     }
   };
 
@@ -97,14 +106,23 @@ export const Elogin = () => {
     if (!validateForm()) return;
 
     setLoading(true);
+    setErrors({});
 
     try {
-      const res = await api.post("/login/", {
-        email: formValues.username,
-        password: formValues.password,
-      });
+      const isEmail = formValues.username.includes('@');
+      const loginData = isEmail
+        ? { email: formValues.username, password: formValues.password }
+        : { username: formValues.username, password: formValues.password };
+
+      const res = await api.post("/login/", loginData);
 
       console.log("Login response:", res.data);
+
+      if (res.data.user.user_type !== 'employer') {
+        setErrors({ general: "Please use job seeker login" });
+        setLoading(false);
+        return;
+      }
 
       if (rememberMe) {
         localStorage.setItem("rememberedEmail", formValues.username);
@@ -113,13 +131,11 @@ export const Elogin = () => {
         localStorage.removeItem("rememberedEmail");
         localStorage.removeItem("rememberedPassword");
       }
-      
-      // Save ALL necessary data to localStorage
+
       localStorage.setItem("access", res.data.access);
       localStorage.setItem("refresh", res.data.refresh);
       localStorage.setItem("userRole", "Employer");
 
-      // Save user_id
       if (res.data.user_id) {
         localStorage.setItem("user_id", res.data.user_id);
       } else if (res.data.user && res.data.user.id) {
@@ -128,29 +144,77 @@ export const Elogin = () => {
         localStorage.setItem("user_id", res.data.id);
       }
 
-      // Save user type
       localStorage.setItem("user_type", res.data.user.user_type);
 
-      // Optional: Save profile_id if available
       if (res.data.profile_id) {
         localStorage.setItem("profile_id", res.data.profile_id);
       }
 
-      console.log("Saved to localStorage:", {
-        user_id: localStorage.getItem("user_id"),
-        user_type: localStorage.getItem("user_type"),
-        access: localStorage.getItem("access") ? "present" : "missing"
-      });
-
-      // ✅ Check onboarding status and redirect accordingly
-      navigate("/Job-portal/employer/dashboard");
       await checkAndRedirect();
-      
+
     } catch (err) {
       console.error("Login error:", err);
-      setErrors({
-        general: "Invalid email or password",
-      });
+
+      const newErrors = {};
+
+      if (err.response?.data?.detail) {
+        const detail = err.response.data.detail;
+
+        if (Array.isArray(detail) && detail[0] === "jobseeker_portal") {
+          newErrors.general = "Access denied. Please use the Job Seeker login.";
+        } else if (detail === "jobseeker_portal") {
+          newErrors.general = "Access denied. Please use the Job Seeker login.";
+        }
+        else if (Array.isArray(detail) && detail[0].toLowerCase().includes('password')) {
+          newErrors.password = detail[0];
+        }
+        else if (Array.isArray(detail) && (detail[0].toLowerCase().includes('account') || detail[0].toLowerCase().includes('found'))) {
+          newErrors.username = detail[0];
+        }
+        else if (Array.isArray(detail)) {
+          newErrors.general = detail[0];
+        } else if (typeof detail === 'string') {
+          if (detail.toLowerCase().includes('password')) {
+            newErrors.password = detail;
+          } else if (detail.toLowerCase().includes('account') || detail.toLowerCase().includes('found')) {
+            newErrors.username = detail;
+          } else {
+            newErrors.general = detail;
+          }
+        }
+      }
+
+      if (err.response?.data?.email) {
+        newErrors.username = Array.isArray(err.response.data.email)
+          ? err.response.data.email[0]
+          : err.response.data.email;
+      }
+
+      if (err.response?.data?.username) {
+        newErrors.username = Array.isArray(err.response.data.username)
+          ? err.response.data.username[0]
+          : err.response.data.username;
+      }
+
+      if (err.response?.data?.password) {
+        newErrors.password = Array.isArray(err.response.data.password)
+          ? err.response.data.password[0]
+          : err.response.data.password;
+      }
+
+      if (err.response?.data?.non_field_errors) {
+        const nonFieldError = Array.isArray(err.response.data.non_field_errors)
+          ? err.response.data.non_field_errors[0]
+          : err.response.data.non_field_errors;
+        newErrors.general = nonFieldError;
+      }
+
+      if (Object.keys(newErrors).length === 0) {
+        newErrors.general = "Invalid email or password";
+      }
+
+      setErrors(newErrors);
+
     } finally {
       setLoading(false);
     }
@@ -159,7 +223,7 @@ export const Elogin = () => {
   return (
     <div className="login-page">
       <header className="login-header">
-        <Link to="/Job-portal" className="logo">
+        <Link to="/" className="logo">
           <span className="logo-text">Job portal</span>
           <span className="subtext">For Employers</span>
         </Link>
@@ -187,17 +251,20 @@ export const Elogin = () => {
           <h2>Login to continue</h2>
 
           {errors.general && (
-            <span className="error-msg">{errors.general}</span>
+            <span className="error-msg" style={{ color: 'red', marginBottom: '10px', display: 'block' }}>
+              {errors.general}
+            </span>
           )}
 
-          <label>Email ID</label>
+          <label>Username / Email</label>
           <input
-            type="email"
+            type="text"
             name="username"
-            placeholder="Enter your email address"
+            placeholder="Enter your username or email"
             value={formValues.username}
             onChange={handleForm}
             className={errors.username ? "input-error" : ""}
+            disabled={loading}
           />
           {errors.username && (
             <span className="error-msg">{errors.username}</span>
@@ -212,6 +279,7 @@ export const Elogin = () => {
               value={formValues.password}
               onChange={handleForm}
               className={errors.password ? "input-error" : ""}
+              disabled={loading}
             />
             <span className="eye-icon" onClick={togglePasswordView}>
               <img
@@ -231,6 +299,7 @@ export const Elogin = () => {
                 type="checkbox"
                 checked={rememberMe}
                 onChange={handleRememberMeChange}
+                disabled={loading}
               />
               Remember me
             </label>

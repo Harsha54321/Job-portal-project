@@ -4,30 +4,31 @@ import { useJobs } from "../JobContext";
 import home from "../assets/home_icon.png";
 import api from "../api/axios";
 import { Link } from 'react-router-dom';
-
+ 
 export const EMessenger = () => {
-  const { 
-    chats, 
-    setChats, 
-    Alluser, 
-    currentEmployer, 
-    addNotification, 
+  const {
+    chats,
+    setChats,
+    Alluser,
+    currentEmployer,
+    addNotification,
     activeSidebarUsers,
     setActiveSidebarUsers,
     fetchMessages,
     sendMessage,
     fetchChats,
     startConversation,
-    currentUserId
+    currentUserId,
+    isChatEnded,setIsChatEnded
   } = useJobs();
-
+ 
   const [input, setInput] = useState("");
   const [selectedUserId, setSelectedUserId] = useState(null);
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
-  const [messagesLoaded, setMessagesLoaded] = useState(false); // Track if messages are loaded
+  const [messagesLoaded, setMessagesLoaded] = useState(false);
   const scrollRef = useRef(null);
-
+ 
   // Fetch chats on component mount (only once)
   useEffect(() => {
     const loadChats = async () => {
@@ -39,42 +40,39 @@ export const EMessenger = () => {
     };
     loadChats();
   }, []);
-
-  
-    const markAsRead = async (messageId) => {
-      try {
-        const response = await api.post(`/chat/messages/${messageId}/read/`);
-        return response.status === 200;
-      } catch (error) {
-        console.error('Error marking message as read:', error);
-        return false;
-      }
-    };
-      
-
+ 
+  const markAsRead = async (messageId) => {
+    try {
+      const response = await api.post(`/chat/messages/${messageId}/read/`);
+      return response.status === 200;
+    } catch (error) {
+      console.error('Error marking message as read:', error);
+      return false;
+    }
+  };
+ 
   // Get the conversation for the selected user
   const getConversationForUser = useCallback((userId) => {
-
     if (!userId) return null;
-    
-    const conversation = chats.find(chat => 
+   
+    const conversation = chats.find(chat =>
       chat.participants?.some(p => p.id === parseInt(userId))
     );
-    
+   
     return conversation;
   }, [chats]);
-
+ 
   const activeConversation = getConversationForUser(selectedUserId);
   const activeUser = Alluser.find(u => parseInt(u.user.id) === selectedUserId);
-
+ 
   // Sidebar filter logic
   const sidebarDisplayUsers = Alluser.filter(user => {
-    const hasConversation = chats.some(chat => 
+    const hasConversation = chats.some(chat =>
       chat.participants?.some(p => p.id === parseInt(user.user.id))
     );
     return hasConversation || activeSidebarUsers.includes(parseInt(user.user.id));
   });
-
+ 
   // Load messages when a conversation is selected (only once per conversation)
   useEffect(() => {
     if (activeConversation && activeConversation.id && !messagesLoaded) {
@@ -90,49 +88,52 @@ export const EMessenger = () => {
       loadMessages();
     }
   }, [activeConversation?.id, fetchMessages, messagesLoaded]);
-
+ 
   // Reset messagesLoaded when selected user changes
   useEffect(() => {
     setMessagesLoaded(false);
   }, [selectedUserId]);
-
+ 
   // Auto scroll to bottom when new messages arrive
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [activeConversation?.messages]);
-
+ 
   // Toggle chat end
   const toggleChatEnd = () => {
     if (activeConversation) {
-      setChats(prev => prev.map(chat => 
-        chat.id === activeConversation.id 
-          ? { ...chat, isChatEnded: !chat.isChatEnded } 
+      setChats(prev => prev.map(chat =>
+        chat.id === activeConversation.id
+          ? { ...chat, isChatEnded: !chat.isChatEnded }
           : chat
       ));
     }
+ 
   };
-
+ 
   // Handle send message
   const handleSend = async (e) => {
     e.preventDefault();
-    if (!input.trim() || activeConversation?.isChatEnded || !selectedUserId || sending) return;
-
-    setSending(true);
+    if (!input.trim() || activeConversation?.isChatEnded || !selectedUserId ) return;
+ 
     const messageText = input.trim();
-
+   
+    // Clear input immediately for better UX
+    setInput("");
+   
+    setSending(true);
+ 
     if (activeConversation && activeConversation.id) {
       try {
         const result = await sendMessage(activeConversation.id, messageText);
-        
+       
         if (result.success) {
-          setInput("");
           // Refresh messages after sending
           await fetchMessages(activeConversation.id);
-          // Keep messagesLoaded as true since we have messages now
           setMessagesLoaded(true);
-          
+         
           if (addNotification) {
             addNotification(`Message sent to ${activeUser?.full_name || 'job seeker'}`);
           }
@@ -141,12 +142,16 @@ export const EMessenger = () => {
           if (addNotification) {
             addNotification("Failed to send message. Please try again.");
           }
+          // Put the message back if failed
+          setInput(messageText);
         }
       } catch (err) {
         console.error("Error sending message:", err);
         if (addNotification) {
           addNotification("Error sending message");
         }
+        // Put the message back if failed
+        setInput(messageText);
       } finally {
         setSending(false);
       }
@@ -155,29 +160,29 @@ export const EMessenger = () => {
       setSending(false);
     }
   };
-
+ 
   // Start conversation
   const handleStartConversation = async (initialMessage = "") => {
     if (!selectedUserId) return;
-    
+   
     setLoading(true);
     try {
       const conversationId = await startConversation(selectedUserId, initialMessage);
-      
+     
       if (conversationId) {
-        setActiveSidebarUsers(prev => 
+        setActiveSidebarUsers(prev =>
           prev.includes(selectedUserId) ? prev : [...prev, selectedUserId]
         );
-        
+       
         await fetchChats();
-        
+       
         if (initialMessage) {
           setTimeout(async () => {
             await fetchMessages(conversationId);
             setMessagesLoaded(true);
           }, 500);
         }
-        
+       
         if (initialMessage) {
           setInput("");
         }
@@ -191,29 +196,29 @@ export const EMessenger = () => {
       setLoading(false);
     }
   };
-
+ 
   // Get message content
   const getMessageContent = (msg) => {
     return msg.content || msg.text || '';
   };
-
+ 
   // Format timestamp
   const formatWhatsAppTime = (timestamp) => {
     if (!timestamp) return '';
-    
+   
     const date = new Date(timestamp);
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
     const messageDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-    
+   
     const hours = date.getHours();
     const minutes = date.getMinutes();
     const ampm = hours >= 12 ? 'PM' : 'AM';
     const formattedHours = hours % 12 || 12;
     const timeString = `${formattedHours}:${minutes.toString().padStart(2, '0')} ${ampm}`;
-    
+   
     if (messageDate.getTime() === today.getTime()) {
       return timeString;
     } else if (messageDate.getTime() === yesterday.getTime()) {
@@ -223,18 +228,18 @@ export const EMessenger = () => {
       return `${days[date.getDay()]}, ${timeString}`;
     }
   };
-
+ 
   // Get date separator
   const getDateSeparator = (timestamp) => {
     if (!timestamp) return '';
-    
+   
     const date = new Date(timestamp);
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
     const messageDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-    
+   
     if (messageDate.getTime() === today.getTime()) {
       return 'Today';
     } else if (messageDate.getTime() === yesterday.getTime()) {
@@ -244,72 +249,72 @@ export const EMessenger = () => {
       return date.toLocaleDateString(undefined, options);
     }
   };
-
-        useEffect(() => {
-        if (!activeConversation?.messages) return;
-
-        const unreadMessages = activeConversation.messages.filter(msg => {
-          const receiverId = msg.receiver?.id || msg.receiver_id;
-          return receiverId === parseInt(currentUserId) && !msg.is_read;
-        });
-
-        if (unreadMessages.length === 0) return;
-
-        const markAllAsRead = async () => {
-          try {
-            await Promise.all(
-              unreadMessages.map(msg => markAsRead(msg.id))
-            );
-          } catch (err) {
-            console.error("Error marking messages as read:", err);
-          }
-        };
-
-        markAllAsRead();
-      }, [activeConversation?.messages]);
-
+ 
+  useEffect(() => {
+    if (!activeConversation?.messages) return;
+ 
+    const unreadMessages = activeConversation.messages.filter(msg => {
+      const receiverId = msg.receiver?.id || msg.receiver_id;
+      return receiverId === parseInt(currentUserId) && !msg.is_read;
+    });
+ 
+    if (unreadMessages.length === 0) return;
+ 
+    const markAllAsRead = async () => {
+      try {
+        await Promise.all(
+          unreadMessages.map(msg => markAsRead(msg.id))
+        );
+      } catch (err) {
+        console.error("Error marking messages as read:", err);
+      }
+    };
+ 
+    markAllAsRead();
+  }, [activeConversation?.messages]);
+ 
   // Group messages by date
   const groupMessagesByDate = (messages) => {
     if (!messages || messages.length === 0) return [];
-    
+   
     const groups = [];
     let currentDate = null;
-    
+   
     const sortedMessages = [...messages].sort((a, b) => {
       const timeA = new Date(a.timestamp || a.created_at);
       const timeB = new Date(b.timestamp || b.created_at);
       return timeA - timeB;
     });
-    
+   
     sortedMessages.forEach((msg) => {
       const timestamp = msg.timestamp || msg.created_at;
       if (!timestamp) {
         groups.push({ type: 'message', data: msg });
         return;
       }
-      
+     
       const date = new Date(timestamp);
       const dateKey = date.toDateString();
-      
+     
       if (currentDate !== dateKey) {
         currentDate = dateKey;
         groups.push({ type: 'date', data: timestamp });
       }
-      
+     
       groups.push({ type: 'message', data: msg });
     });
-    
+   
     return groups;
   };
-
+ 
   // Check if message is from current user
   const isMessageFromMe = (msg) => {
     const senderId = msg.sender?.id || msg.sender_id;
     return senderId === parseInt(currentUserId);
   };
-
+ 
   const groupedMessages = groupMessagesByDate(activeConversation?.messages);
-
+ 
   return (
     <>
       <div className="messages-container">
@@ -325,9 +330,9 @@ export const EMessenger = () => {
               {sidebarDisplayUsers.length > 0 ? (
                 sidebarDisplayUsers.map(user => {
                   const userConversation = getConversationForUser(parseInt(user.user.id));
-                  const isActive = selectedUserId === parseInt(user.user.id); 
+                  const isActive = selectedUserId === parseInt(user.user.id);
                   const unreadCount = userConversation?.unread_count || 0;
-
+ 
                   return (
                     <div
                       key={user.id}
@@ -335,19 +340,19 @@ export const EMessenger = () => {
                       onClick={async () => {
                         const selectedId = parseInt(user.user.id);
                         setSelectedUserId(selectedId);
-
+ 
                         const userConversation = getConversationForUser(selectedId);
-
+ 
                         if (userConversation?.id) {
                           const msgs = await fetchMessages(userConversation.id);
-
+ 
                           const unreadMessages = (msgs || []).filter(msg => {
                             const receiverId = msg.receiver?.id || msg.receiver_id;
                             return receiverId === parseInt(currentUserId) && !msg.is_read;
                           });
-
+ 
                           await Promise.all(unreadMessages.map(msg => markAsRead(msg.id)));
-
+ 
                           setChats(prev =>
                             prev.map(c =>
                               c.id === userConversation.id
@@ -367,10 +372,10 @@ export const EMessenger = () => {
                           </p>
                         </div>
                         {unreadCount > 0 && (
-                          <span style={{ 
-                            background: "#007bff", 
-                            color: "white", 
-                            borderRadius: "50%", 
+                          <span style={{
+                            background: "#007bff",
+                            color: "white",
+                            borderRadius: "50%",
                             padding: "2px 6px",
                             fontSize: "10px"
                           }}>
@@ -391,7 +396,7 @@ export const EMessenger = () => {
               )}
             </div>
           </div>
-
+ 
           <div className="web-main-chat">
             {selectedUserId ? (
               <>
@@ -414,18 +419,18 @@ export const EMessenger = () => {
                     </button>
                   )}
                 </header>
-
+ 
                 <div className="web-chat-window" ref={scrollRef}>
                   {groupedMessages.length > 0 ? (
                     groupedMessages.map((item, index) => {
                       if (item.type === 'date') {
                         return (
-                          <div key={`date-${index}`} style={{ 
-                            textAlign: 'center', 
+                          <div key={`date-${index}`} style={{
+                            textAlign: 'center',
                             margin: '20px 0',
                             position: 'relative'
                           }}>
-                            <span style={{ 
+                            <span style={{
                               backgroundColor: '#e9ecef',
                               padding: '4px 12px',
                               borderRadius: '12px',
@@ -437,16 +442,16 @@ export const EMessenger = () => {
                           </div>
                         );
                       }
-                      
+                     
                       const msg = item.data;
                       const isFromMe = isMessageFromMe(msg);
                       const timestamp = msg.timestamp || msg.created_at;
                       const timeString = formatWhatsAppTime(timestamp);
                       const messageContent = getMessageContent(msg);
-                      
+                     
                       return (
-                        <div 
-                          key={msg.id || index} 
+                        <div
+                          key={msg.id || index}
                           className="web-msg-row"
                           style={{
                             display: "flex",
@@ -462,7 +467,7 @@ export const EMessenger = () => {
                             flexDirection: "column",
                             alignItems: isFromMe ? "flex-end" : "flex-start"
                           }}>
-                            <div 
+                            <div
                               className={`web-bubble ${isFromMe ? 'web-me' : 'web-friend'}`}
                               style={{
                                 wordWrap: "break-word",
@@ -475,25 +480,15 @@ export const EMessenger = () => {
                             >
                               {messageContent}
                             </div>
-                            {/* {timestamp && (
-                              <span style={{
-                                fontSize: "11px",
-                                color: "#999",
-                                marginTop: "4px",
-                                marginLeft: isFromMe ? "0" : "8px",
-                                marginRight: isFromMe ? "8px" : "0"
-                              }}>
-                                {timeString}
-                              </span>
-                            )} */}
+                           
                           </div>
                         </div>
                       );
                     })
                   ) : (
-                    <div style={{ 
-                      textAlign: 'center', 
-                      color: '#888', 
+                    <div style={{
+                      textAlign: 'center',
+                      color: '#888',
                       marginTop: '50px',
                       fontSize: '14px'
                     }}>
@@ -501,9 +496,9 @@ export const EMessenger = () => {
                     </div>
                   )}
                   {sending && (
-                    <div style={{ 
-                      display: "flex", 
-                      justifyContent: "flex-end", 
+                    <div style={{
+                      display: "flex",
+                      justifyContent: "flex-end",
                       marginBottom: "12px",
                       width: "100%"
                     }}>
@@ -511,9 +506,9 @@ export const EMessenger = () => {
                         maxWidth: "70%",
                         padding: "10px 14px",
                         borderRadius: "18px",
-                        background: "#007bff",
-                        color: "white",
-                        opacity: 0.7
+                        background: "#e9ecef",
+                        color: "#666",
+                        opacity: 0.8
                       }}>
                         Sending...
                       </div>
@@ -521,21 +516,20 @@ export const EMessenger = () => {
                   )}
                   {activeConversation?.isChatEnded && <div className="chat-end-label">--- Conversation Ended ---</div>}
                 </div>
-
+ 
                 <form className="web-input-bar" onSubmit={handleSend}>
                   <input
                     className="web-text-input"
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
-                    disabled={activeConversation?.isChatEnded || sending}
+                    disabled={activeConversation?.isChatEnded}
                     placeholder={activeConversation?.isChatEnded ? "Conversation ended" : "Type a message..."}
                   />
-                  <button 
-                    type="submit" 
-                    className="web-send-button" 
-                    disabled={activeConversation?.isChatEnded || sending || !input.trim()}
+                  <button
+                    type="submit"
+                    className="web-send-button"
                   >
-                    {sending ? "SENDING..." : "SEND"}
+                    SEND
                   </button>
                 </form>
               </>
@@ -551,3 +545,4 @@ export const EMessenger = () => {
     </>
   );
 };
+ 

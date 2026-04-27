@@ -600,6 +600,8 @@ class PostAJobSerializer(serializers.ModelSerializer):
     company = serializers.SerializerMethodField()
 
     posted_date = serializers.DateTimeField(source='created_at', read_only=True)
+
+    applicants_count = serializers.SerializerMethodField()
  
     class Meta:
 
@@ -649,7 +651,9 @@ class PostAJobSerializer(serializers.ModelSerializer):
 
             'employer',
 
-            'company'
+            'company',
+
+            'applicants_count'
 
         ]
 
@@ -822,6 +826,10 @@ class PostAJobSerializer(serializers.ModelSerializer):
         instance.save()
 
         return instance
+    
+    def get_applicants_count(self, obj):
+
+        return JobApplication.objects.filter(job=obj).count()
 
 
 # Job Read Serializer (for PostAJob)

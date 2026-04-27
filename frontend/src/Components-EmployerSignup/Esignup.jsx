@@ -564,7 +564,7 @@ export const Esignup = () => {
       {showMobileOtp && renderEmployerOtpModal('mobile')}
 
       <header className="j-sign-up-header">
-        <Link to="/Job-portal" className="logo">
+        <Link to="/" className="logo">
           <span className="logo-text">Job portal</span>
           <span className='subtext'>For Employers</span>
         </Link>

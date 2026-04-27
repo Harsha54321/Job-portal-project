@@ -170,6 +170,17 @@ export const OpportunityOverview = () => {
   }
 
   // if (!job) return null;
+  const formatLocation = (location) => {
+
+        if (!location) return "Location not specified";
+
+        if (Array.isArray(location)) {
+            return location.join(", ");
+        }
+        return location;
+    };
+
+    const locationDisplay = formatLocation(job.location);
 
   return (
     <>
@@ -232,7 +243,7 @@ export const OpportunityOverview = () => {
                 </p>
                 <p className='Opportunities-detail-line'>
                   <img src={place} className='card-icons' alt="location" />
-                  {job.location}
+                  {locationDisplay}
                 </p>
               </div>
 
@@ -267,7 +278,7 @@ export const OpportunityOverview = () => {
                     <span className="Opportunities-divider">|</span>
                     Openings: {job.openings}
                     <span className="Opportunities-divider">|</span>
-                    Applicants: {job.applicants}
+                    Applicants: {job.applicants_count}
                   </p>
                 </div>
 
@@ -326,7 +337,7 @@ export const OpportunityOverview = () => {
               <p><strong>Industry Type:</strong> {Array.isArray(job.industry_type) ? job.industry_type.join(", ") : job.industry_type}</p>
               <p><strong>Department:</strong> {Array.isArray(job.department) ? job.department.join(", ") : job.department}</p>
               <p><strong>Job Type:</strong> {job.work_type}</p>
-              <p><strong>Location:</strong> {job.location}</p>
+              <p><strong>Location:</strong> {locationDisplay}</p>
               <p><strong>Shift:</strong> {job.shift}</p>
 
               <h3>Key Skills</h3>
@@ -395,7 +406,7 @@ export const OpportunityOverview = () => {
                     </p>
                     <p className='Opportunities-detail-line'>
                       <img src={place} className='card-icons' alt="location" />
-                      {sim.location}
+                      {formatLocation(sim.location)}
                     </p>
                   </div>
                   <div className="similar-job-footer">

@@ -14,6 +14,19 @@ export const AppliedJobCard = ({ appliedJob }) => {
   const job = appliedJob?.job;
   if (!job) return null;
   console.log("APPLIED CARD DATA:", appliedJob);
+
+  const formatLocation = (location) => {
+
+        if (!location) return "Location not specified";
+
+        if (Array.isArray(location)) {
+            return location.join(", ");
+        }
+        return location;
+    };
+
+    const locationDisplay = formatLocation(job.location);
+
   // 🔹 Adapter: backend data → requirement shape
   const opp = {
     id: appliedJob.id,
@@ -27,7 +40,7 @@ export const AppliedJobCard = ({ appliedJob }) => {
     WorkType: job.work_type || "N/A",
     salary: job.salary || "N/A",
     experience: job.experience || "N/A",
-    location: job.location || "N/A",
+    location: locationDisplay || "N/A",
 
     posted: formatPostedDate(job.posted_date),
     openings: job.openings || 0,

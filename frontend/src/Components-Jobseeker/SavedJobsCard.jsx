@@ -40,6 +40,18 @@ export const SavedJobsCard = ({ job, onRemoved }) => {
         navigate(`/Job-portal/jobseeker/OpportunityOverview/${job.id}`)
     }
 
+    const formatLocation = (location) => {
+
+        if (!location) return "Location not specified";
+
+        if (Array.isArray(location)) {
+            return location.join(", ");
+        }
+        return location;
+    };
+
+    const locationDisplay = formatLocation(job.location);
+
     return (
         <div className="myjobs-job-card">
             <div onClick={() => HandleClick()}>
@@ -79,7 +91,7 @@ export const SavedJobsCard = ({ job, onRemoved }) => {
 
                     <p className="Opportunities-detail-line">
                         <img src={place} className="card-icons" alt="" />
-                        {job.location}
+                        {locationDisplay}
                     </p>
 
                     <p className="Opportunities-detail-line">

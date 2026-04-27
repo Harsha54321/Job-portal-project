@@ -13,15 +13,13 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
   const { setCompanyProfile } = useJobs();
   const [isLoading, setIsLoading] = useState(false);
   const [backendError, setBackendError] = useState("");
-  const [errorType, setErrorType] = useState(""); 
+  const [errorType, setErrorType] = useState("");
   const [existingLogo, setExistingLogo] = useState(null);
   const [hasExistingProfile, setHasExistingProfile] = useState(false);
-
-  // State for popup modal
+  const [originalData, setOriginalData] = useState(null);
   const [showPopup, setShowPopup] = useState(false);
   const [pendingCompanyName, setPendingCompanyName] = useState("");
 
-  // Check if coming from signup
   const fromSignup = location.state?.fromSignup || false;
 
   const [formData, setFormData] = useState({
@@ -106,18 +104,16 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
   const fetchExistingProfile = async () => {
     try {
       setIsLoading(true);
-      setBackendError(""); // ✅ fix
+      setBackendError("");
 
-      let errorMsg = ""; // ✅ collect errors
+      let errorMsg = "";
 
-      // ---------- Employer API ----------
       let employerData = null;
       try {
         const res = await api.get("/profile/employer/");
         employerData = res.data;
       } catch (err) {
         console.error("Employer error:", err);
-
         if (err.response?.status === 401) {
           if (!hideNavigation) {
             navigate("/Job-portal/employer/login");
@@ -126,28 +122,22 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
           }
           return;
         }
-
         if (err.code === "ERR_NETWORK") {
           setBackendError("Network error. Please check your connection.");
-          return; // ✅ stop everything
+          return;
         }
-
         errorMsg = "Failed to load employer data.";
       }
 
-      // ---------- Company API ----------
       let companyData = null;
       try {
         const res = await api.get("/company/profile/");
         companyData = res.data;
-
+        console.log(companyData, "company data ::");
         setHasExistingProfile(true);
-        setExistingLogo(companyData.company_logo || companyData.logo_url);
-
+        setExistingLogo(companyData.logo_absolute_url || companyData.logo_url);
       } catch (err) {
-        
         console.error("Company error:", err);
-
         if (err.response?.status === 401) {
           if (!hideNavigation) {
             navigate("/Job-portal/employer/login");
@@ -156,12 +146,10 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
           }
           return;
         }
-
         if (err.code === "ERR_NETWORK") {
           setBackendError("Network error. Please check your connection.");
           return;
         }
-
         if (err.response?.status === 404) {
           setHasExistingProfile(false);
           setExistingLogo(null);
@@ -173,28 +161,25 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
         }
       }
 
-      // ---------- Set form safely ----------
-      setFormData(prev => ({
-        ...prev,
-        ...(employerData && {
-          fullName: employerData.full_name || "",
-          employerId: employerData.employee_id || "",
-        }),
-        ...(companyData && {
-          companyName: companyData.company_name || "",
-          companyMoto: companyData.company_moto || "",
-          contactPerson: companyData.contact_person || "",
-          contactNumber: companyData.contact_number || "",
-          companyMail: companyData.company_email || "",
-          website: companyData.website || "",
-          companySize: companyData.company_size || "",
-          address1: companyData.address1 || "",
-          address2: companyData.address2 || "",
-          about: companyData.about || "",
-        })
-      }));
+      const newFormData = {
+        fullName: employerData?.full_name || "",
+        employerId: employerData?.employee_id || "",
+        companyName: companyData?.company_name || "",
+        companyMoto: companyData?.company_moto || "",
+        contactPerson: companyData?.contact_person || "",
+        contactNumber: companyData?.contact_number || "",
+        companyMail: companyData?.company_email || "",
+        website: companyData?.website || "",
+        companySize: companyData?.company_size || "",
+        address1: companyData?.address1 || "",
+        address2: companyData?.address2 || "",
+        about: companyData?.about || "",
+        companyLogo: null,
+      };
 
-      // ✅ set combined error
+      setFormData(newFormData);
+      setOriginalData(JSON.parse(JSON.stringify(newFormData)));
+
       if (errorMsg) {
         setBackendError(errorMsg);
         window.scrollTo({ top: 0, behavior: "smooth" });
@@ -205,19 +190,30 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
     }
   };
 
+  const handleDiscard = () => {
+    if (originalData) {
+      setFormData(originalData);
+      setErrors({});
+      setBackendError("");
+      if (hasExistingProfile && originalData.companyLogo !== null) {
+      }
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
   const validateForm = () => {
     const newErrors = {};
 
     const companyNameRegex = /^(?=.*[a-zA-Z])[a-zA-Z0-9\s&.,-]{3,100}$/;
     const motoRegex = /^(?=.*[a-zA-Z])[a-zA-Z0-9\s.,!'-]{5,150}$/;
-    const personRegex = /^[a-zA-Z\s]{3,50}$/;
+    const personRegex = /^[A-Za-z\s]+$/;
     const mobileRegex = /^[6-9]\d{9}$/;
     const emailRegex = /^[a-zA-Z][a-zA-Z0-9._%+-]*@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
     const urlRegex = /^(https?:\/\/)[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}(\/[a-zA-Z0-9._~:/?#[\]@!$&'()*+,;=%-]*)?$/;
     const fullNameRegex = /^[A-Za-z]+( [A-Za-z]+)+$/;
     const employerIdRegex = /^(?=.*[A-Za-z])[A-Za-z0-9](?:[A-Za-z0-9_-]{0,18}[A-Za-z0-9])?$/;
+    
 
-    // Fullname
     if (!formData.fullName.trim()) {
       newErrors.fullName = "Please enter your full name";
     } else if (formData.fullName.length < 3) {
@@ -226,7 +222,6 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
       newErrors.fullName = "Enter valid full name (First & Last name, only letters)";
     }
 
-    // Employee Id
     if (!formData.employerId.trim()) {
       newErrors.employerId = "Employer ID is required";
     } else if (formData.employerId.length > 20) {
@@ -241,49 +236,46 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
       newErrors.employerId = "Invalid Employer ID format";
     }
 
-    // Company Name
     if (!formData.companyName?.trim()) {
       newErrors.companyName = "Company Name is required";
     } else if (!companyNameRegex.test(formData.companyName)) {
       newErrors.companyName = "Invalid Name (must contain letters, no special symbols)";
     }
 
-    // Company Moto
     if (!formData.companyMoto?.trim()) {
       newErrors.companyMoto = "Company Moto is required";
     } else if (!motoRegex.test(formData.companyMoto)) {
       newErrors.companyMoto = "Moto must contain letters (min 5 characters)";
     }
 
-    // Contact Person
     if (!formData.contactPerson?.trim()) {
       newErrors.contactPerson = "Contact person name is required";
-    } else if (!personRegex.test(formData.contactPerson)) {
-      newErrors.contactPerson = "Name must contain only letters";
+    } else if (!/^[A-Za-z\s]+$/.test(formData.contactPerson)) {
+      newErrors.contactPerson = "Contact person name must contain only alphabets and spaces";
+    } else if (formData.contactPerson.length < 3) {
+      newErrors.contactPerson = "Contact person name must be at least 3 characters";
+    } else if (formData.contactPerson.length > 50) {
+      newErrors.contactPerson = "Contact person name must be less than 50 characters";
     }
 
-    // Contact Number
     if (!formData.contactNumber?.trim()) {
       newErrors.contactNumber = "Mobile number is required";
     } else if (!mobileRegex.test(formData.contactNumber)) {
       newErrors.contactNumber = "Enter valid 10-digit mobile (starts with 6-9)";
     }
 
-    // Company Mail
     if (!formData.companyMail?.trim()) {
       newErrors.companyMail = "Company email is required";
     } else if (!emailRegex.test(formData.companyMail)) {
       newErrors.companyMail = "Email must start with a letter and be valid";
     }
 
-    // Website URL
     if (!formData.website?.trim()) {
       newErrors.website = "Company website is required";
     } else if (!urlRegex.test(formData.website)) {
       newErrors.website = "Include https:// (e.g., https://www.company.com)";
     }
 
-    // Static Selections / Textareas
     if (!formData.companySize?.trim()) newErrors.companySize = "Please select company size";
     if (!formData.address1?.trim() || formData.address1.length < 10) {
       newErrors.address1 = "Enter a complete address (min 10 chars)";
@@ -292,7 +284,6 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
       newErrors.about = "About description must be at least 50 characters";
     }
 
-    // Logo validation
     if (!formData.companyLogo && !existingLogo) {
       newErrors.companyLogo = "Please upload a company logo";
     }
@@ -315,6 +306,13 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
     setErrors((prev) => ({ ...prev, [name]: "" }));
     setBackendError("");
 
+    if (name === "contactPerson") {
+      // Allow only alphabets and spaces
+      const filteredValue = value.replace(/[^A-Za-z\s]/g, '');
+      setFormData({ ...formData, [name]: filteredValue });
+      return;
+    }
+
     if (files) {
       const file = files[0];
       const allowedTypes = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
@@ -336,7 +334,6 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
     }
   };
 
-  // ✅ Link to existing company (for multi-employer support)
   const linkToExistingCompany = async (companyName) => {
     setIsLoading(true);
     setBackendError("");
@@ -346,7 +343,7 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
         company_name: companyName
       });
 
-      console.log("✅ Linked to existing company:", response.data);
+      console.log("Linked to existing company:", response.data);
 
       setCompanyProfile({
         ...formData,
@@ -451,7 +448,7 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
   const createCompanyProfile = async (data) => {
     setIsLoading(true);
     setBackendError("");
-    setErrors({}); // ✅ reset old errors
+    setErrors({});
 
     try {
       const formDataToSend = new FormData();
@@ -475,7 +472,7 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
         { headers: { "Content-Type": "multipart/form-data" } }
       );
 
-      console.log(" Company profile created:", response.data);
+      console.log("Company profile created:", response.data);
 
       return {
         success: true,
@@ -483,27 +480,23 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
       };
 
     } catch (err) {
-      console.error(" Create profile error:", err);
+      console.error("Create profile error:", err);
 
-      // ✅ Network error
       if (err.code === "ERR_NETWORK") {
         setBackendError("Network error. Please check your connection.");
         window.scrollTo({ top: 0, behavior: "smooth" });
         return { success: false, error: "network" };
       }
 
-      // ✅ Unauthorized
       if (err.response?.status === 401) {
         setBackendError("Session expired. Please login again.");
         return { success: false, error: "unauthorized" };
       }
 
-      // ✅ Validation / duplicate
       if (err.response?.status === 400) {
         const errorData = err.response.data;
         const errorMsg = errorData?.error || "";
 
-        // 🔥 Duplicate company
         if (errorMsg.includes("already exists")) {
           setBackendError("Company already exists.");
           setPendingCompanyName(data.companyName);
@@ -516,7 +509,6 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
           };
         }
 
-        // ✅ Field mapping
         const fieldMapping = {
           company_name: "companyName",
           company_moto: "companyMoto",
@@ -544,16 +536,13 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
         if (Object.keys(newErrors).length > 0) {
           setErrors(prev => ({ ...prev, ...newErrors }));
           window.scrollTo({ top: 100, behavior: "smooth" });
-
           return { success: false, error: "validation" };
         }
 
-        // fallback
         setBackendError(errorMsg || "Invalid data provided.");
         return { success: false, error: "validation" };
       }
 
-      // ✅ Other errors
       setBackendError(
         err.response?.data?.error ||
         "Something went wrong. Please try again."
@@ -566,415 +555,307 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
     }
   };
 
-
   const updateEmployerProfile = async (data) => {
-  setIsLoading(true);
-  setBackendError("");
-  setErrorType("");
-
-  try {
-    // Add timeout protection
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000);
-
-    await api.patch("/profile/employer/", {
-      full_name: data.fullName,
-      employee_id: data.employerId,
-    }, {
-      signal: controller.signal,
-    });
-
-    clearTimeout(timeoutId);
-    
-    console.log("✅ Employer profile updated");
-    
-    // Clear any existing errors on success
-    setErrors(prev => {
-      const { employerId, fullName, ...rest } = prev;
-      return rest;
-    });
+    setIsLoading(true);
     setBackendError("");
     setErrorType("");
-    
-    return { success: true };
 
-  } catch (err) {
-    console.error("Employer profile update error:", err);
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
 
-    // ============================================
-    // 1 NETWORK ERROR
-    // ============================================
-    if (err.code === 'ERR_NETWORK' || err.message === 'Network Error') {
-      const errorMsg = "No internet connection. Please check your network and try again.";
-      setBackendError(errorMsg);
-      setErrorType("NETWORK_ERROR");
-      return { success: false, error: errorMsg, errorType: "NETWORK_ERROR" };
-    }
+      await api.patch("/profile/employer/", {
+        full_name: data.fullName,
+        employee_id: data.employerId,
+      }, {
+        signal: controller.signal,
+      });
 
-    // ============================================
-    // 2 TIMEOUT ERROR
-    // ============================================
-    if (err.name === 'AbortError') {
-      const errorMsg = "Request is taking too long. Please check your connection and try again.";
-      setBackendError(errorMsg);
-      setErrorType("TIMEOUT_ERROR");
-      return { success: false, error: errorMsg, errorType: "TIMEOUT_ERROR" };
-    }
+      clearTimeout(timeoutId);
 
-    // ============================================
-    // 3 VALIDATION ERROR (400)
-    // ============================================
-    if (err.response?.status === 400) {
-      const errorData = err.response.data;
-      const newErrors = {};
-      let specificErrorMsg = "";
+      console.log("Employer profile updated");
 
-      // Employee ID error
-      if (errorData.employee_id) {
-        const errorMsg = Array.isArray(errorData.employee_id)
-          ? errorData.employee_id[0]
-          : errorData.employee_id;
-        
-        newErrors.employerId = errorMsg;
-        
-        if (!specificErrorMsg) {
-          specificErrorMsg = errorMsg;
+      setErrors(prev => {
+        const { employerId, fullName, ...rest } = prev;
+        return rest;
+      });
+      setBackendError("");
+      setErrorType("");
+
+      return { success: true };
+
+    } catch (err) {
+      console.error("Employer profile update error:", err);
+
+      if (err.code === 'ERR_NETWORK' || err.message === 'Network Error') {
+        const errorMsg = "No internet connection. Please check your network and try again.";
+        setBackendError(errorMsg);
+        setErrorType("NETWORK_ERROR");
+        return { success: false, error: errorMsg, errorType: "NETWORK_ERROR" };
+      }
+
+      if (err.name === 'AbortError') {
+        const errorMsg = "Request is taking too long. Please check your connection and try again.";
+        setBackendError(errorMsg);
+        setErrorType("TIMEOUT_ERROR");
+        return { success: false, error: errorMsg, errorType: "TIMEOUT_ERROR" };
+      }
+
+      if (err.response?.status === 400) {
+        const errorData = err.response.data;
+        const newErrors = {};
+        let specificErrorMsg = "";
+
+        if (errorData.employee_id) {
+          const errorMsg = Array.isArray(errorData.employee_id)
+            ? errorData.employee_id[0]
+            : errorData.employee_id;
+
+          newErrors.employerId = errorMsg;
+
+          if (!specificErrorMsg) {
+            specificErrorMsg = errorMsg;
+          }
         }
-      }
 
-      // Full name error
-      if (errorData.full_name) {
-        const errorMsg = Array.isArray(errorData.full_name)
-          ? errorData.full_name[0]
-          : errorData.full_name;
-        
-        newErrors.fullName = errorMsg;
-        
-        if (!specificErrorMsg) {
-          specificErrorMsg = errorMsg;
+        if (errorData.full_name) {
+          const errorMsg = Array.isArray(errorData.full_name)
+            ? errorData.full_name[0]
+            : errorData.full_name;
+
+          newErrors.fullName = errorMsg;
+
+          if (!specificErrorMsg) {
+            specificErrorMsg = errorMsg;
+          }
         }
-      }
 
-      // Generic 400 error
-      if (errorData.error && !specificErrorMsg) {
-        specificErrorMsg = errorData.error;
-      }
-
-      if (Object.keys(newErrors).length > 0) {
-        setErrors(prev => ({ ...prev, ...newErrors }));
-        
-        // Show specific error message to user
-        if (specificErrorMsg) {
-          setBackendError(specificErrorMsg);
-          setErrorType("VALIDATION_ERROR");
-        } else {
-          setBackendError("Please check your information and try again.");
-          setErrorType("VALIDATION_ERROR");
+        if (errorData.error && !specificErrorMsg) {
+          specificErrorMsg = errorData.error;
         }
-        
-        window.scrollTo({ top: 100, behavior: "smooth" });
-        return { 
-          success: false, 
-          errorType: "VALIDATION_ERROR", 
-          validationErrors: newErrors,
-          error: specificErrorMsg || "Validation failed"
-        };
+
+        if (Object.keys(newErrors).length > 0) {
+          setErrors(prev => ({ ...prev, ...newErrors }));
+
+          if (specificErrorMsg) {
+            setBackendError(specificErrorMsg);
+            setErrorType("VALIDATION_ERROR");
+          } else {
+            setBackendError("Please check your information and try again.");
+            setErrorType("VALIDATION_ERROR");
+          }
+
+          window.scrollTo({ top: 100, behavior: "smooth" });
+          return {
+            success: false,
+            errorType: "VALIDATION_ERROR",
+            validationErrors: newErrors,
+            error: specificErrorMsg || "Validation failed"
+          };
+        }
+
+        const errorMsg = errorData?.error || errorData?.message || "Invalid data. Please check your inputs.";
+        setBackendError(errorMsg);
+        setErrorType("BAD_REQUEST");
+        return { success: false, error: errorMsg, errorType: "BAD_REQUEST" };
       }
-      
-      // No field-specific errors, but 400 response
-      const errorMsg = errorData?.error || errorData?.message || "Invalid data. Please check your inputs.";
+
+      if (err.response?.status === 401) {
+        const errorMsg = "Your session has expired. Please login again to continue.";
+        setBackendError(errorMsg);
+        setErrorType("AUTH_ERROR");
+
+        setTimeout(() => {
+          navigate("/Job-portal/employer/login");
+        }, 2000);
+
+        return { success: false, error: errorMsg, errorType: "AUTH_ERROR" };
+      }
+
+      if (err.response?.status === 403) {
+        const errorMsg = "You don't have permission to update your profile. Please contact support.";
+        setBackendError(errorMsg);
+        setErrorType("PERMISSION_ERROR");
+        return { success: false, error: errorMsg, errorType: "PERMISSION_ERROR" };
+      }
+
+      if (err.response?.status === 404) {
+        const errorMsg = "Profile not found. Please refresh the page and try again.";
+        setBackendError(errorMsg);
+        setErrorType("NOT_FOUND_ERROR");
+        return { success: false, error: errorMsg, errorType: "NOT_FOUND_ERROR" };
+      }
+
+      if (err.response?.status === 429) {
+        const errorMsg = "Too many attempts. Please wait a moment and try again.";
+        setBackendError(errorMsg);
+        setErrorType("RATE_LIMIT_ERROR");
+        return { success: false, error: errorMsg, errorType: "RATE_LIMIT_ERROR" };
+      }
+
+      if (err.response?.status >= 500 && err.response?.status < 600) {
+        const errorMsg = "Server error. Our team has been notified. Please try again later.";
+        setBackendError(errorMsg);
+        setErrorType("SERVER_ERROR");
+        console.error("Server Error:", err.response.status, err.response.data);
+        return { success: false, error: errorMsg, errorType: "SERVER_ERROR" };
+      }
+
+      const errorMsg = "An unexpected error occurred. Please try again or contact support.";
       setBackendError(errorMsg);
-      setErrorType("BAD_REQUEST");
-      return { success: false, error: errorMsg, errorType: "BAD_REQUEST" };
+      setErrorType("UNKNOWN_ERROR");
+      console.error("Unknown error:", err);
+      return { success: false, error: errorMsg, errorType: "UNKNOWN_ERROR" };
+
+    } finally {
+      setIsLoading(false);
     }
-
-    // ============================================
-    // 4 SESSION EXPIRED (401)
-    // ============================================
-    if (err.response?.status === 401) {
-      const errorMsg = "Your session has expired. Please login again to continue.";
-      setBackendError(errorMsg);
-      setErrorType("AUTH_ERROR");
-      
-      // Auto redirect to login after 2 seconds
-      setTimeout(() => {
-        navigate("/Job-portal/employer/login");
-      }, 2000);
-      
-      return { success: false, error: errorMsg, errorType: "AUTH_ERROR" };
-    }
-
-    // ============================================
-    // 5 PERMISSION DENIED (403)
-    // ============================================
-    if (err.response?.status === 403) {
-      const errorMsg = "You don't have permission to update your profile. Please contact support.";
-      setBackendError(errorMsg);
-      setErrorType("PERMISSION_ERROR");
-      return { success: false, error: errorMsg, errorType: "PERMISSION_ERROR" };
-    }
-
-    // ============================================
-    // 6 NOT FOUND (404)
-    // ============================================
-    if (err.response?.status === 404) {
-      const errorMsg = "Profile not found. Please refresh the page and try again.";
-      setBackendError(errorMsg);
-      setErrorType("NOT_FOUND_ERROR");
-      return { success: false, error: errorMsg, errorType: "NOT_FOUND_ERROR" };
-    }
-
-    // ============================================
-    // 7 RATE LIMIT (429)
-    // ============================================
-    if (err.response?.status === 429) {
-      const errorMsg = "Too many attempts. Please wait a moment and try again.";
-      setBackendError(errorMsg);
-      setErrorType("RATE_LIMIT_ERROR");
-      return { success: false, error: errorMsg, errorType: "RATE_LIMIT_ERROR" };
-    }
-
-    // ============================================
-    // 8 SERVER ERROR (500+)
-    // ============================================
-    if (err.response?.status >= 500 && err.response?.status < 600) {
-      const errorMsg = "Server error. Our team has been notified. Please try again later.";
-      setBackendError(errorMsg);
-      setErrorType("SERVER_ERROR");
-      console.error("Server Error:", err.response.status, err.response.data);
-      return { success: false, error: errorMsg, errorType: "SERVER_ERROR" };
-    }
-
-    // ============================================
-    // 9 UNKNOWN ERROR
-    // ============================================
-    const errorMsg = "An unexpected error occurred. Please try again or contact support.";
-    setBackendError(errorMsg);
-    setErrorType("UNKNOWN_ERROR");
-    console.error("Unknown error:", err);
-    return { success: false, error: errorMsg, errorType: "UNKNOWN_ERROR" };
-
-  } finally {
-    setIsLoading(false);
-  }
-};
-
-  // ✅ Update existing company profile
-  // const updateCompanyProfile = async (data) => {
-  //   setIsLoading(true);
-  //   setBackendError("");
-
-  //   try {
-  //     const formDataToSend = new FormData();
-  //     formDataToSend.append("company_name", data.companyName);
-  //     formDataToSend.append("company_moto", data.companyMoto);
-  //     formDataToSend.append("contact_person", data.contactPerson);
-  //     formDataToSend.append("contact_number", data.contactNumber);
-  //     formDataToSend.append("company_email", data.companyMail);
-  //     formDataToSend.append("website", data.website);
-  //     formDataToSend.append("company_size", data.companySize);
-  //     formDataToSend.append("address1", data.address1);
-  //     if (data.address2) formDataToSend.append("address2", data.address2);
-  //     formDataToSend.append("about", data.about);
-  //     if (data.companyLogo) formDataToSend.append("company_logo", data.companyLogo);
-
-  //     const response = await api.patch("/company/profile/update/", formDataToSend, {
-  //       headers: { "Content-Type": "multipart/form-data" },
-  //     });
-
-  //     console.log("✅ Company profile updated:", response.data);
-  //     return { success: true, data: response.data };
-  //   } catch (err) {
-  //     console.error("Update profile error:", err);
-
-  //     if (err.response?.status === 400) {
-  //       const backendErrors = err.response.data;
-  //       const newErrors = {};
-  //       const fieldMapping = {
-  //         company_name: "companyName", company_moto: "companyMoto",
-  //         contact_person: "contactPerson", contact_number: "contactNumber",
-  //         company_email: "companyMail", website: "website",
-  //         company_size: "companySize", address1: "address1",
-  //         about: "about", company_logo: "companyLogo",
-  //       };
-
-  //       Object.keys(backendErrors).forEach((key) => {
-  //         const frontendKey = fieldMapping[key];
-  //         if (frontendKey) {
-  //           newErrors[frontendKey] = Array.isArray(backendErrors[key])
-  //             ? backendErrors[key][0] : backendErrors[key];
-  //         }
-  //       });
-  //       setErrors(newErrors);
-  //       return { success: false, error: "Validation failed" };
-  //     }
-
-  //     return { success: false, error: err.response?.data?.error || "Network error" };
-  //   } finally {
-  //     setIsLoading(false);
-  //   }
-  // }; 
-
+  };
 
   const updateCompanyProfile = async (data) => {
-  setIsLoading(true);
-  setBackendError("");
-  setErrorType(""); // Add this state if not exists
-
-  try {
-    const formDataToSend = new FormData();
-    formDataToSend.append("company_name", data.companyName);
-    formDataToSend.append("company_moto", data.companyMoto);
-    formDataToSend.append("contact_person", data.contactPerson);
-    formDataToSend.append("contact_number", data.contactNumber);
-    formDataToSend.append("company_email", data.companyMail);
-    formDataToSend.append("website", data.website);
-    formDataToSend.append("company_size", data.companySize);
-    formDataToSend.append("address1", data.address1);
-    if (data.address2) formDataToSend.append("address2", data.address2);
-    formDataToSend.append("about", data.about);
-    if (data.companyLogo) formDataToSend.append("company_logo", data.companyLogo);
-
-    // Add timeout protection
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000);
-
-    const response = await api.patch("/company/profile/update/", formDataToSend, {
-      headers: { "Content-Type": "multipart/form-data" },
-      signal: controller.signal,
-    });
-
-    clearTimeout(timeoutId);
-
-    console.log("✅ Company profile updated:", response.data);
-    setErrors({});
+    setIsLoading(true);
     setBackendError("");
     setErrorType("");
-    
-    return { success: true, data: response.data };
-    
-  } catch (err) {
-    console.error("Update profile error:", err);
 
-    //  1. NETWORK ERROR - Internet ledu
-    if (err.code === 'ERR_NETWORK' || err.message === 'Network Error') {
-      const errorMsg = "No internet connection. Please check your network and try again.";
-      setBackendError(errorMsg);
-      setErrorType("NETWORK_ERROR");
-      return { success: false, error: errorMsg, errorType: "NETWORK_ERROR" };
-    }
+    try {
+      const formDataToSend = new FormData();
+      formDataToSend.append("company_name", data.companyName);
+      formDataToSend.append("company_moto", data.companyMoto);
+      formDataToSend.append("contact_person", data.contactPerson);
+      formDataToSend.append("contact_number", data.contactNumber);
+      formDataToSend.append("company_email", data.companyMail);
+      formDataToSend.append("website", data.website);
+      formDataToSend.append("company_size", data.companySize);
+      formDataToSend.append("address1", data.address1);
+      if (data.address2) formDataToSend.append("address2", data.address2);
+      formDataToSend.append("about", data.about);
+      if (data.companyLogo) formDataToSend.append("company_logo", data.companyLogo);
 
-    // 2. TIMEOUT ERROR - Request took too long
-    if (err.name === 'AbortError') {
-      const errorMsg = "Request is taking too long. Please check your connection and try again.";
-      setBackendError(errorMsg);
-      setErrorType("TIMEOUT_ERROR");
-      return { success: false, error: errorMsg, errorType: "TIMEOUT_ERROR" };
-    }
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
 
-    //  3. VALIDATION ERROR - Form data problem (400)
-    if (err.response?.status === 400) {
-      const backendErrors = err.response.data;
-      const newErrors = {};
-      const fieldMapping = {
-        company_name: "companyName", company_moto: "companyMoto",
-        contact_person: "contactPerson", contact_number: "contactNumber",
-        company_email: "companyMail", website: "website",
-        company_size: "companySize", address1: "address1",
-        address2: "address2", about: "about", company_logo: "companyLogo",
-      };
-
-      // Map backend errors to frontend fields
-      Object.keys(backendErrors).forEach((key) => {
-        const frontendKey = fieldMapping[key];
-        if (frontendKey) {
-          newErrors[frontendKey] = Array.isArray(backendErrors[key])
-            ? backendErrors[key][0] : backendErrors[key];
-        }
+      const response = await api.patch("/company/profile/update/", formDataToSend, {
+        headers: { "Content-Type": "multipart/form-data" },
+        signal: controller.signal,
       });
-      
-      setErrors(newErrors);
-      
-      // ✅ Show SPECIFIC error message, not "Validation failed"
-      const firstErrorField = Object.keys(newErrors)[0];
-      if (firstErrorField) {
-        const specificError = newErrors[firstErrorField];
-        setBackendError(specificError); // Example: "Company name is required"
-        setErrorType("VALIDATION_ERROR");
-      } else {
-        setBackendError("Please check the form for errors and try again.");
-        setErrorType("VALIDATION_ERROR");
+
+      clearTimeout(timeoutId);
+
+      console.log("Company profile updated:", response.data);
+      setErrors({});
+      setBackendError("");
+      setErrorType("");
+
+      return { success: true, data: response.data };
+
+    } catch (err) {
+      console.error("Update profile error:", err);
+
+      if (err.code === 'ERR_NETWORK' || err.message === 'Network Error') {
+        const errorMsg = "No internet connection. Please check your network and try again.";
+        setBackendError(errorMsg);
+        setErrorType("NETWORK_ERROR");
+        return { success: false, error: errorMsg, errorType: "NETWORK_ERROR" };
       }
-      
-      return { success: false, errorType: "VALIDATION_ERROR", validationErrors: newErrors };
-    }
 
-    //  4. SESSION EXPIRED (401) - Login again
-    if (err.response?.status === 401) {
-      const errorMsg = "Your session has expired. Please login again to continue.";
+      if (err.name === 'AbortError') {
+        const errorMsg = "Request is taking too long. Please check your connection and try again.";
+        setBackendError(errorMsg);
+        setErrorType("TIMEOUT_ERROR");
+        return { success: false, error: errorMsg, errorType: "TIMEOUT_ERROR" };
+      }
+
+      if (err.response?.status === 400) {
+        const backendErrors = err.response.data;
+        const newErrors = {};
+        const fieldMapping = {
+          company_name: "companyName", company_moto: "companyMoto",
+          contact_person: "contactPerson", contact_number: "contactNumber",
+          company_email: "companyMail", website: "website",
+          company_size: "companySize", address1: "address1",
+          address2: "address2", about: "about", company_logo: "companyLogo",
+        };
+
+        Object.keys(backendErrors).forEach((key) => {
+          const frontendKey = fieldMapping[key];
+          if (frontendKey) {
+            newErrors[frontendKey] = Array.isArray(backendErrors[key])
+              ? backendErrors[key][0] : backendErrors[key];
+          }
+        });
+
+        setErrors(newErrors);
+
+        const firstErrorField = Object.keys(newErrors)[0];
+        if (firstErrorField) {
+          const specificError = newErrors[firstErrorField];
+          setBackendError(specificError);
+          setErrorType("VALIDATION_ERROR");
+        } else {
+          setBackendError("Please check the form for errors and try again.");
+          setErrorType("VALIDATION_ERROR");
+        }
+
+        return { success: false, errorType: "VALIDATION_ERROR", validationErrors: newErrors };
+      }
+
+      if (err.response?.status === 401) {
+        const errorMsg = "Your session has expired. Please login again to continue.";
+        setBackendError(errorMsg);
+        setErrorType("AUTH_ERROR");
+        setTimeout(() => {
+          navigate("/Job-portal/employer/login");
+        }, 2000);
+        return { success: false, error: errorMsg, errorType: "AUTH_ERROR" };
+      }
+
+      if (err.response?.status === 403) {
+        const errorMsg = "You don't have permission to update this profile. Please contact support.";
+        setBackendError(errorMsg);
+        setErrorType("PERMISSION_ERROR");
+        return { success: false, error: errorMsg, errorType: "PERMISSION_ERROR" };
+      }
+
+      if (err.response?.status === 404) {
+        const errorMsg = "Company profile not found. Please refresh the page and try again.";
+        setBackendError(errorMsg);
+        setErrorType("NOT_FOUND_ERROR");
+        return { success: false, error: errorMsg, errorType: "NOT_FOUND_ERROR" };
+      }
+
+      if (err.response?.status === 413) {
+        const errorMsg = "File is too large. Please compress your image to under 5MB and try again.";
+        setErrors({ companyLogo: errorMsg });
+        setBackendError(errorMsg);
+        setErrorType("FILE_SIZE_ERROR");
+        return { success: false, error: errorMsg, errorType: "FILE_SIZE_ERROR" };
+      }
+
+      if (err.response?.status === 429) {
+        const errorMsg = "Too many attempts. Please wait a moment and try again.";
+        setBackendError(errorMsg);
+        setErrorType("RATE_LIMIT_ERROR");
+        return { success: false, error: errorMsg, errorType: "RATE_LIMIT_ERROR" };
+      }
+
+      if (err.response?.status >= 500 && err.response?.status < 600) {
+        const errorMsg = "Server error. Our team has been notified. Please try again later.";
+        setBackendError(errorMsg);
+        setErrorType("SERVER_ERROR");
+        console.error("Server Error:", err.response.status, err.response.data);
+        return { success: false, error: errorMsg, errorType: "SERVER_ERROR" };
+      }
+
+      const errorMsg = "An unexpected error occurred. Please try again or contact support if the problem continues.";
       setBackendError(errorMsg);
-      setErrorType("AUTH_ERROR");
-      // Auto redirect to login
-      setTimeout(() => {
-        navigate("/Job-portal/employer/login");
-      }, 2000);
-      return { success: false, error: errorMsg, errorType: "AUTH_ERROR" };
+      setErrorType("UNKNOWN_ERROR");
+      return { success: false, error: errorMsg, errorType: "UNKNOWN_ERROR" };
+
+    } finally {
+      setIsLoading(false);
     }
+  };
 
-    //  5. PERMISSION DENIED (403)
-    if (err.response?.status === 403) {
-      const errorMsg = "You don't have permission to update this profile. Please contact support.";
-      setBackendError(errorMsg);
-      setErrorType("PERMISSION_ERROR");
-      return { success: false, error: errorMsg, errorType: "PERMISSION_ERROR" };
-    }
-
-    //  6. PROFILE NOT FOUND (404)
-    if (err.response?.status === 404) {
-      const errorMsg = "Company profile not found. Please refresh the page and try again.";
-      setBackendError(errorMsg);
-      setErrorType("NOT_FOUND_ERROR");
-      return { success: false, error: errorMsg, errorType: "NOT_FOUND_ERROR" };
-    }
-
-    //  7. FILE TOO LARGE (413)
-    if (err.response?.status === 413) {
-      const errorMsg = "File is too large. Please compress your image to under 5MB and try again.";
-      setErrors({ companyLogo: errorMsg });
-      setBackendError(errorMsg);
-      setErrorType("FILE_SIZE_ERROR");
-      return { success: false, error: errorMsg, errorType: "FILE_SIZE_ERROR" };
-    }
-
-    //  8. TOO MANY REQUESTS (429)
-    if (err.response?.status === 429) {
-      const errorMsg = "Too many attempts. Please wait a moment and try again.";
-      setBackendError(errorMsg);
-      setErrorType("RATE_LIMIT_ERROR");
-      return { success: false, error: errorMsg, errorType: "RATE_LIMIT_ERROR" };
-    }
-
-    //  9. SERVER ERROR (500+)
-    if (err.response?.status >= 500 && err.response?.status < 600) {
-      const errorMsg = "Server error. Our team has been notified. Please try again later.";
-      setBackendError(errorMsg);
-      setErrorType("SERVER_ERROR");
-      console.error("Server Error:", err.response.status, err.response.data);
-      return { success: false, error: errorMsg, errorType: "SERVER_ERROR" };
-    }
-
-    //  10. UNKNOWN ERROR
-    const errorMsg = "An unexpected error occurred. Please try again or contact support if the problem continues.";
-    setBackendError(errorMsg);
-    setErrorType("UNKNOWN_ERROR");
-    return { success: false, error: errorMsg, errorType: "UNKNOWN_ERROR" };
-
-  } finally {
-    setIsLoading(false);
-  }
-};
-
-  // ✅ Handle popup confirm (Join existing company)
   const handleJoinExistingCompany = async () => {
     setShowPopup(false);
     const result = await linkToExistingCompany(pendingCompanyName);
@@ -986,15 +867,13 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
         companyLogo: result.data.company_logo
       });
 
-      // Navigate to verification page
       navigate("/Job-portal/Employer/about-your-company/company-verification", {
         state: {
           fromSignup: fromSignup,
           profileId: result.data.company_id,
           isExistingCompany: true,
           companyName: pendingCompanyName,
-          fromCompanyProfile: true  
-          
+          fromCompanyProfile: true
         }
       });
     } else if (result.error !== "Validation failed") {
@@ -1002,217 +881,124 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
     }
   };
 
-  // ✅ Handle popup cancel
   const handleCancelJoin = () => {
     setShowPopup(false);
     setPendingCompanyName("");
     setErrors({ companyName: "Please use a different company name" });
   };
 
-  //  Next button - ALWAYS go to verification page
-  // const handleNext = async (e) => {
-  //   e.preventDefault();
-
-  //   const isValid = validateForm();
-  //   if (!isValid) {
-  //     console.log("Form has errors");
-  //     return;
-  //   }
-
-  //   console.log("Saving company profile...");
-
-  //   //  First update employer profile (full_name + employee_id)
-  //   const employerUpdated = await updateEmployerProfile(formData);
-  //   if (!employerUpdated) return;
-
-  //   let result;
-  //   if (fromSignup || !hasExistingProfile) {
-  //     result = await createCompanyProfile(formData);
-  //     // If duplicate company detected and popup is shown, stop here
-  //     if (result.pending) return;
-  //   } else {
-  //     result = await updateCompanyProfile(formData);
-  //   }
-
-  //   if (result.success) {
-  //     setCompanyProfile({
-  //       ...formData,
-  //       id: result.data.id || result.data.company_id,
-  //       companyLogo: result.data.company_logo
-  //     });
-
-  //     navigate("/Job-portal/Employer/about-your-company/company-verification", {
-  //       state: {
-  //         fromSignup: fromSignup,
-  //         profileId: result.data.id || result.data.company_id,
-  //         isExistingCompany: result.data.is_existing || false,
-  //         companyName: formData.companyName
-  //       }
-  //     });
-  //   } else if (result.error !== "Validation failed" && result.error !== "duplicate_company") {
-  //     setBackendError(result.error || "Failed to save company profile");
-  //   }
-  // };
-
   const handleNext = async (e) => {
-  e.preventDefault();
+    e.preventDefault();
 
-  const isValid = validateForm();
-  if (!isValid) {
-    console.log("Form has errors");
-    return;
-  }
+    const isValid = validateForm();
+    if (!isValid) {
+      console.log("Form has errors");
+      return;
+    }
 
-  console.log("Saving company profile...");
+    console.log("Saving company profile...");
 
-  // ✅ Update employer profile - Check properly
-  const employerResult = await updateEmployerProfile(formData);
-  if (!employerResult.success) {
-    // Error already set in the function
-    console.log("Employer update failed:", employerResult.error);
-    // Scroll to top to show error
-    window.scrollTo({ top: 0, behavior: "smooth" });
-    return;
-  }
+    const employerResult = await updateEmployerProfile(formData);
+    if (!employerResult.success) {
+      console.log("Employer update failed:", employerResult.error);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
 
-  let result;
-  if (fromSignup || !hasExistingProfile) {
-    result = await createCompanyProfile(formData);
-    // If duplicate company detected and popup is shown, stop here
-    if (result.pending) return;
-  } else {
-    result = await updateCompanyProfile(formData);
-  }
+    let result;
+    if (fromSignup || !hasExistingProfile) {
+      result = await createCompanyProfile(formData);
+      if (result.pending) return;
+    } else {
+      result = await updateCompanyProfile(formData);
+    }
 
-  if (result.success) {
-    console.log("🔍 Navigating with state:", {
-    fromSignup: fromSignup,
-    profileId: result.data.id || result.data.company_id,
-    companyName: formData.companyName,
-    fromCompanyProfile: true
-  })
-    setCompanyProfile({
-      ...formData,
-      id: result.data.id || result.data.company_id,
-      companyLogo: result.data.company_logo
-    });
-
-    navigate("/Job-portal/Employer/about-your-company/company-verification", {
-      state: {
+    if (result.success) {
+      console.log("Navigating with state:", {
         fromSignup: fromSignup,
         profileId: result.data.id || result.data.company_id,
-        isExistingCompany: result.data.is_existing || false,
         companyName: formData.companyName,
-        fromCompanyProfile: true  
-      }
-    });
-  } else {
-    // ✅ Different handling based on error type
-    if (result.errorType === "VALIDATION_ERROR") {
-      // Errors already shown on fields, just scroll
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    } else if (result.errorType === "NETWORK_ERROR") {
-      // Network error - show retry option? Already shown in UI
-      console.log("Network error - check connection");
-    } else if (result.errorType === "AUTH_ERROR") {
-      // Will redirect automatically
-      console.log("Auth error - redirecting to login");
-    } else if (result.error !== "Validation failed" && result.error !== "duplicate_company") {
-      // Only set if not already set by the function
-      if (!backendError) {
-        setBackendError(result.error || "Failed to save company profile");
+        fromCompanyProfile: true
+      });
+
+      setCompanyProfile({
+        ...formData,
+        id: result.data.id || result.data.company_id,
+        companyLogo: result.data.company_logo
+      });
+
+      navigate("/Job-portal/Employer/about-your-company/company-verification", {
+        state: {
+          fromSignup: fromSignup,
+          profileId: result.data.id || result.data.company_id,
+          isExistingCompany: result.data.is_existing || false,
+          companyName: formData.companyName,
+          fromCompanyProfile: true
+        }
+      });
+    } else {
+      if (result.errorType === "VALIDATION_ERROR") {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      } else if (result.errorType === "NETWORK_ERROR") {
+        console.log("Network error - check connection");
+      } else if (result.errorType === "AUTH_ERROR") {
+        console.log("Auth error - redirecting to login");
+      } else if (result.error !== "Validation failed" && result.error !== "duplicate_company") {
+        if (!backendError) {
+          setBackendError(result.error || "Failed to save company profile");
+        }
       }
     }
-  }
-};
-
-  // Save button (from Dashboard My Profile)
-  // const handleSave = async (e) => {
-  //   e.preventDefault();
-
-  //   const isValid = validateForm();
-  //   if (!isValid) return;
-
-  //   console.log("Saving Company Profile from Dashboard:", formData);
-
-  //   //  First update employer profile (full_name + employee_id)
-  //   const employerUpdated = await updateEmployerProfile(formData);
-  //   if (!employerUpdated) return;
-
-  //   let result;
-  //   if (hasExistingProfile) {
-  //     result = await updateCompanyProfile(formData);
-  //   } else {
-  //     result = await createCompanyProfile(formData);
-  //   }
-
-  //   if (result.success) {
-  //     setCompanyProfile({
-  //       ...formData,
-  //       id: result.data.id,
-  //       companyLogo: result.data.company_logo
-  //     });
-
-  //     setExistingLogo(result.data.company_logo);
-  //     setHasExistingProfile(true);
-
-  //     alert("Company profile saved successfully!");
-  //   } else if (result.error !== "Validation failed" && result.error !== "duplicate_company") {
-  //     setBackendError(result.error || "Failed to save");
-  //   }
-  // };
+  };
 
   const handleSave = async (e) => {
-  e.preventDefault();
+    e.preventDefault();
 
-  const isValid = validateForm();
-  if (!isValid) return;
+    const isValid = validateForm();
+    if (!isValid) return;
 
-  console.log("Saving Company Profile from Dashboard:", formData);
+    console.log("Saving Company Profile from Dashboard:", formData);
 
-  // ✅ Update employer profile - Check properly
-  const employerResult = await updateEmployerProfile(formData);
-  if (!employerResult.success) {
-    console.log("Employer update failed:", employerResult.error);
-    window.scrollTo({ top: 0, behavior: "smooth" });
-    return;
-  }
-
-  let result;
-  if (hasExistingProfile) {
-    result = await updateCompanyProfile(formData);
-  } else {
-    result = await createCompanyProfile(formData);
-  }
-
-  if (result.success) {
-    setCompanyProfile({
-      ...formData,
-      id: result.data.id,
-      companyLogo: result.data.company_logo
-    });
-
-    setExistingLogo(result.data.company_logo);
-    setHasExistingProfile(true);
-
-    alert("Company profile saved successfully!");
-  } else {
-    // ✅ Different handling based on error type
-    if (result.errorType === "VALIDATION_ERROR") {
+    const employerResult = await updateEmployerProfile(formData);
+    if (!employerResult.success) {
+      console.log("Employer update failed:", employerResult.error);
       window.scrollTo({ top: 0, behavior: "smooth" });
-    } else if (result.errorType === "NETWORK_ERROR") {
-      console.log("Network error - check connection");
-    } else if (result.errorType === "AUTH_ERROR") {
-      console.log("Auth error - redirecting to login");
-    } else if (result.error !== "Validation failed" && result.error !== "duplicate_company") {
-      if (!backendError) {
-        setBackendError(result.error || "Failed to save");
+      return;
+    }
+
+    let result;
+    if (hasExistingProfile) {
+      result = await updateCompanyProfile(formData);
+    } else {
+      result = await createCompanyProfile(formData);
+    }
+
+    if (result.success) {
+      setCompanyProfile({
+        ...formData,
+        id: result.data.id,
+        companyLogo: result.data.company_logo
+      });
+
+      setExistingLogo(result.data.company_logo);
+      setHasExistingProfile(true);
+
+      alert("Company profile saved successfully!");
+    } else {
+      if (result.errorType === "VALIDATION_ERROR") {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      } else if (result.errorType === "NETWORK_ERROR") {
+        console.log("Network error - check connection");
+      } else if (result.errorType === "AUTH_ERROR") {
+        console.log("Auth error - redirecting to login");
+      } else if (result.error !== "Validation failed" && result.error !== "duplicate_company") {
+        if (!backendError) {
+          setBackendError(result.error || "Failed to save");
+        }
       }
     }
-  }
-};
+  };
 
-  // Popup Modal Component
   const PopupModal = () => {
     return (
       <div className="popup-modal-overlay">
@@ -1245,7 +1031,6 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
     );
   };
 
-  // Loading state
   if (isLoading && !fromSignup) {
     return (
       <>
@@ -1263,7 +1048,6 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
     <>
       {!hideNavigation && <EHeader />}
 
-      {/* Popup Modal */}
       {showPopup && <PopupModal />}
 
       <div className="aboutcompany-container">
@@ -1282,7 +1066,6 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
         )}
 
         <form className="aboutcompany-form">
-          {/* Full Name */}
           <div className="aboutcompany-form-group">
             <label>Full Name *</label>
             <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
@@ -1294,12 +1077,12 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
                 value={formData.fullName}
                 onChange={handleChange}
                 disabled={isLoading}
+                maxLength={50}
               />
               {errors.fullName && <span className="error-msg">{errors.fullName}</span>}
             </div>
           </div>
 
-          {/* Employee Id */}
           <div className="aboutcompany-form-group">
             <label>Employee ID *</label>
             <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
@@ -1311,12 +1094,12 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
                 value={formData.employerId}
                 onChange={handleChange}
                 disabled={isLoading}
+                maxLength={20}
               />
               {errors.employerId && <span className="error-msg">{errors.employerId}</span>}
             </div>
           </div>
 
-          {/* Company Name */}
           <div className="aboutcompany-form-group">
             <label>Company Name *</label>
             <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
@@ -1328,12 +1111,12 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
                 value={formData.companyName}
                 onChange={handleChange}
                 disabled={isLoading}
+                maxLength={80}
               />
               {errors.companyName && <span className="error-msg">{errors.companyName}</span>}
             </div>
           </div>
 
-          {/* Company Moto */}
           <div className="aboutcompany-form-group">
             <label>Company Moto *</label>
             <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
@@ -1345,12 +1128,12 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
                 value={formData.companyMoto}
                 onChange={handleChange}
                 disabled={isLoading}
+                maxLength={500}
               />
               {errors.companyMoto && <span className="error-msg">{errors.companyMoto}</span>}
             </div>
           </div>
 
-          {/* Contact Person */}
           <div className="aboutcompany-form-group">
             <label>Contact Person *</label>
             <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
@@ -1362,12 +1145,12 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
                 value={formData.contactPerson}
                 onChange={handleChange}
                 disabled={isLoading}
+                maxLength={40}
               />
               {errors.contactPerson && <span className="error-msg">{errors.contactPerson}</span>}
             </div>
           </div>
 
-          {/* Contact Number */}
           <div className="aboutcompany-form-group">
             <label>Contact Number *</label>
             <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
@@ -1379,12 +1162,12 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
                 value={formData.contactNumber}
                 onChange={handleChange}
                 disabled={isLoading}
+                maxLength={10}
               />
               {errors.contactNumber && <span className="error-msg">{errors.contactNumber}</span>}
             </div>
           </div>
 
-          {/* Company Email */}
           <div className="aboutcompany-form-group">
             <label>Company Mail Id *</label>
             <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
@@ -1396,12 +1179,12 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
                 value={formData.companyMail}
                 onChange={handleChange}
                 disabled={isLoading}
+                maxLength={100}
               />
               {errors.companyMail && <span className="error-msg">{errors.companyMail}</span>}
             </div>
           </div>
 
-          {/* Website */}
           <div className="aboutcompany-form-group">
             <label>Company Website *</label>
             <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
@@ -1418,7 +1201,6 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
             </div>
           </div>
 
-          {/* Company Logo */}
           <div className="aboutcompany-form-group">
             <label>Company Logo *</label>
             <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
@@ -1451,10 +1233,13 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
                 {formData.companyLogo && (
                   <div className="aboutcompany-file-preview">
                     <label htmlFor="logoUpload" className="aboutcompany-file-left clickable-area">
-                      <img src={fileIcon} alt="file" />
+                      <img src={fileIcon} alt="Current Logo" style={{ maxWidth: "100px", maxHeight: "100px" }} />
                       <div>
                         <p>{formData.companyLogo.name}</p>
                         <span>{(formData.companyLogo.size / 1024 / 1024).toFixed(2)} MB</span>
+                        <label htmlFor="logoUpload" style={{ cursor: "pointer", color: "#007bff", display: "block" }}>
+                          Click to change
+                        </label>
                       </div>
                     </label>
                   </div>
@@ -1464,7 +1249,6 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
             </div>
           </div>
 
-          {/* Company Size */}
           <div className="aboutcompany-form-group">
             <label>Company Size *</label>
             <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
@@ -1487,7 +1271,6 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
             </div>
           </div>
 
-          {/* Address 1 */}
           <div className="aboutcompany-form-group">
             <label>Company Address *</label>
             <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
@@ -1499,12 +1282,12 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
                 value={formData.address1}
                 onChange={handleChange}
                 disabled={isLoading}
+                maxLength={100}
               />
               {errors.address1 && <span className="error-msg">{errors.address1}</span>}
             </div>
           </div>
 
-          {/* Address 2 (Optional) */}
           <div className="aboutcompany-form-group">
             <label>Company Address 2 (Optional)</label>
             <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
@@ -1515,11 +1298,11 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
                 value={formData.address2}
                 onChange={handleChange}
                 disabled={isLoading}
+                maxLength={100}
               />
             </div>
           </div>
 
-          {/* About Company */}
           <div className="aboutcompany-form-group">
             <label>About Company *</label>
             <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
@@ -1531,6 +1314,7 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
                 value={formData.about}
                 onChange={handleChange}
                 disabled={isLoading}
+                maxLength={500}
               />
               {errors.about && <span className="error-msg">{errors.about}</span>}
             </div>
@@ -1552,111 +1336,20 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
               <button type="button" className="aboutcompany-save-btn" onClick={handleSave} disabled={isLoading}>
                 {isLoading ? "Saving..." : "Save"}
               </button>
+              <button
+                type="button"
+                className="aboutcompany-discard-btn"
+                onClick={handleDiscard}
+                disabled={isLoading}
+              >
+                Discard
+              </button>
             </div>
           )}
         </form>
       </div>
 
       {!hideNavigation && <Footer />}
-
-      {/* Popup Modal CSS */}
-      <style>{`
-        .popup-modal-overlay {
-          position: fixed;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background-color: rgba(0, 0, 0, 0.5);
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          z-index: 9999;
-        }
-        
-        .popup-modal-content {
-          background: white;
-          border-radius: 12px;
-          width: 450px;
-          max-width: 90%;
-          box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-          animation: modalFadeIn 0.3s ease;
-        }
-        
-        @keyframes modalFadeIn {
-          from {
-            opacity: 0;
-            transform: translateY(-20px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-        
-        .popup-modal-header {
-          padding: 20px 24px;
-          border-bottom: 1px solid #e0e0e0;
-        }
-        
-        .popup-modal-header h3 {
-          margin: 0;
-          color: #d32f2f;
-          font-size: 20px;
-        }
-        
-        .popup-modal-body {
-          padding: 24px;
-        }
-        
-        .popup-modal-body p {
-          margin: 10px 0;
-          color: #333;
-          line-height: 1.5;
-        }
-        
-        .popup-modal-body strong {
-          color: #1e88e5;
-        }
-        
-        .popup-modal-footer {
-          padding: 16px 24px;
-          border-top: 1px solid #e0e0e0;
-          display: flex;
-          justify-content: flex-end;
-          gap: 12px;
-        }
-        
-        .popup-btn-cancel {
-          padding: 10px 20px;
-          background: white;
-          border: 1px solid #ccc;
-          border-radius: 6px;
-          cursor: pointer;
-          font-size: 14px;
-          color: #666;
-          transition: all 0.2s;
-        }
-        
-        .popup-btn-cancel:hover {
-          background: #f5f5f5;
-        }
-        
-        .popup-btn-confirm {
-          padding: 10px 20px;
-          background: #1e88e5;
-          border: none;
-          border-radius: 6px;
-          cursor: pointer;
-          font-size: 14px;
-          color: white;
-          transition: all 0.2s;
-        }
-        
-        .popup-btn-confirm:hover {
-          background: #1565c0;
-        }
-      `}</style>
     </>
   );
 };

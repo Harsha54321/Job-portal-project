@@ -188,6 +188,39 @@
     box-shadow: 0 10px 15px -3px rgba(232, 34, 34, 0.1);
 }
 
+.postedjobs-table-header {
+    position: relative; 
+    margin-bottom: 15px;
+}
+
+.new-label {
+    position: relative;
+    cursor: help;
+}
+
+.new-label::after {
+    content: "Candidates who applied but not yet reviewed";
+    display: none;
+    position: absolute;
+    background: #333;
+    color: white;
+    padding: 5px 10px;
+    border-radius: 5px;
+    font-size: 12px;
+    white-space: nowrap;
+    top: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 999;  
+    border: none;  
+    outline: none;
+    box-shadow: none;  
+}
+
+.new-label:hover::after {
+    display: block;
+}
+
 
 /* @media (max-width: 1024px) {
     .postedjobs-grid-layout {

@@ -65,6 +65,17 @@ export const OpportunitiesCard = ({ job }) => {
 
     console.log(job);
 
+    const formatLocation = (location) => {
+
+        if (!location) return "Location not specified";
+
+        if (Array.isArray(location)) {
+            return location.join(", ");
+        }
+        return location;
+    };
+
+    const locationDisplay = formatLocation(job.location);
 
     return (
         <div className="Opportunities-job-card">
@@ -95,7 +106,7 @@ export const OpportunitiesCard = ({ job }) => {
                 <div className="Opportunities-job-details">
                     <p className='Opportunities-detail-line'><img src={time} className='card-icons' />{job.work_duration}<span className="Opportunities-divider">|</span>₹ {job.salary} Lpa</p>
                     <p className='Opportunities-detail-line'><img src={experience} className='card-icons' />{job.experience} years of experience</p>
-                    <p className='Opportunities-detail-line'><img src={place} className='card-icons' />{job.location}</p>
+                    <p className='Opportunities-detail-line'><img src={place} className='card-icons' />{locationDisplay}</p>
                 </div>
 
                 <div className='Opportunities-details-bottom'>
@@ -116,7 +127,7 @@ export const OpportunitiesCard = ({ job }) => {
 
             <div className="Opportunities-job-footer">
                 <div className="Opportunities-job-meta">
-                    <p>{formatPostedDate(job?.posted_date)} <span className="Opportunities-divider">|</span> Openings: {job.openings} <span className="Opportunities-divider">|</span> Applicants: {job.applicants}</p>
+                    <p>{formatPostedDate(job?.posted_date)} <span className="Opportunities-divider">|</span> Openings: {job.openings} <span className="Opportunities-divider">|</span> Applicants: {job.applicants_count}</p>
                 </div>
 
                 <div className="Opportunities-job-actions">
@@ -132,7 +143,7 @@ export const OpportunitiesCard = ({ job }) => {
                         }}
                     >
                         {isApplied ? "Applied" : "Apply"}
-                    </button>                
+                    </button>
                 </div>
             </div>
         </div>

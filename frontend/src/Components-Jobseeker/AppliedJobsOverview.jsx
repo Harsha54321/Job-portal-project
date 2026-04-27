@@ -107,6 +107,17 @@ export const AppliedJobsOverview = () => {
 
   const job = appliedJob.job;
 
+  const formatLocation = (location) => {
+
+        if (!location) return "Location not specified";
+
+        if (Array.isArray(location)) {
+            return location.join(", ");
+        }
+        return location;
+    };
+
+    const locationDisplay = formatLocation(job.location);
 
   const viewJob = {
     title: job.job_title,
@@ -116,7 +127,7 @@ export const AppliedJobsOverview = () => {
     WorkType: job.work_type,
     experience: job.experience,
     salary: job.salary,
-    location: job.location,
+    location: locationDisplay,
     logo: job.company.logo || job.company.company_logo,
     tags: job.job_category || "",
     JobHighlights: job.job_highlights || [],

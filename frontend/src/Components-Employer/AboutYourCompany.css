@@ -1,6 +1,6 @@
 .aboutcompany-container {
   /* max-width: 800px; */
-  margin: 102px 200px 40px;
+  margin: 0px 100px 100px;
   background: #ffffff;
   padding: 30px 40px;
   border-radius: 12px;
@@ -155,4 +155,125 @@
  
 .aboutcompany-clickable-area {
   cursor: pointer;
+}
+
+.aboutcompany-save-btn {
+  background: #1e88e5;
+  color: white;
+  border: none;
+  padding: 8px 30px;
+  border-radius: 6px;
+  font-weight: 500;
+}
+.aboutcompany-save-btn:hover,.aboutcompany-discard-btn {
+  opacity: 0.7;
+  cursor: pointer;
+}
+
+.aboutcompany-discard-btn {
+  background: #e84444;
+  color: white;
+  border: none;
+  padding: 8px 30px;
+  border-radius: 6px;
+  font-weight: 500;
+  margin-left: 20px;
+  width: max-content;
+}
+
+.popup-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+}
+
+.popup-modal-content {
+  background: white;
+  border-radius: 12px;
+  width: 450px;
+  max-width: 90%;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  animation: modalFadeIn 0.3s ease;
+}
+
+@keyframes modalFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.popup-modal-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.popup-modal-header h3 {
+  margin: 0;
+  color: #d32f2f;
+  font-size: 20px;
+}
+
+.popup-modal-body {
+  padding: 24px;
+}
+
+.popup-modal-body p {
+  margin: 10px 0;
+  color: #333;
+  line-height: 1.5;
+}
+
+.popup-modal-body strong {
+  color: #1e88e5;
+}
+
+.popup-modal-footer {
+  padding: 16px 24px;
+  border-top: 1px solid #e0e0e0;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.popup-btn-cancel {
+  padding: 10px 20px;
+  background: white;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #666;
+  transition: all 0.2s;
+}
+
+.popup-btn-cancel:hover {
+  background: #f5f5f5;
+}
+
+.popup-btn-confirm {
+  padding: 10px 20px;
+  background: #1e88e5;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  color: white;
+  transition: all 0.2s;
+}
+
+.popup-btn-confirm:hover {
+  background: #1565c0;
 }

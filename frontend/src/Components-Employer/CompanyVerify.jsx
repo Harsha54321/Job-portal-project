@@ -10,9 +10,7 @@ import mobileIcon from '../assets/icon_mobile_otp.png'
 import Verified from '../assets/verified-otpimage.png'
 import { useLocation } from "react-router-dom";
 
-
 export const CompanyVerify = () => {
-
 
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
@@ -23,10 +21,9 @@ export const CompanyVerify = () => {
   console.log("🔍 location.state:", location.state);
   console.log("🔍 isFirstTime:", isFirstTime);
 
+  const [errors, setErrors] = useState({});
 
-  const [errors, setErrors] = useState({}); // error message 
-
-  // --- NEW OTP STATES ---
+  // OTP STATES
   const [showEmailOtp, setShowEmailOtp] = useState(false);
   const [showMobileOtp, setShowMobileOtp] = useState(false);
   const [isEmailVerified, setIsEmailVerified] = useState(false);
@@ -58,7 +55,6 @@ export const CompanyVerify = () => {
     if (files) {
       const file = files[0];
 
-      // Allow PDF, JPG, and PNG
       const allowedTypes = [
         "application/pdf",
         "image/jpeg",
@@ -159,7 +155,6 @@ export const CompanyVerify = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  // --- TIMER LOGIC ---
   // TIMER LOGIC
   useEffect(() => {
     let interval;
@@ -169,7 +164,7 @@ export const CompanyVerify = () => {
     return () => clearInterval(interval);
   }, [timer]);
 
-  // ✅ Verification status effect
+  // Verification status effect
   useEffect(() => {
     if (isFirstTime) {
       console.log("First time user - skipping verification status check");
@@ -195,17 +190,16 @@ export const CompanyVerify = () => {
       }
     };
 
-    fetchVerificationStatus(); // ✅ Call it here
+    fetchVerificationStatus();
   }, [isFirstTime]);
 
-  // ✅ formatTime function - OUTSIDE useEffect
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // --- COMPANY EMAIL OTP FUNCTIONS (Updated) ---
+  // COMPANY EMAIL OTP FUNCTIONS
   const sendCompanyEmailOtp = async () => {
     const email = formData.officialEmail;
     if (!email) {
@@ -213,13 +207,11 @@ export const CompanyVerify = () => {
       return;
     }
 
-    // Check if starts with a letter
     if (!/^[a-zA-Z]/.test(email)) {
       setErrors({ ...errors, officialEmail: "Email must start with a letter to receive OTP" });
       return;
     }
 
-    // Check full email format
     const emailRegex = /^[a-zA-Z0-9._%+-]*@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
     if (!emailRegex.test(email)) {
       setErrors({ ...errors, officialEmail: "Please enter a valid email address" });
@@ -228,7 +220,6 @@ export const CompanyVerify = () => {
 
     setIsLoading(true);
     try {
-      // ✅ Use company-specific OTP endpoint
       const response = await api.post('/company/send-email-otp/', {
         email: email,
         company_name: formData.legalName
@@ -257,7 +248,6 @@ export const CompanyVerify = () => {
 
     setIsLoading(true);
     try {
-      // ✅ Use company-specific verification endpoint
       const response = await api.post('/company/verify-email-otp/', {
         email: emailForOtp,
         otp: otpValues.emailOtp
@@ -276,7 +266,7 @@ export const CompanyVerify = () => {
     }
   };
 
-  // --- MOBILE OTP FUNCTIONS (Simulated - Replace with actual API if needed) ---
+  // MOBILE OTP FUNCTIONS
   const sendMobileOtp = () => {
     const phone = formData.phoneNumber;
     if (!/^[6-9]\d{9}$/.test(phone)) return alert("Enter valid 10-digit number");
@@ -288,15 +278,16 @@ export const CompanyVerify = () => {
   };
 
   const verifyMobileOtp = () => {
-    if (otpValues.mobileOtp === "123456") { // Testing OTP - Replace with actual API
+    if (otpValues.mobileOtp === "123456") {
       setIsMobileVerified(true);
       setTimeout(() => setShowMobileOtp(false), 1500);
+      alert("Mobile verified successfully!");
     } else {
       alert("Invalid OTP");
     }
   };
 
-  // ✅ Updated handleSubmit with API call
+  // Handle Submit with auto-refresh
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -319,7 +310,6 @@ export const CompanyVerify = () => {
     setBackendError("");
 
     try {
-      // Create FormData for file upload
       const formDataToSend = new FormData();
       formDataToSend.append("legal_name", formData.legalName);
       formDataToSend.append("registration_number", formData.registrationNumber);
@@ -331,7 +321,6 @@ export const CompanyVerify = () => {
 
       console.log("Submitting verification data...");
 
-      // ✅ API Call
       const response = await api.post("/company/verify/", formDataToSend, {
         headers: {
           "Content-Type": "multipart/form-data",
@@ -342,13 +331,24 @@ export const CompanyVerify = () => {
 
       if (response.status === 200 || response.status === 201) {
         alert("Verification submitted successfully! Admin will review your application.");
-        navigate('/Job-portal/Employer/Dashboard', { state: { fromVerify: true, verificationSubmitted: true } });
+        // ✅ Navigate to dashboard with auto-refresh state
+        navigate('/Job-portal/Employer/Dashboard', { 
+          replace: true,
+          state: { 
+            fromVerify: true, 
+            verificationSubmitted: true,
+            justLoggedIn: true  // ✅ This triggers auto-refresh in dashboard
+          } 
+        });
       }
     } catch (err) {
       console.error("Verification error:", err);
       if (err.response?.data?.error) {
         setBackendError(err.response.data.error);
         alert(err.response.data.error);
+      } else if (err.code === 'ERR_NETWORK') {
+        setBackendError("Network error. Please check your connection.");
+        alert("Network error. Please check your connection.");
       } else {
         setBackendError("Failed to submit verification. Please try again.");
         alert("Failed to submit. Please try again.");
@@ -364,7 +364,6 @@ export const CompanyVerify = () => {
     const otpKey = isEmail ? "emailOtp" : "mobileOtp";
     const isCurrentlyVerified = isEmail ? isEmailVerified : isMobileVerified;
 
-    // SUCCESS POPUP VIEW
     if (isCurrentlyVerified) {
       return (
         <div className="otp-modal-overlay">
@@ -485,10 +484,11 @@ export const CompanyVerify = () => {
       <div className="company-verify-container">
         <h2 className="company-verify-title">Company Verify</h2>
 
-        {/* Show backend error only */}
         {backendError && (
-          <div style={{backgroundColor: "#ffebee", color: "#d32f2f",
-            padding: "10px", borderRadius: "5px", marginBottom: "20px", textAlign: "center"}}>
+          <div style={{
+            backgroundColor: "#ffebee", color: "#d32f2f",
+            padding: "10px", borderRadius: "5px", marginBottom: "20px", textAlign: "center"
+          }}>
             {backendError}
           </div>
         )}

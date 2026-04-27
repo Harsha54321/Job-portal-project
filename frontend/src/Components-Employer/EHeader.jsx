@@ -25,7 +25,9 @@ export const EHeader = () => {
 
     return (
         <header className="header">
-            <div className="logo">Job portal</div>
+            <Link to="/" className="logo">
+                <span className="logo-text">Job portal</span>
+            </Link>
 
             {/* <div className='E-Header-search'>
                 <img className="E-searchicon" src={search} alt="search icon" />
@@ -40,6 +42,7 @@ export const EHeader = () => {
                         src={chat}
                         width={40}
                         alt='Chat'
+                        title='Messanger'
                     />
                 </Link>
 
@@ -51,12 +54,13 @@ export const EHeader = () => {
                             src={newNotificationsCount > 0 ? belldot : bell}
                             width={40}
                             alt='Notifications'
+                            title='Notifications'
                         />
                     </Link>
 
                     {/* ✅ Only show notification dropdown when employershowNotification is true */}
                     {employershowNotification && (
-                        <ENotification 
+                        <ENotification
                             notifications={employerNotifications}
                             onClose={() => setEmployerShowNotification(false)}
                         />

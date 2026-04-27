@@ -2001,6 +2001,16 @@ class CancelSubscriptionView(APIView):
             sub.status = "cancelled"
             sub.save()
         return Response({"message": "Cancelled"})
+    
+    def patch(self, request):
+        sub = Subscription.objects.filter(
+            user=request.user,
+            status='cancelled'
+        ).order_by('-start_date').first()
+        if sub:
+            sub.status = 'active'
+            sub.save()
+        return Response({"message": "Reactivated"})
  
  
 class InvoiceListView(APIView):
