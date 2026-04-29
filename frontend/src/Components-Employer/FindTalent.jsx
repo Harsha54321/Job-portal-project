@@ -406,11 +406,11 @@ export const FindTalent = () => {
               onChange={(e) => setMaxExp(parseInt(e.target.value))}
               className="FindTalent-exp-slider"
             />
-            <div className="FindTalent-range-values">
+            {/* <div className="FindTalent-range-values">
               <span>0 yrs</span>
               <span>{maxExp} yrs</span>
               <span>20 yrs</span>
-            </div>
+            </div> */}
           </div>
  
           {/* Education Filter */}

@@ -111,7 +111,7 @@ export const JsProfileOverview = () => {
           <button
             className="back-btn"
             onClick={() => navigate('/Job-portal/Employer/Dashboard', {
-              state: { targetTab: 'Find a Talent' }
+              state: { targetTab: 'Find Talent' }
             })}
           >
             <span className="back-icon">←</span> Back to Find Talent

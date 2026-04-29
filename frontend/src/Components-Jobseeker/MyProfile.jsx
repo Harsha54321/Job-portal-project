@@ -17,11 +17,15 @@ const isValidValue = (value) => {
 
     if (cleaned.length < 2) return false;
 
-    // only letters + space
-    if (!/^[A-Za-z\s]+$/.test(cleaned)) return false;
+    if (!/[A-Za-z]/.test(cleaned)) return false;
 
-    // avoid junk like abbbb, aaaa
+    if (!/^[A-Za-z0-9\s.+#&/-]+$/.test(cleaned)) return false;
+
     if (/^(.)\1+$/.test(cleaned)) return false;
+
+    if (/([.+#&/-])\1{1,}/.test(cleaned)) return false;
+
+    if (/^[.+#&/-]|[.+#&/-]$/.test(cleaned)) return false;
 
     return true;
 };
@@ -559,44 +563,31 @@ const Profile = ({ data, onChange, onReset, onNext, setProfilePhoto, setRemovePh
 
 const CurrentDetails = ({ data, onChange, onReset, onNext }) => {
     const [errors, setErrors] = useState({});
-    const [isFresher, setIsFresher] = useState(false);
+
+    // Derived state to check if the user is a fresher based on experienceType
+    const isFresher = data.experienceType === "fresher";
 
     const AlphaOnlyWithSpace = /^[A-Za-z\s]*$/;
 
     const handleChange = (e) => {
         const { name, value } = e.target;
 
-        if (name === "jobTitle") {
- 
-            if (!AlphaOnlyWithSpace.test(value)) return;
-        }
-        if (name === "company") {
- 
-        if (value !== "" && !/^[A-Za-z0-9\s\.\-\'\,\&\(\)]*$/.test(value)) return;
-    }
- 
-        if ((name === "currentLocation" || name === "prefLocation") && !AlphaOnlyWithSpace.test(value)) {
-            return;
-        }
+        // Validation Logic
+        if (name === "jobTitle" && !AlphaOnlyWithSpace.test(value)) return;
+        if (name === "company" && value !== "" && !/^(?=.*[A-Za-z])[A-Za-z0-9\s\.\-\'\,\&\(\)@#\$]*$/.test(value)) return;
+        if ((name === "currentLocation" || name === "prefLocation") && !AlphaOnlyWithSpace.test(value)) return;
 
+        // Reset experience fields when switching to fresher
         if (name === "experienceType") {
-            setIsFresher(value === "fresher");
             if (value === "fresher") {
-                // Clear experience field and keep it as 0 for freshers
-                onChange({
-                    target: {
-                        name: "experience",
-                        value: "0"
-                    }
-                });
-            } else {
-                onChange({
-                    target: {
-                        name: "experience",
-                        value: ""
-                    }
-                });
+                // Clear all experience-related fields when switching to fresher
+                onChange({ target: { name: "experience", value: "" } });
+                onChange({ target: { name: "jobTitle", value: "" } });
+                onChange({ target: { name: "company", value: "" } });
+                onChange({ target: { name: "noticePeriod", value: "" } });
             }
+            // Note: When switching to experienced, don't auto-clear anything
+            // Let the user fill the details
         }
 
         if (errors[name]) {
@@ -608,22 +599,22 @@ const CurrentDetails = ({ data, onChange, onReset, onNext }) => {
 
     const handleSubmit = (e) => {
         e.preventDefault();
-
         const newErrors = {};
 
-        if (!isFresher) {
+        // Validate experienceType is selected
+        if (!data.experienceType) {
+            newErrors.experienceType = "*Please select your experience status";
+        }
+        // Only validate other fields if NOT fresher
+        else if (!isFresher) {
+            // Validation for Experienced users
             if (!data.jobTitle?.trim()) newErrors.jobTitle = "*Job Title is required";
             if (!data.company?.trim()) newErrors.company = "*Company name is required";
             if (!data.experience) newErrors.experience = "*Experience is required";
+            else if (isNaN(data.experience)) newErrors.experience = "*Please enter a valid number";
             if (data.noticePeriod === "Select" || !data.noticePeriod) newErrors.noticePeriod = "*Please select a notice period";
             if (!data.currentLocation?.trim()) newErrors.currentLocation = "*Current location is required";
-            if (!data.prefLocation?.trim()) newErrors.prefLocation = "Preferred location is required";
-        }
-        // For freshers, only validate that they selected fresher option
-        else {
-            if (!data.experienceType || data.experienceType !== "fresher") {
-                newErrors.experienceType = "*Please select your experience status";
-            }
+            if (!data.prefLocation?.trim()) newErrors.prefLocation = "*Preferred location is required";
         }
 
         setErrors(newErrors);
@@ -645,14 +636,14 @@ const CurrentDetails = ({ data, onChange, onReset, onNext }) => {
                     onClick={() => {
                         onReset();
                         setErrors({});
-                        setIsFresher(false);
                     }}
                 >
                     Reset
                 </button>
             </div>
+
             <div className="form-grid">
-                {/* Experience Type Dropdown */}
+                {/* 1. Experience Status - Always Visible */}
                 <div className="form-group">
                     <label>Experience Status</label>
                     <select
@@ -668,113 +659,102 @@ const CurrentDetails = ({ data, onChange, onReset, onNext }) => {
                     {errors.experienceType && <span className="error-message">{errors.experienceType}</span>}
                 </div>
 
-                {/* Total Experience Field - Only show for experienced */}
+                {/* HIDE THESE FIELDS IF FRESHER */}
                 {!isFresher && (
-                    <div className="form-group">
-                        <label>Total Experience (Years)</label>
-                        <input
-                            type="text"
-                            name="experience"
-                            min="0"
-                            step="0.1"
-                            placeholder="e.g. 2.5"
-                            value={data.experience || ""}
-                            onChange={(e) => {
-                                const val = e.target.value;
-                                // Allow digits and one decimal point for experience
-                                if (val === "" || /^\d{0,2}(\.\d{0,1})?$/.test(val)) {
-                                    handleChange(e);
-                                }
-                            }}
-                            className={errors.experience ? "input-error" : ""}
-                        />
-                        {errors.experience && <span className="error-message">{errors.experience}</span>}
-                    </div>
+                    <>
+                        <div className="form-group">
+                            <label>Total Experience (Years)</label>
+                            <input
+                                type="text"
+                                name="experience"
+                                placeholder="e.g., 2.5"
+                                value={data.experience || ""}
+                                onChange={(e) => {
+                                    const val = e.target.value;
+                                    if (val === "" || /^\d{0,2}(\.\d{0,1})?$/.test(val)) handleChange(e);
+                                }}
+                                className={errors.experience ? "input-error" : ""}
+                            />
+                            {errors.experience && <span className="error-message">{errors.experience}</span>}
+                        </div>
+
+                        <div className="form-group">
+                            <label>Current Job Title</label>
+                            <input
+                                type="text"
+                                name="jobTitle"
+                                value={data.jobTitle || ""}
+                                onChange={handleChange}
+                                className={errors.jobTitle ? "input-error" : ""}
+                                placeholder="e.g., Software Engineer"
+                            />
+                            {errors.jobTitle && <span className="error-message">{errors.jobTitle}</span>}
+                        </div>
+
+                        <div className="form-group">
+                            <label>Current Company</label>
+                            <input
+                                type="text"
+                                name="company"
+                                value={data.company || ""}
+                                onChange={handleChange}
+                                className={errors.company ? "input-error" : ""}
+                                placeholder="e.g., XYZ Company"
+                            />
+                            {errors.company && <span className="error-message">{errors.company}</span>}
+                        </div>
+
+                        <div className="form-group">
+                            <label>Notice Period</label>
+                            <select
+                                name="noticePeriod"
+                                value={data.noticePeriod || "Select"}
+                                onChange={handleChange}
+                                className={errors.noticePeriod ? "input-error" : ""}
+                            >
+                                <option value="Select">Select</option>
+                                <option value="Immediate">Immediate</option>
+                                <option value="1 Month">1 Month</option>
+                                <option value="2 Months">2 Months</option>
+                                <option value="3 Months">3 Months</option>
+                            </select>
+                            {errors.noticePeriod && <span className="error-message">{errors.noticePeriod}</span>}
+                        </div>
+                    </>
                 )}
 
-                {/* Experienced Fields - Disabled for freshers */}
-                <div className={!isFresher ? "form-group" : "form-group disabled-field"}>
-                    <label>Current Job Title</label>
-                    <input
-                        type="text"
-                        name="jobTitle"
-                        value={data.jobTitle || ""}
-                        onChange={handleChange}
-                        disabled={isFresher}
-                        className={errors.jobTitle ? "input-error" : ""}
-                        placeholder="e.g., Software Engineer"
-                    />
-                    {errors.jobTitle && <span className="error-message">{errors.jobTitle}</span>}
-                </div>
-
-                <div className={!isFresher ? "form-group" : "form-group disabled-field"}>
-                    <label>Current Company</label>
-                    <input
-                        type="text"
-                        name="company"
-                        value={data.company || ""}
-                        onChange={handleChange}
-                        disabled={isFresher}
-                        className={errors.company ? "input-error" : ""}
-                        placeholder="e.g., XYZ Company"
-                    />
-                    {errors.company && <span className="error-message">{errors.company}</span>}
-                </div>
-
-                <div className={!isFresher ? "form-group" : "form-group disabled-field"}>
-                    <label>Notice Period</label>
-                    <select
-                        name="noticePeriod"
-                        value={data.noticePeriod || "Select"}
-                        onChange={handleChange}
-                        disabled={isFresher}
-                        className={errors.noticePeriod ? "input-error" : ""}
-                    >
-                        <option value="Select">Select</option>
-                        <option value="Immediate">Immediate</option>
-                        <option value="1 Month">1 Month</option>
-                        <option value="2 Months">2 Months</option>
-                        <option value="3 Months">3 Months</option>
-                    </select>
-                    {errors.noticePeriod && <span className="error-message">{errors.noticePeriod}</span>}
-                </div>
-
-                <div className={!isFresher ? "form-group full-width" : "form-group full-width disabled-field"}>
+                {/* Location Fields - Always visible but styling changes for fresher */}
+                <div className={`form-group full-width ${isFresher ? "disabled-field" : ""}`}>
                     <label>Current Location</label>
                     <input
                         type="text"
                         name="currentLocation"
                         value={data.currentLocation || ""}
                         onChange={(e) => {
-                            if (/^[A-Za-z\s,]*$/.test(e.target.value)) {
-                                handleChange(e);
-                            }
+                            if (/^[A-Za-z\s,]*$/.test(e.target.value)) handleChange(e);
                         }}
-                        disabled={isFresher}
                         className={errors.currentLocation ? "input-error" : ""}
                         placeholder="e.g., Bangalore"
                     />
                     {errors.currentLocation && <span className="error-message">{errors.currentLocation}</span>}
                 </div>
 
-                <div className={!isFresher ? "form-group full-width" : "form-group full-width disabled-field"}>
+                <div className={`form-group full-width ${isFresher ? "disabled-field" : ""}`}>
                     <label>Preferred Location(s)</label>
                     <input
                         type="text"
                         name="prefLocation"
                         value={data.prefLocation || ""}
                         onChange={(e) => {
-                            if (/^[A-Za-z\s,]*$/.test(e.target.value)) {
-                                handleChange(e);
-                            }
+                            if (/^[A-Za-z\s,]*$/.test(e.target.value)) handleChange(e);
                         }}
-                        disabled={isFresher}
                         className={errors.prefLocation ? "input-error" : ""}
                         placeholder="e.g., Bangalore, Chennai, Coimbatore"
                     />
                     {errors.prefLocation && <span className="error-message">{errors.prefLocation}</span>}
                 </div>
             </div>
+
             <div className="form-actions">
                 <button type="submit" className="btn btn-primary">
                     Save & Continue
@@ -783,7 +763,6 @@ const CurrentDetails = ({ data, onChange, onReset, onNext }) => {
         </form>
     );
 };
-
 
 const ContactDetails = ({ data, onChange, onReset, onNext }) => {
     const [errors, setErrors] = useState({});
@@ -1293,6 +1272,10 @@ const EducationDetails = ({
         }
     };
 
+    function isValidInstitution(name) {
+        return /^(?=.*[a-zA-Z])[a-zA-Z&. ]+$/.test(name.trim());
+    }
+
     const handleSubmit = (e) => {
         e.preventDefault();
         const newErrors = {};
@@ -1302,6 +1285,9 @@ const EducationDetails = ({
             newErrors.highestQual = "*Please select your highest qualification";
 
         if (!data.sslc.institution) newErrors.sslcinstitution = "*institution Required";
+        else if (!/^(?=.*[a-zA-Z])[a-zA-Z&. ]+$/.test(data.sslc.institution)) {
+            newErrors.sslcinstitution = "Must contain at least one alphabet";
+        }
         if (!data.sslc.percentage) newErrors.sslcpercentage = "*percentage Required";
         else if (!percentageReg.test(data.sslc.percentage))
             newErrors.sslcpercentage = "should not be greater than 100";
@@ -1315,6 +1301,9 @@ const EducationDetails = ({
         if (!data.hsc.stream || data.hsc.stream === "Select")
             newErrors.hscstream = "Select atleast One";
         if (!data.hsc.institution?.trim()) newErrors.hscinstitution = "*institution Required";
+        else if (!/^(?=.*[a-zA-Z])[a-zA-Z&. ]+$/.test(data.hsc.institution)) {
+            newErrors.hscinstitution = "Must contain at least one alphabet";
+        }
         if (!data.hsc.percentage) newErrors.hscpercentage = "* percentage Required";
         else if (!percentageReg.test(data.hsc.percentage))
             newErrors.hscpercentage = "should not be greater than 100";
@@ -1324,7 +1313,6 @@ const EducationDetails = ({
         else if (parseInt(data.hsc.year) > currentYear) newErrors.hscyear = "*Cannot be in future";
         else if (data.sslc.year && parseInt(data.hsc.year) <= parseInt(data.sslc.year))
             newErrors.hscyear = "*Must be after SSLC";
-
 
         data.graduations.forEach((grad) => {
             if (!grad.degree || grad.degree.trim() === "") {
@@ -1338,6 +1326,9 @@ const EducationDetails = ({
             }
             if (!grad.college || grad.college.trim() === "") {
                 newErrors[`gradcollege${grad.id}`] = "Institution name is required";
+            }
+            else if (!/^(?=.*[a-zA-Z])[a-zA-Z&. ]+$/.test(grad.college)) {
+                newErrors[`gradcollege${grad.id}`] = "Must contain at least one alphabet";
             }
             if (!grad.percentage || grad.percentage.trim() === "") {
                 newErrors[`gradpercentage${grad.id}`] = "Percentage is required";
@@ -1419,7 +1410,7 @@ const EducationDetails = ({
                     className={errors.highestQual ? "input-error" : ""}
 
                 >
-                    <option value="Select">Select</option>
+                    <option value="">Select</option>
                     <option value="Diploma">Diploma</option>
                     <option value="Under-Graduation">Under-Graduation</option>
                     <option value="Post-Graduation">Post-Graduation</option>
@@ -1453,7 +1444,7 @@ const EducationDetails = ({
                                         value={data.sslc.institution}
                                         onChange={(e) => {
 
-                                            if (/^[A-Za-z\s,]*$/.test(e.target.value)) {
+                                            if (/^(?:[a-zA-Z][a-zA-Z&. ]*)?$/.test(e.target.value)) {
                                                 handleInputChange(e, 'sslc');
 
                                             }
@@ -1541,7 +1532,7 @@ const EducationDetails = ({
                                         onChange={onUpdateHSC}
                                         className={errors.hscstream ? "input-error" : ""}
                                     >
-                                        <option value="Select">Select</option>
+                                        <option value="">Select</option>
                                         <option value="Intermediate">Intermediate/12</option>
                                         <option value="Diploma">Diploma</option>
                                     </select>
@@ -1557,7 +1548,7 @@ const EducationDetails = ({
                                         value={data.hsc.institution || ""}
                                         onChange={(e) => {
 
-                                            if (/^[A-Za-z\s,]*$/.test(e.target.value)) {
+                                            if (/^(?:[a-zA-Z][a-zA-Z&. ]*)?$/.test(e.target.value)) {
                                                 handleInputChange(e, 'hsc');
 
                                             }
@@ -1756,7 +1747,11 @@ const EducationDetails = ({
                                             type="text"
                                             name="college"
                                             value={grad.college}
-                                            onChange={(e) => handleInputChange(e, 'grad', grad.id)}
+                                            onChange={(e) => {
+                                                if (/^[a-zA-Z&. ]*$/.test(e.target.value)) {
+                                                    handleInputChange(e, 'grad', grad.id)
+                                                }
+                                            }}
                                             placeholder="e.g., XYZ Institute"
                                             className={errors[`gradcollege${grad.id}`] ? "input-error" : ""}
                                         />
@@ -1830,8 +1825,10 @@ const WorkExperience = ({
     onReset,
     onNext,
 }) => {
-
     const [errors, setErrors] = useState({});
+    // ✅ Get experienceType from parent via data prop
+    // data.status is coming from allData.experience.status which is synced with currentDetails.experienceType
+    const isFresher = data.status === "Fresher";
     const AlphaOnlyreg = /^[A-Za-z]+(?: [A-Za-z]+)*$/;
 
     const handleDateChangeWithValidation = (entryId, fieldName, dateValue, currentEntry) => {
@@ -1840,57 +1837,30 @@ const WorkExperience = ({
             onUpdateEntry(entryId, syntheticEvent);
             return;
         }
-
         const [year, month, day] = dateValue.split('-');
-
-        // Check if year has exactly 4 digits
         if (year && year.length !== 4) {
             alert("Please enter a valid year with 4 digits (e.g., 2024)");
             return;
         }
-
         const syntheticEvent = { target: { name: fieldName, value: dateValue } };
         onUpdateEntry(entryId, syntheticEvent);
     };
 
     const handleEntryChange = (id, e) => {
         const { name, value } = e.target;
-
         if (name === "location" && value !== "" && !AlphaOnlyreg.test(value)) return;
-
         if (["title"].includes(name)) {
             if (value !== "" && !/^[A-Za-z\s,]*$/.test(value)) return;
         }
         if (["company"].includes(name)) {
-            if (value !== "" && !/^(?![0-9,]*$)[A-Za-z0-9\s,]*$/.test(value)) return;
+            if (value !== "" && !/^(?=.*[A-Za-z])[A-Za-z0-9\s\.\-\'\,\&\(\)@#\$]*$/.test(value)) return;
         }
-
-
         const errorKey = `${name}_${id}`;
         if (errors[errorKey]) {
             setErrors(prev => ({ ...prev, [errorKey]: "" }));
         }
-
         onUpdateEntry(id, e);
     };
-
-
-    // Add this useEffect inside the WorkExperience component, right after the state declarations
-    useEffect(() => {
-        if (data.status === "Experienced") {
-            // When status is Experienced, set hasExperience to "Yes" if it's not already
-            if (data.hasExperience !== "Yes") {
-                // Create a synthetic event to update the parent
-                const syntheticEvent = {
-                    target: {
-                        name: "hasExperience",
-                        value: "Yes"
-                    }
-                };
-                onChange(syntheticEvent);
-            }
-        }
-    }, [data.status, data.hasExperience, onChange]);
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -1905,20 +1875,19 @@ const WorkExperience = ({
             }
 
             data.entries.forEach((entry) => {
-                //  Basic Text Fields
                 if (!entry.title?.trim()) newErrors[`title_${entry.id}`] = "*Job Title is required";
-                if (!entry.company?.trim()) newErrors[`company_${entry.id}`] = "*Company name is required";
+                if (!entry.company?.trim()) {
+                    newErrors[`company_${entry.id}`] = "*Company name is required";
+                } else if (!/[A-Za-z]/.test(entry.company)) {
+                    newErrors[`company_${entry.id}`] = "*Company name must contain at least one letter";
+                }
                 if (!entry.location?.trim()) newErrors[`location_${entry.id}`] = "*Location is required";
-
-                //  Dropdown Fields (Checking for "Select")
                 if (!entry.industry || entry.industry === "Select") {
                     newErrors[`industry_${entry.id}`] = "*Please select an industry";
                 }
                 if (!entry.jobType || entry.jobType === "Select") {
                     newErrors[`jobType_${entry.id}`] = "*Please select a job type";
                 }
-
-                //  Date Logic
                 if (!entry.startDate) {
                     newErrors[`startDate_${entry.id}`] = "*Start date is required";
                 } else if (new Date(entry.startDate) > today) {
@@ -1930,18 +1899,11 @@ const WorkExperience = ({
                 else if (new Date(entry.endDate) > today) {
                     newErrors[`endDate_${entry.id}`] = "*End date cannot be in the future";
                 }
-
-                // If endDate exists, check against startDate
                 if (entry.startDate && entry.endDate) {
                     if (new Date(entry.startDate) > new Date(entry.endDate)) {
                         newErrors[`endDate_${entry.id}`] = "*End date must be after start date";
                     }
-                    if (new Date(entry.endDate) > today) {
-                        newErrors[`endDate_${entry.id}`] = "*End date cannot be in the future";
-                    }
                 }
-
-                // Responsibilities Logic
                 if (!entry.responsibilities?.trim()) {
                     newErrors[`responsibilities_${entry.id}`] = "*Responsibilities are required";
                 } else if (entry.responsibilities.trim().length < 10) {
@@ -1959,6 +1921,29 @@ const WorkExperience = ({
         }
     };
 
+    // ✅ Handle Status Change - Show alert or error message
+    const handleStatusChange = (newStatus) => {
+        // Check if trying to change to Fresher when data exists
+        if (newStatus === "Fresher" && (data.entries.length > 0 || data.hasExperience === "Yes")) {
+            alert("Cannot change to Fresher because you have added work experience entries. Please remove all entries first.");
+            return;
+        }
+
+        // Check if trying to change to Experienced when it's already Experienced
+        if (newStatus === "Experienced" && data.status === "Experienced") {
+            return;
+        }
+
+        // Create synthetic event to update parent
+        const syntheticEvent = {
+            target: {
+                name: "status",
+                value: newStatus
+            }
+        };
+        onChange(syntheticEvent);
+    };
+
     const showEntries = data.status === "Experienced" || data.hasExperience === "Yes";
 
     return (
@@ -1971,12 +1956,13 @@ const WorkExperience = ({
             </div>
             <div className="form-grid">
                 <div className="form-group">
-                    <label>Current Status</label>
+                    <label>Current Status (Synced with Basic Details)</label>
+                    {/* ✅ Show status but allow change with validation */}
                     <select
                         name="status"
                         value={data.status || "Fresher"}
-                        onChange={onChange}>
-
+                        onChange={(e) => handleStatusChange(e.target.value)}
+                    >
                         <option value="Fresher">Fresher</option>
                         <option value="Experienced">Experienced</option>
                     </select>
@@ -2006,6 +1992,7 @@ const WorkExperience = ({
                                 </button>
                             </div>
                             <div className="form-grid">
+                                {/* ... all entry fields remain same ... */}
                                 <div className="form-group">
                                     <label>Job Title</label>
                                     <input
@@ -2036,7 +2023,6 @@ const WorkExperience = ({
                                         value={entry.startDate || ""}
                                         onChange={(e) => handleDateChangeWithValidation(entry.id, 'startDate', e.target.value, entry)}
                                         className={errors[`startDate_${entry.id}`] ? "input-error" : "", "cursor-as-pointer"}
-
                                     />
                                     {errors[`startDate_${entry.id}`] && <span className="error-message">{errors[`startDate_${entry.id}`]}</span>}
                                 </div>
@@ -2048,11 +2034,9 @@ const WorkExperience = ({
                                         value={entry.endDate || ""}
                                         onChange={(e) => handleDateChangeWithValidation(entry.id, 'endDate', e.target.value, entry)}
                                         className={errors[`endDate_${entry.id}`] ? "input-error" : "", "cursor-as-pointer"}
-
                                     />
-                                    {errors[`endDate_${entry.id}`] && <span className="error-message">{errors[`endDate_${entry.id}`]}</span>}
+                                    {errors[`endDate_entry.id`] && <span className="error-message">{errors[`endDate_${entry.id}`]}</span>}
                                 </div>
-
                                 <div className="form-group">
                                     <label>Industry / Domain</label>
                                     <select
@@ -2100,16 +2084,16 @@ const WorkExperience = ({
                                 </div>
                                 <div className="form-group">
                                     <label>Key Responsibilities / Achievements</label>
-                                    <input
+                                    <textarea
                                         name="responsibilities"
                                         value={entry.responsibilities || ""}
                                         onChange={(e) => handleEntryChange(entry.id, e)}
                                         placeholder="Briefly describe your role, projects, or achievements..."
                                         className={errors[`responsibilities_${entry.id}`] ? "input-error" : ""}
-
+                                        rows="3"
                                     />
                                     {errors[`responsibilities_${entry.id}`] && (
-                                        <span className="error-message" style={{ color: "red", fontSize: "0.8rem", marginTop: "4px", display: "block" }}>
+                                        <span className="error-message">
                                             {errors[`responsibilities_${entry.id}`]}
                                         </span>
                                     )}
@@ -2121,6 +2105,12 @@ const WorkExperience = ({
                         + Add {data.status === "Experienced" ? "Company" : "Internship"}
                     </button>
                 </>
+            )}
+
+            {isFresher && data.hasExperience === "No" && data.entries.length === 0 && (
+                <div style={{ padding: "20px", textAlign: "center", color: "#666", backgroundColor: "#f5f5f5", borderRadius: "8px", marginTop: "20px" }}>
+                    📌 As a Fresher, work experience details are optional. You can add internship experience if you have any.
+                </div>
             )}
 
             <div className="form-actions">
@@ -2163,7 +2153,7 @@ const KeySkills = ({ skills, onAdd, onUpdate, onDelete, onReset, onNext }) => {
 
     const handleSave = () => {
         const value = currentSkill.trim();
-        if(!value) {
+        if (!value) {
             setError("Key Skills field is Mandatory");
             return;
         }
@@ -2178,7 +2168,7 @@ const KeySkills = ({ skills, onAdd, onUpdate, onDelete, onReset, onNext }) => {
 
 
         if (!isValidValue(value)) {
-            setError("Enter valid skill (only letters, no junk values)");
+            setError("Enter a valid skill (avoid special character misuse)");
             return;
         }
 
@@ -2960,9 +2950,10 @@ export const MyProfile = () => {
                     jobTitle: res.data.current_job_title || "",
                     company: res.data.current_company || "",
                     experience: res.data.total_experience_years || "",
-                    noticePeriod: res.data.notice_period || "Select",
+                    noticePeriod: res.data.notice_period || "",
                     currentLocation: res.data.current_location || "",
                     prefLocation: res.data.preferred_locations || "",
+                    experienceType: res.data.employment_status || "",
                 },
 
                 contact: {
@@ -3154,9 +3145,9 @@ export const MyProfile = () => {
     const [allData, setAllData] = useState({
         profile: {
             fullName: "",
-            gender: "Select",
+            gender: "",
             dob: "",
-            maritalStatus: "Select",
+            maritalStatus: "",
             nationality: "",
         },
 
@@ -3164,9 +3155,10 @@ export const MyProfile = () => {
             jobTitle: "",
             company: "",
             experience: "",
-            noticePeriod: "Select",
+            noticePeriod: "",
             currentLocation: "",
             prefLocation: "",
+            experienceType: "",
         },
 
         contact: {
@@ -3223,6 +3215,36 @@ export const MyProfile = () => {
     useEffect(() => {
         fetchProfile();
     }, []);
+
+    useEffect(() => {
+        const experienceType = allData.currentDetails.experienceType;
+
+        // Only sync if there's a change and no entries exist (to prevent data loss)
+        if (experienceType === "fresher" && allData.experience.status !== "Fresher") {
+            // Check if there are existing entries
+            if (allData.experience.entries.length > 0) {
+                console.warn("Cannot change to Fresher - entries exist");
+                return;
+            }
+            setAllData(prev => ({
+                ...prev,
+                experience: {
+                    ...prev.experience,
+                    status: "Fresher",
+                    hasExperience: "No"
+                }
+            }));
+        } else if (experienceType === "experienced" && allData.experience.status !== "Experienced") {
+            setAllData(prev => ({
+                ...prev,
+                experience: {
+                    ...prev.experience,
+                    status: "Experienced",
+                    hasExperience: "Yes"
+                }
+            }));
+        }
+    }, [allData.currentDetails.experienceType, allData.experience.entries.length]);
 
     const handleHighestQualChange = (e) => {
         const { value } = e.target;
@@ -3470,15 +3492,21 @@ export const MyProfile = () => {
     };
 
     const mapFrontendToBackendPayload = () => {
-        const normalize = (val) => val.trim().toLowerCase();
+        const normalize = (val) => val?.trim().toLowerCase();
 
-        const format = (val) =>
-            val.charAt(0).toUpperCase() + val.slice(1).toLowerCase();
+        const format = (val) => {
+            if (!val) return "";
+            return val.split(' ').map(word => {
+                if (word.length === 0) return word;
+                return word[0].toUpperCase() + word.slice(1).toLowerCase();
+            }).join(' ');
+        };
 
         const isValid = (val) => {
             if (!val) return false;
-            if (!/^[A-Za-z\s]{2,}$/.test(val)) return false;
-            if (/^(.)\1+$/.test(val)) return false;
+            if (!/^[A-Za-z0-9\s&\/#.,+-]+$/.test(val)) return false;
+            if (/^(.)\1{3,}$/.test(val)) return false;
+            if (val.length < 2) return false;
             return true;
         };
 
@@ -3489,12 +3517,14 @@ export const MyProfile = () => {
                 if (!skill) return;
 
                 const value = skill.trim();
-                if (!isValid(value)) return;
+                if (value.length < 2) return;
 
-                const key = normalize(value);
+                if (!/^[A-Za-z0-9\s&\/#.,+-]{2,}$/.test(value)) return;
+
+                const key = value.toLowerCase();
 
                 if (!map.has(key)) {
-                    map.set(key, { name: format(value) });
+                    map.set(key, { name: value });
                 }
             });
 
@@ -3537,7 +3567,7 @@ export const MyProfile = () => {
             dob: allData.profile.dob,
             marital_status: allData.profile.maritalStatus,
             nationality: allData.profile.nationality,
-
+            employment_status: allData.currentDetails.experienceType,
             // ... rest of your payload fields ...
 
             current_job_title: allData.currentDetails.jobTitle,
@@ -3872,9 +3902,10 @@ export const MyProfile = () => {
                 jobTitle: "",
                 company: "",
                 experience: "",
-                noticePeriod: "Select",
+                noticePeriod: "",
                 currentLocation: "",
                 prefLocation: "",
+                experienceType: "",
             },
             contact: {
                 mobile: "",

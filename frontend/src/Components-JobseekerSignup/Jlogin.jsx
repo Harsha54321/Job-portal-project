@@ -1,27 +1,27 @@
-import React, { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
-import { useNavigate } from "react-router-dom";
-import manSitting from '../assets/Illustration_1.png'
-import eye from '../assets/show_password.png'
-import eyeHide from '../assets/eye-hide.png'
-import Email from '../assets/icon_email_id.png'
-import Google from '../assets/GOOG.png'
-import mobile from '../assets/icon_mobile_otp.png'
-import './Jlogin.css'
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import manSitting from '../assets/Illustration_1.png';
+import eye from '../assets/show_password.png';
+import eyeHide from '../assets/eye-hide.png';
+import Email from '../assets/icon_email_id.png';
+import Google from '../assets/GOOG.png';
+import mobile from '../assets/icon_mobile_otp.png';
+import './Jlogin.css';
 import api from '../api/axios';
 import { useJobs } from '../JobContext';
 
 export const Jlogin = () => {
-
   const navigate = useNavigate();
+  const location = useLocation();
   const { fetchAllJobs } = useJobs();
+
+  const redirectTo = location.state?.redirectTo || "/Job-portal/jobseeker/";
+
   const [view, setView] = useState('default');
   const [passwordShow, setPasswordShow] = useState(true);
   const [loading, setLoading] = useState(false);
   const [otpSent, setOtpSent] = useState(false);
   const [otpData, setOtpData] = useState(null);
-
-  // Remember Me state
   const [rememberMe, setRememberMe] = useState(false);
 
   const initialValues = {
@@ -29,37 +29,38 @@ export const Jlogin = () => {
     password: "",
     phone: "",
     email: ""
-  }
-  const [formValues, setFormValues] = useState(initialValues)
-  const [errors, setErrors] = useState({})
+  };
+
+  const [formValues, setFormValues] = useState(initialValues);
+  const [errors, setErrors] = useState({});
 
   const togglePasswordView = () => {
-    setPasswordShow((prev) => !prev)
-  }
+    setPasswordShow((prev) => !prev);
+  };
 
-  // Load saved credentials on component mount
   useEffect(() => {
     const savedUsername = localStorage.getItem("rememberedUsername");
     const savedPassword = localStorage.getItem("rememberedPassword");
 
     if (savedUsername && savedPassword) {
-      setFormValues({
-        ...formValues,
+      setFormValues((prev) => ({
+        ...prev,
         username: savedUsername,
         password: savedPassword
-      });
+      }));
       setRememberMe(true);
     } else if (savedUsername) {
-      setFormValues({
-        ...formValues,
+      setFormValues((prev) => ({
+        ...prev,
         username: savedUsername
-      });
+      }));
       setRememberMe(true);
     }
   }, []);
 
   const handleForm = (e) => {
-    const { name, value } = e.target
+    const { name, value } = e.target;
+
     if (name === "phone") {
       const onlyNums = value.replace(/[^0-9]/g, '');
       if (onlyNums.length <= 10) {
@@ -68,26 +69,26 @@ export const Jlogin = () => {
       }
       return;
     }
-    setFormValues({ ...formValues, [name]: value })
-    setErrors({ ...errors, [name]: "" })
-  }
+
+    setFormValues({ ...formValues, [name]: value });
+    setErrors({ ...errors, [name]: "" });
+  };
 
   const validateForm = () => {
-    const newErrors = {}
+    const newErrors = {};
 
     if (!formValues.username.trim()) {
-      newErrors.username = "Username or Email is required"
+      newErrors.username = "Username or Email is required";
     }
 
     if (!formValues.password.trim()) {
-      newErrors.password = "Password is required"
+      newErrors.password = "Password is required";
     }
 
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
-  }
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
-  // Handle Email OTP Send
   const handleSendEmailOTP = async () => {
     const newErrors = {};
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -104,6 +105,7 @@ export const Jlogin = () => {
     }
 
     setLoading(true);
+
     try {
       console.log('Sending OTP to email:', formValues.username);
 
@@ -123,18 +125,27 @@ export const Jlogin = () => {
           email: formValues.username,
           purpose: 'login',
           otpId: response.data.otp_id,
-          otpToken: response.data.token
+          otpToken: response.data.token,
+          redirectTo,
+          fromSearch: location.state?.fromSearch || false,
+          searchQuery: location.state?.searchQuery || "",
+          searchLocation: location.state?.searchLocation || "",
+          searchExperience: location.state?.searchExperience || ""
         }
       });
-
     } catch (error) {
       console.error('Error sending OTP:', error);
 
       if (error.response) {
         if (error.response.status === 400) {
           const errorData = error.response.data;
+
           if (errorData.email) {
-            setErrors({ username: Array.isArray(errorData.email) ? errorData.email[0] : errorData.email });
+            setErrors({
+              username: Array.isArray(errorData.email)
+                ? errorData.email[0]
+                : errorData.email
+            });
           } else if (errorData.detail) {
             setErrors({ username: errorData.detail });
           } else if (errorData.error) {
@@ -147,7 +158,9 @@ export const Jlogin = () => {
         } else if (error.response.status === 429) {
           setErrors({ username: "Too many attempts. Please try again later." });
         } else {
-          setErrors({ username: error.response.data?.error || "Failed to send OTP" });
+          setErrors({
+            username: error.response.data?.error || "Failed to send OTP"
+          });
         }
       } else {
         setErrors({ username: "Network error. Please try again." });
@@ -157,7 +170,6 @@ export const Jlogin = () => {
     }
   };
 
-  // Handle Mobile OTP Send (Mock)
   const handleSendMobileOTP = () => {
     const newErrors = {};
     const mobileRegex = /^[6-9]\d{9}$/;
@@ -180,9 +192,15 @@ export const Jlogin = () => {
         state: {
           phone: formValues.phone,
           purpose: 'login_mobile',
-          isMock: true
+          isMock: true,
+          redirectTo,
+          fromSearch: location.state?.fromSearch || false,
+          searchQuery: location.state?.searchQuery || "",
+          searchLocation: location.state?.searchLocation || "",
+          searchExperience: location.state?.searchExperience || ""
         }
       });
+
       setLoading(false);
     }, 1000);
   };
@@ -193,9 +211,28 @@ export const Jlogin = () => {
     } else if (view === 'mobile-otp') {
       handleSendMobileOTP();
     }
-  }
+  };
 
-  // Handle Regular Login with Password
+  const getRedirectAfterLogin = () => {
+    if (location.state?.fromSearch) {
+      return {
+        type: "search",
+        data: {
+          query: location.state?.searchQuery || "",
+          location: location.state?.searchLocation || "",
+          experience: location.state?.searchExperience || ""
+        }
+      };
+    }
+
+    localStorage.removeItem("pendingSearch");
+    sessionStorage.removeItem("savedSearch");
+
+    return {
+      type: "redirect",
+      path: redirectTo
+    };
+  };
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -204,50 +241,33 @@ export const Jlogin = () => {
     }
 
     setLoading(true);
+
     try {
-      // Determine if input is email or username
       const isEmail = formValues.username.includes('@');
 
       const loginData = isEmail
         ? { email: formValues.username, password: formValues.password }
         : { username: formValues.username, password: formValues.password };
 
-      console.log('🔍 Login attempt with:', isEmail ? 'email' : 'username');
-      console.log('📤 Sending to backend:', loginData);
-      // In handleSubmit, before API call
-      console.log('📝 Testing credentials:');
-      console.log('Input value:', formValues.username);
-      console.log('Is email?', formValues.username.includes('@'));
-      console.log('Password length:', formValues.password.length);
-
       const response = await api.post('login/', loginData);
 
-
-      console.log('✅ Login Response:', response.data);
       if (response.data.user.user_type !== 'jobseeker') {
         setErrors({ general: "Please use employer login" });
         setLoading(false);
         return;
       }
-
-
-
-      // Store tokens
       if (response.data.access && response.data.refresh) {
         localStorage.setItem('access', response.data.access);
         localStorage.setItem('refresh', response.data.refresh);
         localStorage.setItem('user_type', 'jobseeker');
 
-        // Store user data if available
         if (response.data.user) {
           localStorage.setItem('user_data', JSON.stringify(response.data.user));
           localStorage.setItem('user_id', response.data.user.id);
-          console.log("📌 Stored user_id:", response.data.user.id);
         }
 
         localStorage.setItem("userRole", "jobseeker");
 
-        // Remember Me logic
         if (rememberMe) {
           localStorage.setItem("rememberedUsername", formValues.username);
           localStorage.setItem("rememberedPassword", formValues.password);
@@ -258,11 +278,26 @@ export const Jlogin = () => {
 
         await fetchAllJobs();
 
-        navigate("/Job-portal/jobseeker/");
+        const nextStep = getRedirectAfterLogin();
+
+        if (nextStep.type === "search") {
+          localStorage.removeItem('pendingSearch');
+          sessionStorage.removeItem('savedSearch');
+
+          navigate('/Job-portal/jobseeker/searchresults', {
+            replace: true,
+            state: {
+              query: nextStep.data.query,
+              location: nextStep.data.location,
+              experience: nextStep.data.experience
+            }
+          });
+        } else {
+          navigate(nextStep.path, { replace: true });
+        }
       } else {
         throw new Error('Invalid response format from server');
       }
-
     } catch (error) {
       console.error('❌ Login Error:', error);
 
@@ -272,16 +307,12 @@ export const Jlogin = () => {
         if (error.response.status === 400 || error.response.status === 401) {
           const errorData = error.response.data;
 
-          // 🔥 FIXED: Helper function to get error message from array or string
           const getErrorMessage = (errorField) => {
             if (!errorField) return null;
-            if (Array.isArray(errorField)) {
-              return errorField[0]; // Take first element if it's an array
-            }
-            return errorField; // Return as is if it's a string
+            if (Array.isArray(errorField)) return errorField[0];
+            return errorField;
           };
 
-          // Check for detail field (can be array or string)
           if (errorData.detail) {
             const errorMessage = getErrorMessage(errorData.detail);
 
@@ -292,7 +323,12 @@ export const Jlogin = () => {
 
               if (lowerMsg.includes('password') || lowerMsg.includes('incorrect')) {
                 setErrors({ password: errorMessage });
-              } else if (lowerMsg.includes('account') || lowerMsg.includes('found') || lowerMsg.includes('email') || lowerMsg.includes('username')) {
+              } else if (
+                lowerMsg.includes('account') ||
+                lowerMsg.includes('found') ||
+                lowerMsg.includes('email') ||
+                lowerMsg.includes('username')
+              ) {
                 setErrors({ username: errorMessage });
               } else {
                 setErrors({ password: errorMessage });
@@ -342,11 +378,29 @@ export const Jlogin = () => {
         <Link to="/" className="logo">
           <span className="logo-text">Job portal</span>
         </Link>
+
         <div className="header-links">
-          <span className='no-account'>Don't have an account?</span>
-          <Link to="/Job-portal/jobseeker/signup" className="signup-btn">Sign up</Link>
+          <span className="no-account">Don't have an account?</span>
+
+          <Link
+            to="/Job-portal/jobseeker/signup"
+            state={{
+              redirectTo,
+              fromSearch: location.state?.fromSearch || false,
+              searchQuery: location.state?.searchQuery || "",
+              searchLocation: location.state?.searchLocation || "",
+              searchExperience: location.state?.searchExperience || ""
+            }}
+            className="signup-btn"
+          >
+            Sign up
+          </Link>
+
           <div className="separator"></div>
-          <Link to='/Job-portal/employer/login' className="employer-redirect-link">Employers Login</Link>
+
+          <Link to="/Job-portal/employer/login" className="employer-redirect-link">
+            Employers Login
+          </Link>
         </div>
       </header>
 
@@ -364,16 +418,17 @@ export const Jlogin = () => {
                 setView('default');
                 setErrors({});
                 setOtpSent(false);
-                setFormValues({
-                  ...formValues,
+                setFormValues((prev) => ({
+                  ...prev,
                   username: '',
                   phone: ''
-                });
+                }));
               }}
             >
               ← Back
             </button>
           )}
+
           <h2>Login to continue</h2>
 
           {errors.general && (
@@ -404,7 +459,7 @@ export const Jlogin = () => {
                 <input
                   type={passwordShow ? "password" : "text"}
                   placeholder="Enter your password"
-                  name='password'
+                  name="password"
                   value={formValues.password}
                   onChange={handleForm}
                   className={errors.password ? "input-error" : ""}
@@ -412,7 +467,11 @@ export const Jlogin = () => {
                   autoComplete="current-password"
                 />
                 <span className="eye-icon" onClick={togglePasswordView}>
-                  <img src={passwordShow ? eyeHide : eye} className='show-icon' alt='show' />
+                  <img
+                    src={passwordShow ? eyeHide : eye}
+                    className="show-icon"
+                    alt="show"
+                  />
                 </span>
               </div>
               {errors.password && <span className="error-msg">{errors.password}</span>}
@@ -427,20 +486,21 @@ export const Jlogin = () => {
                   />
                   Remember me
                 </label>
-                <Link to="/Job-portal/jobseeker/login/forgotpassword" className='forgot-password'>
+
+                <Link
+                  to="/Job-portal/jobseeker/login/forgotpassword"
+                  className="forgot-password"
+                >
                   Forgot Password?
                 </Link>
               </div>
 
-              <button
-                type="submit"
-                className="j-login-btn"
-                disabled={loading}
-              >
+              <button type="submit" className="j-login-btn" disabled={loading}>
                 {loading ? 'Logging in...' : 'Login'}
               </button>
 
               <div className="divider">Or Continue with</div>
+
               <button
                 type="button"
                 className="google-btn-outline"
@@ -449,7 +509,9 @@ export const Jlogin = () => {
               >
                 <img src={Email} alt="Email" /> Email ID
               </button>
+
               <div className="divider"> Or </div>
+
               <button
                 type="button"
                 className="mobile-btn-outline"
@@ -461,7 +523,6 @@ export const Jlogin = () => {
             </>
           )}
 
-          {/* VIEW 2: EMAIL GET OTP */}
           {view === 'email-otp' && (
             <>
               <label>Email ID</label>
@@ -487,6 +548,7 @@ export const Jlogin = () => {
               </button>
 
               <div className="divider">Or Continue with</div>
+
               <button
                 type="button"
                 className="mobile-btn-outline"
@@ -498,7 +560,6 @@ export const Jlogin = () => {
             </>
           )}
 
-          {/* VIEW 3: MOBILE GET OTP */}
           {view === 'mobile-otp' && (
             <>
               <label>Mobile number</label>
@@ -526,6 +587,7 @@ export const Jlogin = () => {
               </button>
 
               <div className="divider">Or Continue with</div>
+
               <button
                 type="button"
                 className="google-btn-outline"
@@ -539,5 +601,5 @@ export const Jlogin = () => {
         </form>
       </div>
     </div>
-  )
-}
+  );
+};

@@ -3,10 +3,10 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Header } from '../Components-LandingPage/Header';
 import { Footer } from '../Components-LandingPage/Footer';
 import api from '../api/axios'; // base api
- 
+
 // Style
 import './ReportAJob.css';
- 
+
 // Named export to match your App.jsx import
 export const ReportAJob = () => {
     const navigate = useNavigate();
@@ -19,11 +19,11 @@ export const ReportAJob = () => {
         reason: "",
         explanation: ""
     };
- 
+
     const [formValues, setFormValues] = useState(initialValues);
     const [errors, setErrors] = useState({});
     const { id } = useParams();
- 
+
     useEffect(() => {
         if (id) {
             setFormValues(prev => ({
@@ -32,24 +32,24 @@ export const ReportAJob = () => {
             }));
         }
     }, [id]);
- 
+
     // ✅ Validation for alphabets only (no spaces, no numbers, no special characters)
     const isValidName = (name) => {
         // Only letters A-Z and a-z allowed
         const nameRegex = /^[A-Za-z]+$/;
         return nameRegex.test(name);
     };
- 
+
     // ✅ Validation for alphabets with spaces (for reason and explanation)
     const isValidTextWithSpaces = (text) => {
         // Only letters A-Z, a-z, and spaces allowed
         const textRegex = /^[A-Za-z\s]*$/;
         return textRegex.test(text);
     };
- 
+
     const validate = () => {
         let newErrors = {};
- 
+
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!formValues.email) {
             newErrors.email = "Email is required";
@@ -58,14 +58,14 @@ export const ReportAJob = () => {
         } else if (formValues.email.length > 100) {
             newErrors.email = "Email cannot exceed 100 characters";
         }
- 
+
         const phoneRegex = /^[6-9]\d{9}$/;
         if (!formValues.mobile) {
             newErrors.mobile = "Phone number is required";
         } else if (!phoneRegex.test(formValues.mobile)) {
             newErrors.mobile = "Number must start with 6, 7, 8, or 9 and be 10 digits";
         }
- 
+
         // ✅ First Name validation - alphabets only
         if (!formValues.firstName.trim()) {
             newErrors.firstName = "First name is required";
@@ -74,7 +74,7 @@ export const ReportAJob = () => {
         } else if (formValues.firstName.length > 15) {
             newErrors.firstName = "First name cannot exceed 15 characters";
         }
- 
+
         // ✅ Last Name validation - alphabets only
         if (!formValues.lastName.trim()) {
             newErrors.lastName = "Last name is required";
@@ -83,7 +83,7 @@ export const ReportAJob = () => {
         } else if (formValues.lastName.length > 15) {
             newErrors.lastName = "Last name cannot exceed 15 characters";
         }
- 
+
         // ✅ Reason validation - alphabets and spaces only
         if (!formValues.reason.trim()) {
             newErrors.reason = "Reason for complaint is required";
@@ -92,7 +92,7 @@ export const ReportAJob = () => {
         } else if (formValues.reason.length > 100) {
             newErrors.reason = "Reason cannot exceed 100 characters";
         }
- 
+
         // ✅ Explanation validation - alphabets and spaces only
         if (!formValues.explanation.trim()) {
             newErrors.explanation = "Please provide an explanation";
@@ -101,14 +101,14 @@ export const ReportAJob = () => {
         } else if (formValues.explanation.length > 500) {
             newErrors.explanation = "Explanation cannot exceed 500 characters";
         }
- 
+
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
- 
+
     const handleChange = (e) => {
         const { name, value } = e.target;
- 
+
         // ✅ Handle First Name - Only alphabets, max 15 characters
         if (name === "firstName") {
             // Remove any non-alphabetic characters
@@ -158,10 +158,10 @@ export const ReportAJob = () => {
         else {
             setFormValues({ ...formValues, [name]: value });
         }
- 
+
         if (errors[name]) setErrors({ ...errors, [name]: "" });
     };
- 
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (validate()) {
@@ -174,22 +174,22 @@ export const ReportAJob = () => {
                 setFormValues(initialValues);
             } catch (error) {
                 const errData = error.response?.data;
- 
+
                 console.log(errData);
- 
-                // Access explanation error
-                if (errData?.explanation) {
-                    if (errData.explanation[0]) {
-                        alert(errData.explanation[0]);
+
+                if (errData?.non_field_errors) {
+                    if (errData.non_field_errors[0]) {
+                        alert(errData.non_field_errors[0]);
                     }
                 }
+
                 if (errData?.job_id && errData.job_id[0]) {
                     alert(errData.job_id[0])
                 }
             }
         }
     };
- 
+
     // ✅ Auto-capitalize first letter of each name
     const handleBlur = (e) => {
         const { name, value } = e.target;
@@ -200,7 +200,7 @@ export const ReportAJob = () => {
             }
         }
     };
- 
+
     return (
         <>
             <Header />
@@ -225,7 +225,7 @@ export const ReportAJob = () => {
                                     />
                                     {errors.firstName && <span className="error-text">{errors.firstName}</span>}
                                 </div>
- 
+
                                 {/* Last Name Group */}
                                 <div className="report-input-group">
                                     <input
@@ -243,7 +243,7 @@ export const ReportAJob = () => {
                             </div>
                         </div>
                     </div>
- 
+
                     <div className="report-row">
                         <label>Mobile number</label>
                         <div className="report-input-value">
@@ -259,7 +259,7 @@ export const ReportAJob = () => {
                             {errors.mobile && <span className="error-text">{errors.mobile}</span>}
                         </div>
                     </div>
- 
+
                     <div className="report-row">
                         <label>Mail ID</label>
                         <div className="report-input-value">
@@ -275,7 +275,7 @@ export const ReportAJob = () => {
                             {errors.email && <span className="error-text">{errors.email}</span>}
                         </div>
                     </div>
- 
+
                     <div className="report-row">
                         <label>Reason for complaint</label>
                         <div className="report-input-value">
@@ -291,7 +291,7 @@ export const ReportAJob = () => {
                             {errors.reason && <span className="error-text">{errors.reason}</span>}
                         </div>
                     </div>
- 
+
                     <div className="report-row align-top">
                         <label>Explain</label>
                         <div className="report-input-value">
@@ -307,7 +307,7 @@ export const ReportAJob = () => {
                             {errors.explanation && <span className="error-text">{errors.explanation}</span>}
                         </div>
                     </div>
- 
+
                     <div className="report-actions">
                         <button type="button" className="btn-cancel" onClick={() => navigate(-1)}>Cancel</button>
                         <button type="submit" className="btn-submit">Submit</button>
@@ -318,4 +318,3 @@ export const ReportAJob = () => {
         </>
     );
 };
- 

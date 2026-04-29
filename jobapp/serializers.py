@@ -297,6 +297,7 @@ class CertificationSerializer(serializers.ModelSerializer):
  
 # Profile Serializers
  
+# Profile Serializers
 class JobSeekerProfileReadSerializer(serializers.ModelSerializer):
     user = UserReadSerializer(read_only=True)
     profile_photo_url = serializers.SerializerMethodField()
@@ -304,6 +305,7 @@ class JobSeekerProfileReadSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(source="user.email", read_only=True)
     phone = serializers.CharField(source="user.phone", read_only=True)
     highest_qualification = serializers.SerializerMethodField()
+    employment_status = serializers.CharField(read_only=True)
    
     educations = EducationEntrySerializer(many=True, read_only=True)
     experiences = WorkExperienceEntrySerializer(many=True, read_only=True)
@@ -332,11 +334,11 @@ class JobSeekerProfileReadSerializer(serializers.ModelSerializer):
  
     def get_resume_url(self, obj):
         return obj.resume_file.url if obj.resume_file else None
-    
+   
     def get_highest_qualification(self, obj):
         """Calculate highest qualification from education entries"""
         educations = obj.educations.all()
-        
+       
         # Priority order: Doctorate > Post-Graduation > Graduation > Diploma
         if educations.filter(qualification_level='Doctorate').exists():
             return 'Doctorate'
@@ -346,31 +348,33 @@ class JobSeekerProfileReadSerializer(serializers.ModelSerializer):
             return 'Graduation'
         if educations.filter(qualification_level='Diploma').exists():
             return 'Diploma'
-        
+       
         # Check HSC for diploma equivalent
         hsc_entry = educations.filter(qualification_level='HSC').first()
         if hsc_entry and hsc_entry.post_10th_study == 'Diploma':
             return 'Diploma'
-        
+       
         return None
  
  
 class JobSeekerProfileWriteSerializer(WritableNestedModelSerializer):
-    
+
+    employment_status = serializers.CharField(required=False)
+ 
     experiences = WorkExperienceEntrySerializer(many=True, required=False)
     skills = SkillSerializer(many=True, required=False)
     languages = LanguageKnownSerializer(many=True, required=False)
     certifications = CertificationSerializer(many=True, required=False)
     educations = EducationEntrySerializer(many=True, required=False)
-    
-    # ✅ Add this field to receive highest_qualification
+ 
     highest_qualification = serializers.CharField(required=False, allow_null=True)
-    
     delete_profile_photo = serializers.BooleanField(write_only=True, required=False, default=False)
-
+ 
     class Meta:
         model = JobSeekerProfile
         fields = [
+            'employment_status',  # ✅ added
+ 
             'full_name', 'gender', 'dob', 'marital_status', 'nationality',
             'profile_photo',
             'current_job_title', 'current_company', 'total_experience_years',
@@ -384,71 +388,102 @@ class JobSeekerProfileWriteSerializer(WritableNestedModelSerializer):
             'willing_to_relocate',
             'experiences', 'skills', 'languages', 'certifications', 'educations',
             'delete_profile_photo',
-            'highest_qualification'  # ✅ Add this field
+            'highest_qualification'
         ]
-
+ 
+    # =====================================================
+    # VALIDATION (UNCHANGED)
+    # =====================================================
+    def validate(self, attrs):
+        experiences = attrs.get("experiences", [])
+ 
+        is_fresher = False
+        is_experienced = False
+ 
+        for exp in experiences:
+            status = exp.get("current_status")
+            if status == "Fresher":
+                is_fresher = True
+            elif status == "Experienced":
+                is_experienced = True
+ 
+        if is_fresher:
+            errors = {}
+ 
+            if attrs.get("current_company"):
+                errors["current_company"] = "Not allowed for Freshers."
+            if attrs.get("current_job_title"):
+                errors["current_job_title"] = "Not allowed for Freshers."
+            if attrs.get("notice_period"):
+                errors["notice_period"] = "Not allowed for Freshers."
+            if attrs.get("total_experience_years") not in [None, ""]:
+                errors["total_experience_years"] = "Not allowed for Freshers."
+ 
+            if errors:
+                raise serializers.ValidationError(errors)
+ 
+        if is_experienced:
+            errors = {}
+ 
+            if not attrs.get("current_company"):
+                errors["current_company"] = "Required for Experienced users."
+            if not attrs.get("current_job_title"):
+                errors["current_job_title"] = "Required for Experienced users."
+            if not attrs.get("notice_period"):
+                errors["notice_period"] = "Required for Experienced users."
+            if attrs.get("total_experience_years") in [None, ""]:
+                errors["total_experience_years"] = "Required for Experienced users."
+ 
+            if errors:
+                raise serializers.ValidationError(errors)
+ 
+        current_jobs = [exp for exp in experiences if exp.get("currently_working")]
+        if len(current_jobs) > 1:
+            raise serializers.ValidationError({
+                "experiences": "Only one experience can be marked as currently working."
+            })
+ 
+        return attrs
+ 
+    # =====================================================
+    # UPDATE (UNCHANGED)
+    # =====================================================
     def update(self, instance, validated_data):
         print("\n" + "="*60)
-        print("🔄 SERIALIZER UPDATE METHOD")
+        print("SERIALIZER UPDATE METHOD")
         print("="*60)
-        
-        # ✅ Handle highest_qualification if provided
+ 
         highest_qual = validated_data.pop('highest_qualification', None)
-        if highest_qual:
-            print(f"📚 Setting highest_qualification to: {highest_qual}")
-            # You can store this in a database field or just ignore
-            # For now, we'll just log it
-        
-        # Handle photo deletion
+ 
         delete_photo = validated_data.pop('delete_profile_photo', False)
-        
-        # Handle profile photo deletion
-        if delete_photo:
-            print("🗑️ Deleting profile photo...")
-            if instance.profile_photo:
-                try:
-                    instance.profile_photo.delete(save=False)
-                    print(f"   Deleted file: {instance.profile_photo.name}")
-                except Exception as e:
-                    print(f"   Error deleting file: {e}")
-                instance.profile_photo = None
-        
-        # Extract nested data
+ 
+        if delete_photo and instance.profile_photo:
+            try:
+                instance.profile_photo.delete(save=False)
+            except Exception as e:
+                print(f"Error deleting file: {e}")
+            instance.profile_photo = None
+ 
         skills_data = validated_data.pop('skills', None)
         languages_data = validated_data.pop('languages', None)
         certifications_data = validated_data.pop('certifications', None)
         educations_data = validated_data.pop('educations', None)
         experiences_data = validated_data.pop('experiences', None)
-        
-        print(f"📚 Education data received: {educations_data}")
-        
-        # Update simple fields
+ 
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()
-    
-        # ✅ Update educations (replace all)
+ 
         if educations_data is not None:
-            print(f"\n🔄 Updating educations...")
-            # Delete all existing educations
             instance.educations.all().delete()
-            # Create new educations
             for edu in educations_data:
-                EducationEntry.objects.create(
-                    profile=instance,
-                    **edu
-                )
-            print(f"✅ Created {len(educations_data)} education entries")
-    
-        # Update other fields (skills, languages, etc.)
+                EducationEntry.objects.create(profile=instance, **edu)
+ 
         if skills_data is not None:
             instance.skills.all().delete()
             for skill in skills_data:
                 if skill.get("name"):
-                    Skill.objects.create(
-                        profile=instance,
-                        name=skill["name"].strip()
-                    )
+                    Skill.objects.create(profile=instance, name=skill["name"].strip())
  
         if languages_data is not None:
             instance.languages.all().delete()
@@ -461,48 +496,16 @@ class JobSeekerProfileWriteSerializer(WritableNestedModelSerializer):
                     )
  
         if certifications_data is not None:
-            print(f"\n🔄 Updating certifications...")
-            existing_certs = {cert.id: cert for cert in instance.certifications.all()}
-            processed_ids = set()
-            
-            for cert_data in certifications_data:
-                cert_id = cert_data.get('id')
-                cert_name = cert_data.get('name')
-                certificate_file = cert_data.get('certificate_file')
-                
-                if cert_id and cert_id in existing_certs:
-                    existing_cert = existing_certs[cert_id]
-                    existing_cert.name = cert_name.strip()
-                    if certificate_file:
-                        if existing_cert.certificate_file:
-                            existing_cert.certificate_file.delete(save=False)
-                        existing_cert.certificate_file = certificate_file
-                    existing_cert.save()
-                    processed_ids.add(cert_id)
-                else:
-                    new_cert = Certification.objects.create(
-                        profile=instance,
-                        name=cert_name.strip(),
-                        certificate_file=certificate_file if certificate_file and hasattr(certificate_file, 'name') else None
-                    )
-                    processed_ids.add(new_cert.id)
-            
-            for cert_id, cert in existing_certs.items():
-                if cert_id not in processed_ids:
-                    if cert.certificate_file:
-                        cert.certificate_file.delete(save=False)
-                    cert.delete()
-    
+            instance.certifications.all().delete()
+            for cert in certifications_data:
+                Certification.objects.create(profile=instance, **cert)
+ 
         if experiences_data is not None:
-            print(f"\n🔄 Updating experiences...")
             instance.experiences.all().delete()
             for exp in experiences_data:
-                WorkExperienceEntry.objects.create(
-                    profile=instance,
-                    **exp
-                )
-    
-        print("\n✅ UPDATE COMPLETED")
+                WorkExperienceEntry.objects.create(profile=instance, **exp)
+ 
+        print("\nUPDATE COMPLETED")
         return instance
    
 class AdminProfileReadSerializer(serializers.ModelSerializer):

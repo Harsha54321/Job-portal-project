@@ -111,6 +111,7 @@ import { PaymentMethods } from './Components-Employer/PaymentMethods'
 import { PlansBilling } from './Components-Employer/PlansBilling'
 import { MembershipPlans } from './Components-Employer/MembershipPlans'
 import { BillingSec } from './Components-Employer/BillingSec'
+import { GoogleOAuthProvider } from "@react-oauth/google"
 
 
 /* ---------- LAYOUT ---------- */
@@ -369,14 +370,13 @@ const router = createBrowserRouter([
 /* ---------- APP ---------- */
 
 function App() {
-
   return (
-    <JobProvider>
-      <RouterProvider router={router} />
-    </JobProvider>
-
+    <GoogleOAuthProvider clientId="105293618059-al95762js6gc2o9umchkb3la0mnirhs1.apps.googleusercontent.com">
+      <JobProvider>
+        <RouterProvider router={router} />
+      </JobProvider>
+    </GoogleOAuthProvider>
   )
-
 }
 
 export default App

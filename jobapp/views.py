@@ -1485,79 +1485,42 @@ class CompanyProfileUpdateView(APIView):
 
  
 class CompanyProfileListView(APIView):
-
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
  
     def get(self, request):
-
         companies = CompanyProfile.objects.all().order_by('-created_at')
 
-        # ✅ If employer, only show their company (optional security)
-
-        if request.user.user_type == 'employer' and hasattr(request.user, 'employer_profile'):
-
-            if request.user.employer_profile.company:
-
-                companies = companies.filter(id=request.user.employer_profile.company.id)
- 
         serializer = CompanyProfileSerializer(
-
             companies,
-
             many=True,
-
             context={'request': request}
-
         )
- 
+
         return Response(serializer.data, status=200)
  
  
+ 
+ 
 class CompanyProfileByIdView(APIView):
-
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
  
     def get(self, request, company_id):
-
         try:
-
             company = CompanyProfile.objects.get(id=company_id)
-
-            # ✅ Security check for employers - they can only view their own company
-
-            if request.user.user_type == 'employer':
-
-                if hasattr(request.user, 'employer_profile'):
-
-                    if request.user.employer_profile.company_id != company_id:
-
-                        return Response(
-
-                            {"error": "You don't have permission to view this company"}, 
-
-                            status=403
-
-                        )
  
             serializer = CompanyProfileSerializer(
-
                 company,
-
                 context={'request': request}
-
             )
  
             return Response(serializer.data, status=200)
  
         except CompanyProfile.DoesNotExist:
-
             return Response(
-
                 {"error": "Company not found"},
-
                 status=404
-
             )
+ 
         
 class LinkToExistingCompanyView(APIView):
     permission_classes = [IsEmployerOrAdmin]
@@ -2355,3 +2318,180 @@ class EmployerOnboardingStatusView(APIView):
             "has_verification": has_verification,
             "verification_status": verification_status
         })
+    
+# Google Login    
+ 
+from google.oauth2 import id_token
+from google.auth.transport import requests
+from django.conf import settings
+from rest_framework.permissions import AllowAny
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from rest_framework_simplejwt.tokens import RefreshToken
+ 
+from .models import User, JobSeekerProfile, EmployerProfile
+ 
+ 
+# Update your GoogleLoginView to this:
+ 
+class GoogleLoginView(APIView):
+    """
+    Google Signup/Login API
+    POST /api/google-login/
+ 
+    Request body:
+    {
+        "token": "google_id_token"
+    }
+    """
+ 
+    permission_classes = [AllowAny]
+ 
+    def post(self, request):
+        from google.oauth2 import id_token
+        from google.auth.transport import requests as google_requests
+        from django.conf import settings
+        from rest_framework_simplejwt.tokens import RefreshToken
+ 
+        # Accept token from multiple field names
+        id_token_str = (
+            request.data.get("credential")
+            or request.data.get("id_token")
+            or request.data.get("token")
+            or request.data.get("access_token")
+        )
+ 
+        if not id_token_str:
+            return Response(
+                {
+                    "error": "Google token required"
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+ 
+        try:
+            # Google Client ID
+            google_client_id = getattr(
+                settings,
+                "GOOGLE_CLIENT_ID",
+                None
+            )
+ 
+            if not google_client_id:
+                return Response(
+                    {
+                        "error": "GOOGLE_CLIENT_ID not configured"
+                    },
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+ 
+            # Verify token
+            info = id_token.verify_oauth2_token(
+                id_token_str,
+                google_requests.Request(),
+                google_client_id
+            )
+ 
+            # Google user info
+            email = info.get("email")
+            name = info.get("name", "")
+            picture = info.get("picture", "")
+ 
+            if not email:
+                return Response(
+                    {
+                        "error": "Email not provided by Google"
+                    },
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+ 
+            # --------------------------------------------------
+            # EXISTING EMAIL VALIDATION
+            # --------------------------------------------------
+ 
+            user = User.objects.filter(email=email).first()
+ 
+            # If email already exists -> block signup
+            if user:
+                return Response(
+                    {
+                        "error": "Email already registered. Please login."
+                    },
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+ 
+            # --------------------------------------------------
+            # CREATE NEW USER
+            # --------------------------------------------------
+ 
+            username = email.split("@")[0]
+            base_username = username
+            counter = 1
+ 
+            while User.objects.filter(username=username).exists():
+                username = f"{base_username}{counter}"
+                counter += 1
+ 
+            user = User.objects.create(
+                username=username,
+                email=email,
+                user_type=User.UserType.JOBSEEKER,
+                is_active=True
+            )
+ 
+            user.set_unusable_password()
+            user.save()
+ 
+            # --------------------------------------------------
+            # CREATE JOBSEEKER PROFILE
+            # --------------------------------------------------
+ 
+            try:
+                JobSeekerProfile.objects.create(
+                    user=user,
+                    full_name=name
+                )
+            except Exception as e:
+                print("Profile creation error:", e)
+ 
+            # --------------------------------------------------
+            # JWT TOKENS
+            # --------------------------------------------------
+ 
+            refresh = RefreshToken.for_user(user)
+ 
+            return Response(
+                {
+                    "success": True,
+                    "message": "Google signup successful",
+                    "access": str(refresh.access_token),
+                    "refresh": str(refresh),
+                    "user": {
+                        "id": user.id,
+                        "email": user.email,
+                        "username": user.username,
+                        "user_type": user.user_type,
+                        "profile_image": picture
+                    },
+                    "is_new_user": True
+                },
+                status=status.HTTP_201_CREATED
+            )
+ 
+        except ValueError as e:
+            return Response(
+                {
+                    "error": f"Invalid Google token: {str(e)}"
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+ 
+        except Exception as e:
+            return Response(
+                {
+                    "error": f"Authentication failed: {str(e)}"
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+ 

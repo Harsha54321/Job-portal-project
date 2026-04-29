@@ -26,11 +26,20 @@ class User(AbstractUser):
 
 
 # PROFILES
-
-
 class JobSeekerProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='jobseeker_profile')
 
+    class EmploymentStatus(models.TextChoices):
+        FRESHER = "Fresher", "Fresher"
+        EXPERIENCED = "Experienced", "Experienced"
+ 
+    employment_status = models.CharField(
+        max_length=20,
+        choices=EmploymentStatus.choices,
+        null=True,
+        blank=True
+    )
+ 
     # Basic Profile
     full_name = models.CharField(max_length=200, blank=True)
     gender = models.CharField(
@@ -46,8 +55,8 @@ class JobSeekerProfile(models.Model):
     )
     nationality = models.CharField(max_length=100, blank=True)
     profile_photo = models.ImageField(upload_to='profile_photos/', null=True, blank=True)
-
-    # Current / Professional Details (general fields only)
+ 
+    # Current / Professional Details
     current_job_title = models.CharField(max_length=200, blank=True)
     current_company = models.CharField(max_length=200, blank=True)
     total_experience_years = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True)
@@ -62,8 +71,8 @@ class JobSeekerProfile(models.Model):
         blank=True
     )
     current_location = models.CharField(max_length=200, blank=True)
-    preferred_locations = models.TextField(blank=True)  # comma separated
-
+    preferred_locations = models.TextField(blank=True)
+ 
     # Contact Details
     alternate_phone = models.CharField(max_length=15, blank=True, null=True)
     alternate_email = models.EmailField(blank=True, null=True)
@@ -73,12 +82,12 @@ class JobSeekerProfile(models.Model):
     state = models.CharField(max_length=100, blank=True)
     pincode = models.CharField(max_length=10, blank=True)
     country = models.CharField(max_length=100, blank=True)
-
+ 
     # Resume & Portfolio
     resume_file = models.FileField(upload_to='resumes/', null=True, blank=True)
     portfolio_link = models.URLField(blank=True, null=True)
-
-    # Career Preferences (FIXED DECIMALS)
+ 
+    # Career Preferences (existing duplicate kept as-is)
     total_experience_years = models.DecimalField(
         max_digits=4,
         decimal_places=1,
@@ -86,7 +95,7 @@ class JobSeekerProfile(models.Model):
         blank=True,
         default=None
     )
-
+ 
     current_ctc = models.DecimalField(
         max_digits=12,
         decimal_places=2,
@@ -94,7 +103,7 @@ class JobSeekerProfile(models.Model):
         blank=True,
         default=None
     )
-
+ 
     expected_ctc = models.DecimalField(
         max_digits=12,
         decimal_places=2,
@@ -102,7 +111,7 @@ class JobSeekerProfile(models.Model):
         blank=True,
         default=None
     )
-
+ 
     preferred_job_type = models.CharField(
         max_length=50,
         choices=(
@@ -116,10 +125,19 @@ class JobSeekerProfile(models.Model):
     preferred_role_industry = models.CharField(max_length=200, blank=True)
     ready_to_start_immediately = models.BooleanField(default=False)
     willing_to_relocate = models.BooleanField(default=False)
-
+ 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-
+ 
+    # =====================================================
+    # HELPERS (UNCHANGED)
+    # =====================================================
+    def get_current_experience(self):
+        return self.experiences.filter(currently_working=True).first()
+ 
+    def get_total_experience(self):
+        return self.experiences.count()
+ 
     def __str__(self):
         return f"Job Seeker: {self.user.email}"
 

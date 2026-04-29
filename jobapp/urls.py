@@ -70,6 +70,7 @@ from .views import (
     SendCompanyEmailOTPView,
     CompanyVerificationStatusView,
     EmployerOnboardingStatusView,
+    GoogleLoginView,
 
     # REMOVED: Company-related view imports (CompanyListView, CompanyDetailView, etc.)
 )
@@ -227,5 +228,8 @@ urlpatterns = [
     path('company/verify-email-otp/', VerifyCompanyEmailOTPView.as_view(), name='verify-company-email-otp'),
 
     path('employer/onboarding-status/', EmployerOnboardingStatusView.as_view(), name='employer-onboarding-status'),
+
+     # Google Login
+    path("google-login/", GoogleLoginView.as_view()),
 
 ]

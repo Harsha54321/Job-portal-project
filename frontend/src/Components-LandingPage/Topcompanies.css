@@ -6,21 +6,21 @@
   background-size: cover;
   margin-top: 50px;
 }
-
+ 
 .carousel-title {
   text-align: center;
   font-size: 40px;
   margin-bottom: 80px;
   color: #022c43;
 }
-
+ 
 .carousel-card {
-  background: #FFFFFF;
+  background: #ffffff;
   border-radius: 16px;
-  padding: 40px 20px 0px 20px;
-  box-shadow: 
-    0 -6px 10px -4px rgba(0, 0, 0, 0.12), 
-    0 6px 10px -4px rgba(0, 0, 0, 0.15);  
+  padding: 40px 20px 0 20px;
+  box-shadow:
+    0 -6px 10px -4px rgba(0, 0, 0, 0.12),
+    0 6px 10px -4px rgba(0, 0, 0, 0.15);
   text-align: center;
   height: 300px;
   display: flex;
@@ -28,10 +28,10 @@
   align-items: center;
   max-width: 280px;
   margin-left: 3rem;
-  border-top: 2px solid #D9D9D940;
-  border-bottom: 3px solid #D9D9D940;
+  border-top: 2px solid #d9d9d940;
+  border-bottom: 3px solid #d9d9d940;
 }
-
+ 
 .carousel-company-logo {
   height: 32px;
   width: auto;
@@ -39,47 +39,61 @@
   margin: 0 auto 2rem;
   display: block;
 }
-
-.carousel-card-header {
-    padding: 10px;
-    background-color: #D9D9D940;
-    border-radius: 8px;
-    width: 220px;
-    margin-left: 20px;
+ 
+.carousel-company-logo.placeholder {
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  background: #edf4fb;
+  color: #1e88e5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 38px;
+  font-weight: 700;
+  margin: 0 auto 2rem;
 }
-
+ 
+.carousel-card-header {
+  padding: 10px;
+  background-color: #d9d9d940;
+  border-radius: 8px;
+  width: 220px;
+  margin-left: 20px;
+}
+ 
 .carousel-card-header > h3 {
   margin: 0;
   font-size: 18px;
   font-weight: bold;
   color: #0a0a0a;
 }
-
+ 
 .carousel-card-header > p {
   font-size: 14px;
   color: #555;
   margin-top: 5px;
 }
-
+ 
 .carousel-company-rating {
   display: flex;
   justify-content: center;
   gap: 5px;
 }
-
+ 
 .star > img {
   height: 15px;
 }
-
+ 
 .carousel-desc {
   font-size: 14px;
   color: #333;
   margin: 20px 5px;
   flex-grow: 1;
 }
-
+ 
 .carousel-view-jobs {
-  background-color: #1E88E5;
+  background-color: #1e88e5;
   color: white;
   border: none;
   border-radius: 8px;
@@ -89,22 +103,23 @@
   margin-top: 25px;
   height: 40px;
   width: 120px;
+  transition: background-color 0.25s ease;
 }
-
+ 
 .carousel-view-jobs:hover {
   background-color: #005dc1;
 }
-
+ 
 .carousel-view-all-wrapper {
   text-align: center;
   margin-top: 80px;
   margin-bottom: 110px;
 }
-
+ 
 .carousel-view-all {
-  border: 2px solid #1E88E5;
+  border: 2px solid #1e88e5;
   background: transparent;
-  color: #1E88E5;
+  color: #1e88e5;
   padding: 10px 20px;
   font-weight: bold;
   border-radius: 8px;
@@ -112,13 +127,14 @@
   height: 60px;
   width: 190px;
   font-size: 15px;
+  transition: all 0.25s ease;
 }
-
+ 
 .carousel-view-all:hover {
-  background-color: #1E88E5;
+  background-color: #1e88e5;
   color: white;
 }
-
+ 
 .custom-arrow {
   position: absolute;
   top: 45%;
@@ -126,61 +142,155 @@
   z-index: 2;
   cursor: pointer;
 }
-
+ 
 .custom-arrow img {
   border-radius: 50%;
   padding: 10px;
   width: 60px;
   height: 60px;
 }
-
+ 
 .custom-arrow.next {
   right: 18px;
 }
-
+ 
 .custom-arrow.prev {
   left: 20px;
 }
-
+ 
+.login-popup-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+ 
+.login-popup-modal {
+  width: 420px;
+  max-width: 90%;
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 28px 24px;
+  text-align: center;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+  animation: popupFadeIn 0.25s ease;
+}
+ 
+.login-popup-modal h3 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 600;
+  color: #022c43;
+  line-height: 1.5;
+}
+ 
+.login-popup-actions {
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+  margin-top: 24px;
+  flex-wrap: wrap;
+}
+ 
+.login-popup-login-btn,
+.login-popup-signup-btn {
+  border: none;
+  border-radius: 8px;
+  padding: 12px 28px;
+  font-weight: bold;
+  cursor: pointer;
+  min-width: 120px;
+  font-size: 16px;
+  transition: all 0.25s ease;
+}
+ 
+.login-popup-login-btn {
+  background-color: #1e88e5;
+  color: white;
+}
+ 
+.login-popup-login-btn:hover {
+  background-color: #005dc1;
+}
+ 
+.login-popup-signup-btn {
+  background-color: white;
+  color: #1e88e5;
+  border: 2px solid #1e88e5;
+}
+ 
+.login-popup-signup-btn:hover {
+  background-color: #1e88e5;
+  color: white;
+}
+ 
+@keyframes popupFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+ 
 /* --- Mobile Responsive: Top Companies Carousel --- */
 @media screen and (max-width: 768px) {
-  
   .carousel-wrapper {
     margin-top: 20px;
     padding-bottom: 20px;
   }
-
+ 
   .carousel-title {
-    font-size: 28px; /* Smaller title */
-    margin-bottom: 40px; /* Reduce gap */
+    font-size: 28px;
+    margin-bottom: 40px;
     padding: 0 10px;
   }
-
-  /* 1. Fix Card Alignment */
+ 
   .carousel-card {
-    margin-left: 0 !important;   /* Remove the 3rem left margin */
-    margin: 0 auto 20px auto;    /* Center the card inside the slide */
-    width: 80% !important;       /* Ensure it fits the screen width */
-    max-width: 300px;            /* limit width on larger phones */
+    margin-left: 0 !important;
+    margin: 0 auto 20px auto;
+    width: 80% !important;
+    max-width: 300px;
   }
-
-  /* 2. Fix Card Header */
+ 
   .carousel-card-header {
-    width: auto;                 /* fluid width */
-    margin-left: 0;              /* remove fixed margin */
+    width: auto;
+    margin-left: 0;
     display: flex;
     flex-direction: column;
     align-items: center;
   }
-
-  /* 3. Hide Arrows on Mobile (Users swipe instead) */
+ 
   .custom-arrow {
     display: none !important;
   }
-
-  /* 4. Adjust "View All" Button area */
+ 
   .carousel-view-all-wrapper {
     margin-top: 40px;
     margin-bottom: 60px;
+  }
+ 
+  .login-popup-modal {
+    width: 92%;
+    padding: 24px 18px;
+  }
+ 
+  .login-popup-modal h3 {
+    font-size: 20px;
+  }
+ 
+  .login-popup-actions {
+    flex-direction: column;
+    gap: 12px;
+  }
+ 
+  .login-popup-login-btn,
+  .login-popup-signup-btn {
+    width: 100%;
   }
 }

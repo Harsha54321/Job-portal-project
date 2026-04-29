@@ -81,7 +81,7 @@ export const CompaniesTab = () => {
                       />
                     ) : (
                       <div className="companies-tab-logo-placeholder">
-                        {company.company_?.charAt(0).toUpperCase()}
+                        {company.company_name?.charAt(0).toUpperCase()}
                       </div>
                     )}
 

@@ -457,9 +457,10 @@ export const SearchResults = () => {
             const af = appliedFilters;
  
             const matchesSearch = appliedFilters.query === "" ||
-                job.company_title?.toLowerCase().includes(appliedFilters.query.toLowerCase()) ||
+                job.job_title?.toLowerCase().includes(appliedFilters.query.toLowerCase()) ||
                 job.company?.company_name?.toLowerCase().includes(appliedFilters.query.toLowerCase()) ||
-                job.KeySkills?.some(skill => skill.toLowerCase().includes(af.query.toLowerCase()));
+                job.key_skills?.some(skill => skill.toLowerCase().includes(af.query.toLowerCase())) ||
+                job.keySkills?.some(skill => skill.toLowerCase().includes(af.query.toLowerCase()))
  
             {/*const matchesSearchBarLocation =
                    appliedFilters.location === "" ||

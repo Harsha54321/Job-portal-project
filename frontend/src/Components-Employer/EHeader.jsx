@@ -15,7 +15,7 @@ export const EHeader = () => {
     const { employershowNotification, setEmployerShowNotification, employerNotifications = [] } = useJobs();
     const location = useLocation();
 
-    const newNotificationsCount = employerNotifications.filter(n => !n.is_read).length; // ✅ Fixed: 'is_read' instead of 'isRead'
+    const newNotificationsCount = employerNotifications.filter(n => !n.is_read).length; // Fixed: 'is_read' instead of 'isRead'
 
     const toggleNotification = (e) => {
         e.preventDefault();
@@ -25,7 +25,7 @@ export const EHeader = () => {
 
     return (
         <header className="header">
-            <Link to="/" className="logo">
+            <Link to="/Job-portal/employer/dashboard" className="logo">
                 <span className="logo-text">Job portal</span>
             </Link>
 
