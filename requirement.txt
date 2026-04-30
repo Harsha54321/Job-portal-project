@@ -70,3 +70,5 @@ Flask==3.0.3
 drf-writable-nested==0.7.0
 reportlab
 razorpay
+google
+google_auth

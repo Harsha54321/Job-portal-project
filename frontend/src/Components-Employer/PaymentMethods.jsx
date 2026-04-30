@@ -4,8 +4,8 @@ import './PaymentMethods.css';
 
 // ----------------- UPI & TAB ASSETS -----------------
 import amazonpay from '../assets/Billing/amazonpay.png';
-import phonepe from '../assets/Billing/phonepe.png';
-import paytm from '../assets/Billing/paytm.png';
+import phonepe from '../assets/Billing/Phonepe.png';
+import paytm from '../assets/Billing/Paytm.png';
 import Gpay from '../assets/Billing/Gpay.png';
 import netbanking_icon from '../assets/Billing/netbanking_icon.png';
 import upi_icon from '../assets/Billing/upi_icon.png';
