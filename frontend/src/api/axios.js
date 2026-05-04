@@ -1,7 +1,7 @@
 import axios from "axios";
 
-// const baseURL = "http://127.0.0.1:8000/api/";
-const baseURL = "http://54.183.89.14/api/";
+const baseURL = "http://127.0.0.1:8000/api/";
+// const baseURL = "http://54.183.89.14/api/";
 
 console.log("API Base URL:", baseURL);
 
