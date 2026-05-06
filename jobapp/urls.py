@@ -1,8 +1,11 @@
 from django.urls import path
 from rest_framework_simplejwt.views import TokenRefreshView
 from .views import (
+    AdminCompanyListView,
+    AdminLoginView,
     AdminUpdateComplaintView,
     CompanyProfileCreateView,
+    DashboardView,
     JobSeekerRegistrationView,
     EmployerRegistrationView,
     LoginView,
@@ -14,6 +17,8 @@ from .views import (
     ClearAllNotificationsView,
     NewsletterSubscribeAPIView,
     SubmitComplaintView,
+    UpdateCompanyStatusView,
+    UserListView,
     UserSettingsView,
     SaveJobView,
     JobApplicationDetailView,
@@ -27,6 +32,8 @@ from .views import (
     MarkMessageReadView,
     ChatUsersView,
     EmployerInitiateChatView,
+    UserStatsView,
+    UserStatusUpdateView,
     VerifyEmailOTPView,
     chat_api,
     ForgotPasswordView,
@@ -71,6 +78,12 @@ from .views import (
     CompanyVerificationStatusView,
     EmployerOnboardingStatusView,
     GoogleLoginView,
+    AdminJobStatsView,
+    AdminJobDeleteView,
+    AdminJobApproveView,
+    AdminJobRejectView,
+    AdminJobFlagView,
+    AdminJobListView
 
     # REMOVED: Company-related view imports (CompanyListView, CompanyDetailView, etc.)
 )
@@ -213,23 +226,33 @@ urlpatterns = [
     path("cancel/", CancelSubscriptionView.as_view(), name='cancel-subscription'),
     path("invoices/", InvoiceListView.as_view(), name='invoice-list'),
     path("invoice/<int:pk>/download/", InvoiceDownloadView.as_view(), name='invoice-download'),
-   
-    # Payment Methods - IMPORTANT: Detail route MUST come before list route
-    path("payment-methods/<int:pk>/", PaymentMethodView.as_view(), name='payment-method-detail'),
     path("payment-methods/", PaymentMethodView.as_view(), name='payment-methods'),
-   
-    # Optional: Keep delete endpoint if needed for backward compatibility
-    # path("payment-methods/delete/<int:pk>/", DeletePaymentMethodView.as_view(), name='delete-payment-method'),
-   
+    path("payment-methods/<int:pk>/", DeletePaymentMethodView.as_view(), name='delete-payment-method'),
     path("webhook/", razorpay_webhook, name='razorpay-webhook'),
     path("verify-payment/", VerifyPaymentView.as_view(), name='verify-payment'),
 
     path('company/send-email-otp/', SendCompanyEmailOTPView.as_view(), name='send-company-email-otp'),
     path('company/verify-email-otp/', VerifyCompanyEmailOTPView.as_view(), name='verify-company-email-otp'),
-
     path('employer/onboarding-status/', EmployerOnboardingStatusView.as_view(), name='employer-onboarding-status'),
 
-     # Google Login
+    # Google Login
     path("google-login/", GoogleLoginView.as_view()),
+    # admin login
+    path('admin-login/', AdminLoginView.as_view(), name='admin-login'),
+    #ActivityMonitor
+    path('dashboard/', DashboardView.as_view(), name='dashboard'),
+    path('company/', AdminCompanyListView.as_view(), name='dashboardlist'),
+    path('company/<int:pk>/status/', UpdateCompanyStatusView.as_view(), name='update-company-status'),
+    #UserManagement
+    path('users/', UserListView.as_view(), name='user-list'),
+    path('users/<int:pk>/status/', UserStatusUpdateView.as_view(), name='user-status-update'),
+    path('users/stats/', UserStatsView.as_view(), name='user-stats'),
 
+     #admin JobMonitoring
+    path('admin/jobs/', AdminJobListView.as_view(), name='admin-job-list'),
+    path('admin/jobs/<int:pk>/approve/', AdminJobApproveView.as_view(), name='admin-job-approve'),
+    path('admin/jobs/<int:pk>/reject/', AdminJobRejectView.as_view(), name='admin-job-reject'),
+    path('admin/jobs/<int:pk>/flag/', AdminJobFlagView.as_view(), name='admin-job-flag'),
+    path('admin/jobs/<int:pk>/delete/', AdminJobDeleteView.as_view(), name='admin-job-delete'),
+    path('admin/jobs/stats/', AdminJobStatsView.as_view(), name='admin-job-stats'),
 ]

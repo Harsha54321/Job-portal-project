@@ -10,16 +10,28 @@ class User(AbstractUser):
         ADMIN = 'admin', 'Admin'
         EMPLOYER = 'employer', 'Employer'
         JOBSEEKER = 'jobseeker', 'Jobseeker'
+    
+    class AccountStatus(models.TextChoices):  # newly added
+        ACTIVE = 'Active', 'Active'
+        HOLD = 'Hold', 'Hold'
+        DEACTIVATED = 'Deactivated', 'Deactivated'
+          
 
     user_type = models.CharField(max_length=10, choices=UserType.choices)
     email = models.EmailField(unique=True)
     phone = models.CharField(max_length=15, blank=True, null=True)
-
+    status = models.CharField(                          # ← NEW
+        max_length=15,
+        choices=AccountStatus.choices,
+        default=AccountStatus.ACTIVE
+    )
+    
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['username', 'user_type']
 
     is_online = models.BooleanField(default=False)
     last_seen = models.DateTimeField(auto_now=True)
+    login_time = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
         return f"{self.username} ({self.user_type})"
@@ -346,6 +358,18 @@ class EmployerProfile(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
 
+
+class JobHistory(models.Model):
+    job_id = models.IntegerField()
+    employer = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    job_title = models.CharField(max_length=255)
+ 
+    created_at = models.DateTimeField()
+    deleted_at = models.DateTimeField()
+ 
+    data = models.JSONField(default=dict)
+ 
+
 # Post a Job Model (Main Job Model)
 class PostAJob(models.Model):
     class WorkType(models.TextChoices):
@@ -385,6 +409,7 @@ class PostAJob(models.Model):
     job_highlights = models.JSONField(default=list, blank=True)
     job_description = models.TextField()
     responsibilities = models.JSONField(default=list, blank=True)
+    # last_date_to_apply = models.DateField( null=True, blank=True)
    
     job_status = models.CharField(
         max_length=50,
@@ -395,6 +420,8 @@ class PostAJob(models.Model):
 
     is_published = models.BooleanField(default=False, db_index=True)  
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    flagged = models.BooleanField(default=False, help_text="Admin flagged for review")
+
 
     def clean(self):
         valid_statuses = [status[0] for status in self.JobStatus.choices]
@@ -412,6 +439,34 @@ class PostAJob(models.Model):
     def save(self, *args, **kwargs):
         self.clean()
         super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        from .models import JobHistory
+        from django.forms.models import model_to_dict
+        from django.core.serializers.json import DjangoJSONEncoder
+        import json
+ 
+       
+        job_data = model_to_dict(self)
+ 
+       
+        job_data = json.loads(json.dumps(job_data, cls=DjangoJSONEncoder))
+ 
+       
+        job_data["id"] = self.id
+        job_data["created_at"] = self.created_at.isoformat()
+ 
+       
+        JobHistory.objects.create(
+            job_id=self.id,
+            employer=self.employer,
+            job_title=self.job_title,
+            created_at=self.created_at,
+            deleted_at=timezone.now(),
+            data=job_data
+        )
+ 
+        super().delete(*args, **kwargs)
 
     def __str__(self):
         return self.job_title
@@ -653,11 +708,12 @@ class ContactMessage(models.Model):
 # Company Verify
 
 class CompanyVerification(models.Model):
-    STATUS_CHOICES = (
-        ('pending', 'Pending'),
-        ('approved', 'Approved'),
-        ('rejected', 'Rejected'),
-    )
+    STATUS_CHOICES = [
+    ("Pending", "Pending"),
+    ("Hold", "Hold"),
+    ("Reject", "Reject"),
+    ("Verified", "Verified"),
+]
  
     employer = models.OneToOneField(
         settings.AUTH_USER_MODEL,
@@ -678,7 +734,7 @@ class CompanyVerification(models.Model):
     status = models.CharField(
         max_length=10,
         choices=STATUS_CHOICES,
-        default="pending",
+        default="Pending",
         db_index=True
     )
  
@@ -1019,3 +1075,41 @@ class CompanyEmailOTP(models.Model):
     
     def __str__(self):
         return f"OTP for {self.email} - {self.purpose}"        
+    
+
+
+from django.db import models
+ 
+class ACompany(models.Model):
+    name = models.CharField(max_length=255)
+    created_at = models.DateTimeField(auto_now_add=True)
+ 
+    def __str__(self):
+        return self.name
+ 
+ 
+class AEmployer(models.Model):
+    name = models.CharField(max_length=255)
+    company = models.ForeignKey(ACompany, on_delete=models.CASCADE)
+ 
+    def __str__(self):
+        return self.name
+ 
+ 
+class AJobSeeker(models.Model):
+    name = models.CharField(max_length=255)
+    email = models.EmailField()
+ 
+    def __str__(self):
+        return self.name
+ 
+ 
+class AJob(models.Model):
+    title = models.CharField(max_length=255)
+    company = models.ForeignKey(ACompany, on_delete=models.CASCADE)
+    status = models.CharField(max_length=50, default='active')
+    created_at = models.DateTimeField(auto_now_add=True)
+ 
+    def __str__(self):
+        return self.title
+    

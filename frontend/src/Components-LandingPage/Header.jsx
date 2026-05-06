@@ -24,6 +24,7 @@ export const Header = () => {
     ? notificationsData.filter(n => !n.is_read).length
     : 0;
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [showPortalDropdown, setShowPortalDropdown] = useState(false);
 
   const isLoggedIn =
     location.pathname.includes('/jobseeker') &&
@@ -182,7 +183,35 @@ export const Header = () => {
             <Link to="/Job-portal/jobseeker/login" className="login-btn">Login</Link>
             <Link to="/Job-portal/jobseeker/signup" className="signup-btn">Sign up</Link>
             <div className="separator"></div>
-            <Link to="/Job-portal/employer/login" className="emp-log-link">For Employers</Link>
+            <div
+              className="portal-dropdown"
+              onMouseEnter={() => setShowPortalDropdown(true)}
+              onMouseLeave={() => setShowPortalDropdown(false)}
+            >
+              <div className="emp-log-link">
+                For Employers ▾
+              </div>
+
+              {showPortalDropdown && (
+                <div className="portal-dropdown-menu">
+
+                  <Link
+                    to="/Job-portal/employer/login"
+                    className="portal-dropdown-item"
+                  >
+                    Employer
+                  </Link>
+
+                  <Link
+                    to="/Job-portal/Admin/login"
+                    className="portal-dropdown-item"
+                  >
+                    Admin
+                  </Link>
+
+                </div>
+              )}
+            </div>
           </>
         )}
       </div>
@@ -195,7 +224,13 @@ export const Header = () => {
 
             <Link to="/Job-portal/jobseeker/login" onClick={() => setMobileMenuOpen(false)}>Login</Link>
             <Link to="/Job-portal/jobseeker/signup" onClick={() => setMobileMenuOpen(false)}>Sign up</Link>
-            <Link to="/Job-portal/employer/login" onClick={() => setMobileMenuOpen(false)}>For Employers</Link>
+            <Link to="/Job-portal/employer/login" onClick={() => setMobileMenuOpen(false)}>Employers</Link>
+            <Link
+              to="/Job-portal/Admin/login"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              Admin
+            </Link>
           </div>
         </div>
       )}

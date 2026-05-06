@@ -111,11 +111,11 @@ export const EmployerDashboard = () => {
 
                 setVerificationStatus({
                     isLoading: false,
-                    isVerified: response.data.status === 'approved',
+                    isVerified: response.data.status === 'Verified',
                     status: response.data.status
                 });
 
-                if (response.data.status === 'approved') {
+                if (response.data.status === 'Verified') {
                     localStorage.removeItem('verification_pending');
                 }
             } catch (error) {
@@ -135,7 +135,7 @@ export const EmployerDashboard = () => {
 
         const interval = setInterval(() => {
             const token = localStorage.getItem("access");
-            if (token && verificationStatus.status !== 'approved') {
+            if (token && verificationStatus.status !== 'Verified') {
                 fetchVerificationStatus();
             } else {
                 clearInterval(interval);

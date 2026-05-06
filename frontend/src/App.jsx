@@ -112,7 +112,8 @@ import { PlansBilling } from './Components-Employer/PlansBilling'
 import { MembershipPlans } from './Components-Employer/MembershipPlans'
 import { BillingSec } from './Components-Employer/BillingSec'
 import { GoogleOAuthProvider } from "@react-oauth/google"
-
+import { AdminLogin } from './Components-Admin/AdminLogin'
+import { AdminDashboard } from './Components-Admin/AdminDashboard'
 
 /* ---------- LAYOUT ---------- */
 
@@ -284,9 +285,9 @@ const router = createBrowserRouter([
       },
 
       {
-            path: '/Job-portal/employer-chat/:id',
-            element: <EMessenger />
-          },
+        path: '/Job-portal/employer-chat/:id',
+        element: <EMessenger />
+      },
 
       {
 
@@ -322,7 +323,7 @@ const router = createBrowserRouter([
             path: 'EditJob',
             element: <EditJob />
           },
-          
+
           {
             path: 'chat',
             element: <EMessenger />
@@ -358,8 +359,15 @@ const router = createBrowserRouter([
 
         ]
 
-      }
-
+      },
+      {
+        path: '/Job-portal/Admin/login',
+        element: <AdminLogin />,
+      },
+      {
+        path: '/Job-portal/Admin/Dashboard',
+        element: <AdminDashboard />,
+      },
     ]
 
   }

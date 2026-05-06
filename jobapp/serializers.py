@@ -88,7 +88,10 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
             raise serializers.ValidationError({
                 "detail": ["This account is inactive."]
             })
-
+        from django.utils import timezone
+        user.login_time = timezone.now()
+        user.save(update_fields=["login_time"])
+        
         print(f"✅ Login successful for: {user.username}")
 
         # ✅ Generate tokens
@@ -1563,3 +1566,180 @@ class PaymentMethodSerializer(serializers.ModelSerializer):
             PaymentMethod.objects.filter(user=instance.user).exclude(id=instance.id).update(is_default=False)
            
         return super().update(instance, validated_data)
+    
+
+class AdminCompanySerializer(serializers.ModelSerializer):
+    name = serializers.SerializerMethodField()
+    user = serializers.CharField(source='employer.username')
+    date = serializers.SerializerMethodField()
+    certificate = serializers.SerializerMethodField()
+    verification = serializers.CharField(source='get_status_display')
+ 
+    class Meta:
+        model = CompanyVerification
+        fields = ['id', 'name', 'user', 'date', 'certificate', 'verification']
+ 
+    def get_date(self, obj):
+        return obj.created_at.strftime("%d %B %Y")
+ 
+    def get_certificate(self, obj):
+        return "Yes" if obj.incorporation_certificate else "No"
+ 
+    def get_name(self, obj):
+        return obj.legal_name
+
+
+
+#UserManagement Serializers
+
+
+ 
+class UserListSerializer(serializers.ModelSerializer):
+   
+    role = serializers.SerializerMethodField()
+    profile = serializers.SerializerMethodField()
+    contact = serializers.SerializerMethodField()
+    joinDate = serializers.SerializerMethodField()
+ 
+    class Meta:
+        model = User
+        fields = ['id', 'role', 'status', 'joinDate', 'profile', 'contact']
+ 
+    def get_role(self, obj):
+        if obj.user_type == User.UserType.EMPLOYER:
+            return "employer"
+        return "candidate"  
+ 
+    def get_profile(self, obj):
+        full_name = ""
+ 
+        if obj.user_type == User.UserType.JOBSEEKER:
+            try:
+                full_name = obj.jobseeker_profile.full_name
+            except JobSeekerProfile.DoesNotExist:
+                full_name = obj.username
+ 
+        elif obj.user_type == User.UserType.EMPLOYER:
+            try:
+                full_name = obj.employer_profile.full_name
+            except EmployerProfile.DoesNotExist:
+                full_name = obj.username
+ 
+        elif obj.user_type == User.UserType.ADMIN:
+            full_name = obj.get_full_name() or obj.username
+ 
+        return {"fullName": full_name}
+ 
+    def get_contact(self, obj):
+        '''#city = ""
+        if obj.user_type == User.UserType.JOBSEEKER:
+            try:
+                city = obj.jobseeker_profile.city
+            except JobSeekerProfile.DoesNotExist:
+                pass'''
+        return {
+            "email": obj.email,
+            #"city": city
+        }
+ 
+    def get_joinDate(self, obj):
+        if obj.date_joined:
+            return obj.date_joined.strftime("%b %d, %Y")  # e.g., "Jan 10, 2024"
+        return None
+ 
+ 
+class UserStatusUpdateSerializer(serializers.ModelSerializer):
+ 
+    STATUS_TRANSITIONS = {
+        "Active": ["Hold", "Deactivated"],
+        "Hold": ["Active", "Deactivated"],
+        "Deactivated": ["Active", "Hold"],
+    }
+ 
+    class Meta:
+        model = User
+        fields = ['status']
+ 
+    def validate_status(self, value):
+        user = self.instance
+ 
+       
+        valid_choices = [c[0] for c in User.AccountStatus.choices]
+        if value not in valid_choices:
+            raise serializers.ValidationError("Invalid status")
+ 
+        # 🔹 transition check
+        allowed_transitions = self.STATUS_TRANSITIONS.get(user.status, [])
+ 
+        if value not in allowed_transitions:
+            raise serializers.ValidationError(
+                f"Cannot change from {user.status} to {value}. "
+                f"Allowed: {', '.join(allowed_transitions)}"
+            )
+ 
+        return value
+    
+
+serializers
+from rest_framework import serializers
+from .models import AJob, ACompany, AEmployer, AJobSeeker
+ 
+class AJobSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AJob
+        fields = '__all__'
+ 
+ 
+class ACompanySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ACompany
+        fields = '__all__'
+ 
+ 
+class AEmployerSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AEmployer
+        fields = '__all__'
+ 
+ 
+class AJobSeekerSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AJobSeeker
+        fields = '__all__'
+
+
+class AdminJobSerializer(serializers.ModelSerializer):
+    company_name = serializers.SerializerMethodField()
+    employer_email = serializers.EmailField(source='employer.email')
+    employer_username = serializers.CharField(source='employer.username')
+    applicants_count = serializers.SerializerMethodField()
+    company_verification_status = serializers.SerializerMethodField()
+    formatted_created_at = serializers.SerializerMethodField()
+   
+    class Meta:
+        model = PostAJob
+        fields = [
+            'id', 'job_title', 'company_name', 'job_status', 'is_published',
+            'flagged', 'created_at', 'formatted_created_at', 'location',
+            'experience', 'salary', 'work_type', 'openings', 'key_skills',
+            'applicants_count', 'employer_email', 'employer_username',
+            'company_verification_status', 'job_description'
+        ]
+   
+    def get_company_name(self, obj):
+        if obj.employer and hasattr(obj.employer, 'employer_profile'):
+            if obj.employer.employer_profile.company:
+                return obj.employer.employer_profile.company.company_name
+        return 'N/A'
+   
+    def get_applicants_count(self, obj):
+        return obj.applications.count()
+   
+    def get_company_verification_status(self, obj):
+        if hasattr(obj.employer, 'company_verification'):
+            return obj.employer.company_verification.status
+        return None
+   
+    def get_formatted_created_at(self, obj):
+        return obj.created_at.strftime('%Y-%m-%d')        
+ 

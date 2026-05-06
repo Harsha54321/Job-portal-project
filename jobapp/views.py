@@ -56,6 +56,7 @@ from .serializers import (
     SubscriptionSerializer,
     InvoiceSerializer,
     PaymentMethodSerializer,
+    AdminCompanySerializer,
 
 )
 
@@ -1669,6 +1670,9 @@ class VerifyLoginOTPView(APIView):
  
         user = User.objects.get(email=email)
         refresh = RefreshToken.for_user(user)
+        from django.utils import timezone
+        user.login_time = timezone.now()
+        user.save(update_fields=["login_time"])
  
         return Response({
             "message": "Login successful",
@@ -2460,6 +2464,10 @@ class GoogleLoginView(APIView):
             # --------------------------------------------------
  
             refresh = RefreshToken.for_user(user)
+
+            from django.utils import timezone
+            user.login_time = timezone.now()
+            user.save(update_fields=["login_time"])
  
             return Response(
                 {
@@ -2494,4 +2502,615 @@ class GoogleLoginView(APIView):
                 },
                 status=status.HTTP_400_BAD_REQUEST
             )
+class AdminLoginView(APIView):
+
+    permission_classes = [AllowAny]
  
+    def post(self, request):
+
+        print("REQUEST DATA:", request.data)  # ← indented correctly
+
+        email = request.data.get('email') or request.data.get('username') or ''
+
+        email = email.strip()
+
+        password = request.data.get('password', '').strip()
+
+        print("EMAIL:", email)
+
+        print("PASSWORD:", password)
+ 
+        # ── Field-level validation ──────────────────────────
+
+        errors = {}
+
+        if not email:
+
+            errors['email'] = 'Email is required.'
+
+        if not password:
+
+            errors['password'] = 'Password is required.'
+
+        if errors:
+
+            return Response({'success': False, 'errors': errors},
+
+                            status=status.HTTP_400_BAD_REQUEST)
+ 
+        # ── Find user by email ──────────────────────────────
+
+        try:
+
+            user = User.objects.get(email__iexact=email)
+
+        except User.DoesNotExist:
+
+            return Response(
+
+                {'success': False, 'errors': {'email': 'No account found with this email.'}},
+
+                status=status.HTTP_401_UNAUTHORIZED
+
+            )
+ 
+        if user.user_type != 'admin':
+
+            return Response(
+
+                {'success': False, 'errors': {'email': 'This account does not have admin access.'}},
+
+                status=status.HTTP_403_FORBIDDEN
+
+            )
+ 
+        if not user.check_password(password):
+
+            return Response(
+
+                {'success': False, 'errors': {'password': 'Incorrect password.'}},
+
+                status=status.HTTP_401_UNAUTHORIZED
+
+            )
+ 
+        if not user.is_active:
+
+            return Response(
+
+                {'success': False, 'errors': {'email': 'This account is disabled.'}},
+
+                status=status.HTTP_403_FORBIDDEN
+
+            )
+ 
+        refresh = RefreshToken.for_user(user)
+
+        from django.utils import timezone
+        user.login_time = timezone.now()
+        user.save(update_fields=["login_time"])
+ 
+        return Response({
+
+            'success': True,
+
+            'message': 'Admin login successful.',
+
+            'access':  str(refresh.access_token),
+
+            'refresh': str(refresh),
+
+            'user': {
+
+                'id':        user.id,
+
+                'email':     user.email,
+
+                'username':  user.username,
+
+                'user_type': user.user_type,
+
+            }
+
+        }, status=status.HTTP_200_OK)
+ 
+
+
+class DashboardView(APIView):
+ 
+    def get(self, request):
+        today = timezone.now().date()
+        week_start = today - timedelta(days=7)
+        last_2_days = today - timedelta(days=2)
+        last_month = today - timedelta(days=30)
+ 
+       
+        user_stats = User.objects.aggregate(
+            new_today=Count('id', filter=Q(date_joined__date=today)),
+            new_week=Count('id', filter=Q(date_joined__date__gte=week_start)),
+ 
+            active_today = Count(
+            'id',
+            filter=Q(user_type="employer", login_time__date=today)
+        ),
+ 
+        active_week = Count(
+            'id',
+            filter=Q(user_type="employer", login_time__date__gte=week_start)
+        ),
+            
+ 
+            login_today=Count("id", filter=Q(login_time__date=today)),
+ 
+            new_employers=Count('id', filter=Q(user_type="employer", date_joined__date=today)),
+        )
+ 
+       
+        job_stats = PostAJob.objects.aggregate(
+            total=Count('id'),
+            today=Count('id', filter=Q(created_at__date=today)),
+            week=Count('id', filter=Q(created_at__date__gte=week_start)),
+ 
+            rejected=Count('id', filter=Q(employer__company_verification__status="Reject")),
+            approved=Count('id', filter=Q(employer__company_verification__status="Verified")),
+ 
+            
+        )
+
+        expired_jobs = JobHistory.objects.count()
+ 
+       
+        app_stats = JobApplication.objects.aggregate(
+            total=Count('id'),
+            today=Count('id', filter=Q(applied_date__date=today)),
+            week=Count('id', filter=Q(applied_date__date__gte=week_start)),
+ 
+            last_2_days=Count('id', filter=Q(applied_date__date__gte=last_2_days)),
+            last_month=Count('id', filter=Q(applied_date__date__gte=last_month)),
+ 
+            shortlisted=Count('id', filter=Q(status="shortlisted")),
+            interviews=Count('id', filter=Q(status="interview_called")),
+            rejected=Count('id', filter=Q(status="rejected")),
+        )
+ 
+       
+        profile_update = (
+            JobSeekerProfile.objects.filter(updated_at__date=today).count()
+            + EmployerProfile.objects.filter(updated_at__date=today).count()
+            + AdminProfile.objects.filter(updated_at__date=today).count()
+        )
+ 
+        suspicious_activity = Complaint.objects.filter(
+    status=Complaint.Status.INVESTIGATING
+).count()
+ 
+        messages_sent = Message.objects.count()
+        support_tickets = RaiseTicket.objects.count()
+        emails_sent = EmailOTP.objects.count() + CompanyEmailOTP.objects.count()
+ 
+       
+        return Response({
+            "admin_activity_monitoring": {
+                "new_user_registrations": {
+                    "today": user_stats["new_today"],
+                    "this_week": user_stats["new_week"],
+                },
+                "job_posted": {
+                    "today": job_stats["today"],
+                    "this_week": job_stats["week"],
+                },
+                "total_applications": {
+                    "today": app_stats["today"],
+                    "this_week": app_stats["week"],
+                },
+                "active_employers": {
+                    "today": user_stats["active_today"],
+                    "this_week": user_stats["active_week"],
+                },
+            },
+            "platform_activity_overview": {
+                "user_activity": {
+                    "login_today": user_stats["login_today"],
+                    "profile_update": profile_update,
+                    "suspicious_activity": suspicious_activity,
+                },
+                "application_status": {
+                    "total_application": app_stats["total"],
+                    "shortlisted": app_stats["shortlisted"],
+                    "interviews": app_stats["interviews"],
+                    "rejections": app_stats["rejected"],
+                },
+                "employer_activity": {
+                    "new_employers": user_stats["new_employers"],
+                    "job_postings": job_stats["total"],
+                    "rejected_jobs": job_stats["rejected"],
+                },
+            },
+            "job_communication": {
+                "job_tracking": {
+                    "job_posted": job_stats["total"],
+                    "job_approved": job_stats["approved"],
+                    "expired_jobs": expired_jobs,
+                },
+                "communication_logs": {
+                    "messages_sent": messages_sent,
+                    "support_tickets": support_tickets,
+                    "emails_sent": emails_sent,
+                },
+                "employer_activity": {
+                    "applications_last_2_days": app_stats["last_2_days"],
+                    "applications_last_week": app_stats["week"],
+                    "applications_last_month": app_stats["last_month"],
+                },
+            },
+        })
+
+class AdminCompanyListView(APIView):
+    #permission_classes = [IsAuthenticated, IsAdminUserType] enable in prod
+    def get(self, request):
+        queryset = CompanyVerification.objects.select_related('employer')
+        serializer = AdminCompanySerializer(queryset, many=True)
+        return Response(serializer.data)
+ 
+ 
+class UpdateCompanyStatusView(APIView):
+ 
+    STATUS_TRANSITIONS = {
+        "Pending": ["Verified", "Reject", "Hold"],
+        "Hold": ["Verified", "Reject","Pending"],
+        "Reject": ["Pending","Hold","Verified"],
+        "Verified": []
+    }
+ 
+    def patch(self, request, pk):
+        try:
+            obj = CompanyVerification.objects.get(id=pk)
+        except CompanyVerification.DoesNotExist:
+            return Response(
+                {"error": "Company not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+ 
+        # 🔹 Only status allowed
+        if set(request.data.keys()) != {"status"}:
+            return Response(
+                {"error": "Only 'status' field is allowed"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+ 
+        new_status = request.data.get("status")
+ 
+        valid_values = [choice[0] for choice in CompanyVerification.STATUS_CHOICES]
+ 
+        # 🔹 Validate value
+        if new_status not in valid_values:
+            return Response(
+                {"error": f"Invalid value. Allowed: {valid_values}"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+ 
+        #  Transition check
+        allowed = self.STATUS_TRANSITIONS.get(obj.status, [])
+ 
+        if new_status not in allowed:
+            return Response(
+                {
+                    "error": f"Cannot change from {obj.status} to {new_status}",
+                    "allowed": allowed
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+ 
+        previous = obj.status
+        obj.status = new_status
+        obj.save()
+ 
+        return Response({
+            "message": "Updated successfully",
+            "previous": previous,
+            "current": obj.status
+        })
+
+
+#user management
+ 
+ 
+class UserListView(APIView):
+ 
+    def get(self, request):
+        search = request.query_params.get('search', '').strip().lower()
+ 
+        # 🔹 Base queryset
+        users = User.objects.exclude(
+            user_type=User.UserType.ADMIN
+        ).select_related(
+            'jobseeker_profile',
+            'employer_profile'
+        ).order_by('-date_joined')
+ 
+        if search:
+       
+            users_name = users.filter(
+                Q(jobseeker_profile__full_name__icontains=search) |
+                Q(employer_profile__full_name__icontains=search)
+            )
+ 
+            if users_name.exists():
+                users = users_name
+ 
+            else:
+               
+                users_email = users.filter(email__icontains=search)
+ 
+                if users_email.exists():
+                    users = users_email
+ 
+                else:
+                   
+                    if search in ["candidate", "jobseeker"]:
+                        users = users.filter(user_type=User.UserType.JOBSEEKER)
+ 
+                    elif search == "employer":
+                        users = users.filter(user_type=User.UserType.EMPLOYER)
+ 
+                    else:
+                        users = users.none()  # nothing found
+ 
+       
+        serializer = UserListSerializer(users, many=True)
+ 
+        return Response(serializer.data, status=status.HTTP_200_OK)
+   
+ 
+class UserStatusUpdateView(APIView):
+ 
+    #permission_classes = [IsAuthenticated, IsAdminUserType]
+ 
+    def patch(self, request, pk):
+        try:
+            user = get_object_or_404(User, pk=pk)
+ 
+           
+            if 'status' not in request.data:
+                return Response(
+                    {"error": "Status field is required"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+ 
+            serializer = UserStatusUpdateSerializer(
+                user, data=request.data, partial=True
+            )
+          #two option only show
+            if serializer.is_valid():
+                serializer.save()
+ 
+                return Response(
+                    {
+                        "message": f"User status updated to '{serializer.validated_data.get('status')}'",
+                        "id": user.id,
+                        "status": serializer.validated_data.get('status')
+                    },
+                    status=status.HTTP_200_OK
+                )
+ 
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+ 
+        except Exception as e:
+            return Response(
+                {
+                    "error": "Something went wrong",
+                    "details": str(e)
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+ 
+ 
+ 
+class UserStatsView(APIView):
+   
+    #permission_classes = [IsAuthenticated, IsAdminUserType]
+ 
+    def get(self, request):
+        all_users = User.objects.all()
+ 
+        stats = all_users.aggregate(
+                totalUsers=Count('id'),
+                activeNow=Count('id', filter=Q(status=User.AccountStatus.ACTIVE)),
+                candidates=Count('id', filter=Q(user_type=User.UserType.JOBSEEKER)),
+                employers=Count('id', filter=Q(user_type=User.UserType.EMPLOYER)),
+            )
+        return Response(stats, status=status.HTTP_200_OK)
+ 
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from .models import AJob
+ 
+class AJobListView(APIView):
+ 
+    def get(self, request):
+        jobs = AJob.objects.all().order_by('-created_at')
+ 
+        job_data = []
+        for job in jobs:
+            job_data.append({
+                "title": job.title,
+                "company": job.company.name,
+                "new": 100,      # replace later with real logic
+                "waiting": 20,
+                "total": 200
+            })
+ 
+        return Response(job_data)
+    
+# job monitoring
+class AdminJobListView(APIView):
+    """Admin view to get all jobs with company verification status"""
+    permission_classes = [IsAdminUserType]
+   
+    def get(self, request):
+        jobs = PostAJob.objects.all().select_related('employer').order_by('-created_at')
+       
+        job_data = []
+        for job in jobs:
+            # Get company verification status
+            verification_status = None
+            if hasattr(job.employer, 'company_verification'):
+                verification_status = job.employer.company_verification.status
+           
+            job_data.append({
+                'id': job.id,
+                'job_title': job.job_title,
+                'company_name': job.employer.employer_profile.company.company_name if job.employer.employer_profile.company else 'N/A',
+                'job_status': job.job_status,
+                'is_published': job.is_published,
+                'flagged': job.flagged,
+                'created_at': job.created_at,
+                'location': job.location,
+                'experience': job.experience,
+                'salary': job.salary,
+                'work_type': job.work_type,
+                'openings': job.openings,
+                'key_skills': job.key_skills,
+                'applicants_count': job.applications.count(),
+                'company_verification_status': verification_status,
+                'employer_email': job.employer.email,
+                'employer_username': job.employer.username,
+            })
+       
+        return Response({
+            'total_jobs': jobs.count(),
+            'jobs': job_data
+        }, status=status.HTTP_200_OK)
+ 
+ 
+class AdminJobApproveView(APIView):
+    """Admin approve a job (publish it)"""
+    permission_classes = [IsAdminUserType]
+   
+    def patch(self, request, pk):
+        job = get_object_or_404(PostAJob, pk=pk)
+       
+        # Can only approve if company is verified
+        verification = CompanyVerification.objects.filter(
+            employer=job.employer,
+            status='Verified'
+        ).first()
+       
+        if not verification:
+            return Response({
+                "error": "Cannot approve job. Company is not verified."
+            }, status=status.HTTP_400_BAD_REQUEST)
+       
+        job.is_published = True
+        job.save()
+       
+        # Create notification for employer
+        Notification.objects.create(
+            user=job.employer,
+            message=f"Your job '{job.job_title}' has been approved and is now live!",
+            notification_type='system'
+        )
+       
+        return Response({
+            "message": "Job approved successfully",
+            "job_id": job.id,
+            "is_published": job.is_published
+        }, status=status.HTTP_200_OK)
+ 
+ 
+class AdminJobRejectView(APIView):
+    """Admin reject a job (unpublish it)"""
+    permission_classes = [IsAdminUserType]
+   
+    def patch(self, request, pk):
+        job = get_object_or_404(PostAJob, pk=pk)
+        reason = request.data.get('reason', 'Job posting does not meet our guidelines.')
+       
+        job.is_published = False
+        job.save()
+       
+        # Create notification for employer
+        Notification.objects.create(
+            user=job.employer,
+            message=f"Your job '{job.job_title}' has been rejected. Reason: {reason}",
+            notification_type='system'
+        )
+       
+        return Response({
+            "message": "Job rejected successfully",
+            "job_id": job.id,
+            "is_published": job.is_published
+        }, status=status.HTTP_200_OK)
+ 
+ 
+class AdminJobFlagView(APIView):
+    """Admin flag/unflag a job for review"""
+    permission_classes = [IsAdminUserType]
+   
+    def patch(self, request, pk):
+        job = get_object_or_404(PostAJob, pk=pk)
+       
+        # Toggle flagged status
+        job.flagged = not job.flagged
+        job.save()
+       
+        # If flagged, notify employer
+        if job.flagged:
+            Notification.objects.create(
+                user=job.employer,
+                message=f"Your job '{job.job_title}' has been flagged for review by admin.",
+                notification_type='system'
+            )
+       
+        return Response({
+            "message": f"Job {'flagged' if job.flagged else 'unflagged'} successfully",
+            "job_id": job.id,
+            "flagged": job.flagged
+        }, status=status.HTTP_200_OK)
+ 
+ 
+class AdminJobDeleteView(APIView):
+    """Admin permanently delete a job"""
+    permission_classes = [IsAdminUserType]
+   
+    def delete(self, request, pk):
+        job = get_object_or_404(PostAJob, pk=pk)
+        job_title = job.job_title
+       
+        # Notify employer before deletion
+        Notification.objects.create(
+            user=job.employer,
+            message=f"Your job '{job_title}' has been permanently deleted by admin.",
+            notification_type='system'
+        )
+       
+        job.delete()
+       
+        return Response({
+            "message": f"Job '{job_title}' deleted successfully"
+        }, status=status.HTTP_200_OK)
+ 
+ 
+class AdminJobStatsView(APIView):
+    """Get job statistics for admin dashboard"""
+    permission_classes = [IsAdminUserType]
+   
+    def get(self, request):
+        today = timezone.now().date()
+        week_start = today - timedelta(days=7)
+       
+        stats = {
+            'total_jobs': PostAJob.objects.count(),
+            'published_jobs': PostAJob.objects.filter(is_published=True).count(),
+            'draft_jobs': PostAJob.objects.filter(is_published=False).count(),
+            'flagged_jobs': PostAJob.objects.filter(flagged=True).count(),
+            'jobs_today': PostAJob.objects.filter(created_at__date=today).count(),
+            'jobs_this_week': PostAJob.objects.filter(created_at__date__gte=week_start).count(),
+            'jobs_by_status': {
+                'hiring_in_progress': PostAJob.objects.filter(job_status='Hiring in Progress').count(),
+                'reviewing_application': PostAJob.objects.filter(job_status='Reviewing Application').count(),
+                'hiring_done': PostAJob.objects.filter(job_status='Hiring Done').count(),
+            }
+        }
+       
+        return Response(stats, status=status.HTTP_200_OK)        

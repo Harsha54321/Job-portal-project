@@ -1,0 +1,364 @@
+.AdminContainer {
+    display: grid;
+    grid-template-columns: 250px Auto;
+    gap: 5px;
+    /* margin: 70px 2.5px 0 2.5px; */
+    margin-top: 70px;
+}
+
+.Admin-Sidebar {
+    background-color: #01165D;
+    color: #fff;
+    border-top-right-radius: 10px;
+    border-bottom-right-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: sticky;
+    top: 70px;
+    height: fit-content;
+}
+
+.Admin-Sidebar-list {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 20px 0;
+
+}
+
+.Admin-Navbar {
+    margin: 2px 7px;
+    padding-left: 15px;
+    width: 215px;
+    border-radius: 10px;
+
+}
+
+.Admin-Navbox {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+}
+
+.Admin-Active {
+    color: yellow;
+    margin: 5px 7px;
+    padding-left: 15px;
+    width: 215px;
+    border-radius: 10px;
+    background-color: #0066cc;
+    font-weight: 700;
+}
+
+.Admin-MainSec {
+    border-radius: 10px;
+    padding: 20px;
+}
+.Admin-MainSec ::-webkit-scrollbar, .AdminContainer ::-webkit-scrollbar{
+    display: none;
+}
+
+.Admin-Welcome-Container {
+    box-shadow: 0px 2px 6px 2px rgba(0, 0, 0, 0.25);
+    padding: 10px;
+    border-radius: 10px;
+}
+
+.Admin-Welcome-Note {
+    font-size: 20px;
+    font-weight: Bold;
+    padding-left: 20px;
+}
+
+.Admin-Welcome-para {
+    font-size: 16px;
+    color: #5c5b5b;
+    padding-left: 20px;
+    margin-top: 5px;
+}
+
+.Admin-Overview {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+    width: 100%;
+    margin-top: 25px;
+
+}
+
+.Admin-Overview-Container {
+    box-shadow: 0px 2px 6px 2px rgba(0, 0, 0, 0.15);;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    border-radius: 10px;
+}
+
+.Admin-Overview-Data {
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    height: 40px;
+}
+
+.Admin-Viewmore {
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    border-top: 1px solid rgb(170, 167, 167);
+    margin: 10px;
+    height: 20px;
+    padding-top: 10px;
+}
+
+.Admin-separator {
+    width: 2px;
+    height: 48px;
+    margin-top: 25px;
+    background-color: #EDEDED;
+}
+
+.Admin-Job-Ads-Cont {
+    box-shadow: 0px 2px 6px 2px rgba(0, 0, 0, 0.15);
+    padding: 10px;
+    border-radius: 10px;
+    flex: 1;
+}
+
+.Admin-overview-cont {
+    box-shadow: 0px 2px 6px 2px rgba(0, 0, 0, 0.15);
+    border-radius: 10px;
+    /* display: flex;
+    justify-content: center; */
+     flex: 1;
+}
+
+.Admin-jobads-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.Admin-jobads-header h2 {
+    font-size: 18px;
+    font-weight: 600;
+    color: rgb(77, 76, 76);
+}
+
+.Admin-jobads-buttons {
+    display: flex;
+    gap: 10px;
+}
+
+.Admin-view-btn {
+    padding: 6px 14px;
+
+    border-radius: 8px;
+    border: 1px solid rgb(230, 227, 227);
+    background: white;
+    color: rgb(75, 75, 75);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.Admin-view-btn:hover {
+    background: white;
+}
+
+.Admin-create-btn {
+    padding: 6px 14px;
+    border-radius: 8px;
+    border: none;
+    background: blue;
+    color: white;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.Admin-create-btn:hover {
+    background: blue;
+}
+
+.Admin-job-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 7px 50px;
+    margin-bottom: 7px;
+    border-radius: 12px;
+    border: 1px solid rgb(231, 230, 230);
+}
+
+.Admin-job-left {
+    display: flex;
+    flex-direction: column;
+}
+
+.Admin-job-title {
+    font-size: 14px;
+    font-weight: 600;
+    margin: 0;
+    color: black;
+}
+
+.Admin-job-under {
+    font-size: 12px;
+    color: rgb(168, 165, 165);
+    margin-top: 3px;
+}
+
+.Admin-job-right {
+    display: flex;
+    gap: 40px;
+}
+
+.Ads-Count-Cont {
+    text-align: center;
+     
+}
+
+.Ads-Count {
+    font-size: 15px;
+    font-weight: 600;
+    margin: 0;
+    color: black;
+}
+
+.Ads-Count-Cont span {
+    font-size: 12px;
+    color: rgb(167, 166, 166);
+}
+
+.Admin-Amount-bal-cont {
+    display: flex;
+    flex-direction: column;
+    gap: 1px; 
+    justify-content: center;
+}
+
+.balance-card {
+    background-color: #ffffff;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+    flex: 1;
+}
+
+.card-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #333;
+    margin: 0 0 10px 0;
+    text-align: start;
+}
+
+.divider {
+    border: 0;
+    border-top: 1px solid #eeeeee;
+    margin-bottom: 15px;
+}
+
+.stats-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 15px;
+}
+
+.stat-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.stat-item.border-left {
+    border-left: 1px solid #eeeeee;
+    padding-left: 20px;
+}
+
+.stat-value {
+    font-size: 20px;
+    font-weight: 700;
+    color: #333;
+}
+
+.stat-label {
+    font-size: 12px;
+    color: #888;
+    margin-top: 4px;
+}
+
+.footer-link {
+    font-size: 12px;
+    color: #777;
+}
+
+.footer-link a, .card-desc a {
+    color: #4a90e2;
+    text-decoration: none;
+}
+
+.card-desc {
+    font-size: 13px;
+    color: #666;
+    line-height: 1.5;
+}
+
+.margin-top {
+    margin-top: 10px;
+}
+
+.Adminpending-container {
+  background:white;
+  border-radius: 10px;
+  padding-top: 16px;
+  padding-left: 10px;
+  padding-right: 10px;
+}
+ 
+.Adminpending-head h4 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color:rgb(68, 66, 66);
+}
+  
+.Adminpending-subhead p {
+  margin: 4px 0 10px 0;
+  font-size: 13px;
+  color: rgb(126, 125, 125);
+}
+ 
+.Adminpending-container hr {
+  border: none;
+  border-top: 1px solid rgb(219, 218, 218);
+  margin: 0;
+}
+
+.Adminquiz-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+}
+ 
+.Adminquiz-content p {
+  margin: 0;
+  font-size: 14px;
+  color: rgb(65, 64, 64);
+}
+.Adminpending-total{
+    box-shadow: 0px 2px 6px 2px rgba(0, 0, 0, 0.25);
+    border-radius: 10px;
+    padding: 10px;
+    flex: 1;
+}
+.Admin-Experience{
+    flex: 1;
+    box-shadow: 0px 2px 6px 2px rgba(0, 0, 0, 0.25);
+    border-radius: 10px;
+    padding: 10px;
+}
