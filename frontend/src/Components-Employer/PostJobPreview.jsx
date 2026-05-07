@@ -12,6 +12,7 @@ import './PostJobPreview.css';
 import { EHeader } from './EHeader';
 import { Footer } from '../Components-LandingPage/Footer';
 import { useJobs } from '../JobContext';
+// import e from 'cors';
  
 export const PostJobPreview = () => {
   const { state } = useLocation();
@@ -90,66 +91,49 @@ export const PostJobPreview = () => {
   //   }, 1000);
   // };
  
-const handleFinalPost = () => {
+const handleFinalPost = async () => {
   setStep('loading');
-
-  setTimeout(() => {
-    try {
-
-      const formattedData = {
-        ...state,
-
-        // ✅ ARRAY FIELDS
-        industry_type: Array.isArray(state.industry_type)
-          ? state.industry_type
-          : state.industry_type ? [state.industry_type] : [],
-
-        department: Array.isArray(state.department)
-          ? state.department
-          : state.department ? [state.department] : [],
-
-        education: Array.isArray(state.education)
-          ? state.education
-          : state.education ? [state.education] : [],
-
-        key_skills: Array.isArray(state.key_skills)
-          ? state.key_skills
-          : state.key_skills?.split(',').map(s => s.trim()),
-
-        job_highlights: Array.isArray(state.job_highlights)
-          ? state.job_highlights
-          : state.job_highlights?.split(',').map(h => h.trim()),
-
-        responsibilities: Array.isArray(state.responsibilities)
-          ? state.responsibilities
-          : state.responsibilities?.split(',').map(r => r.trim()),
-
-        //  STRING FIELD (IMPORTANT FIX)
-        shift: Array.isArray(state.shift)
-          ? state.shift[0]   //  ONLY FIRST VALUE
-          : state.shift
-      };
-
-      console.log("🚀 FINAL DATA:", formattedData);
-
-      if (state.id) {
-        editJob(state.id, formattedData);
-      } else {
-        postJob(formattedData);
-      }
-
+ 
+  try {
+    const formattedData = {
+      ...state,
+      industry_type: Array.isArray(state.industry_type) ? state.industry_type : (state.industry_type ? [state.industry_type] : []),
+      department: Array.isArray(state.department) ? state.department : (state.department ? [state.department] : []),
+      education: Array.isArray(state.education) ? state.education : (state.education ? [state.education] : []),
+      key_skills: Array.isArray(state.key_skills) ? state.key_skills : state.key_skills?.split(',').map(s => s.trim()),
+      job_highlights: Array.isArray(state.job_highlights) ? state.job_highlights : state.job_highlights?.split(',').map(h => h.trim()),
+      responsibilities: Array.isArray(state.responsibilities) ? state.responsibilities : state.responsibilities?.split(',').map(r => r.trim()),
+      shift: Array.isArray(state.shift) ? state.shift[0] : state.shift
+    };
+ 
+    // ✅ Wait for the async operation
+    if (state.id) {
+      await editJob(state.id, formattedData);
+    } else {
+     const res = await postJob(formattedData);
+     if(res.success === true)
+     {
       setStep('success');
       setTimeout(() => {
-        navigate('/Job-portal/Employer/Dashboard');
-      }, 2000);
-
-    } catch (error) {
-      console.error("Failed to post job:", error);
-      setStep('preview');
+      navigate('/Job-portal/Employer/Dashboard');
+    }, 2000);
     }
-  }, 1000);
+    else{
+      alert("job not posted due to network error")
+      setTimeout(() => {
+      navigate('/Job-portal/Employer/Dashboard');
+    }, 2000);
+    }
+   
+    }
+ 
+  } catch (error) {
+    console.error("Failed to post job:", error);
+    setStep('preview');
+    alert("Something went wrong while posting the job. Please try again.");
+  }
 };
-
+ 
   if (!state || !job) {
     return (
       <>

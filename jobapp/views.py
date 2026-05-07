@@ -415,7 +415,7 @@ class CreateJobPreviewView(generics.CreateAPIView):
  
         verification = CompanyVerification.objects.filter(
             employer=user,
-            status="approved"
+            status="Verified"
         ).exists()
  
         if not verification:
