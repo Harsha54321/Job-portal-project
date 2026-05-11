@@ -167,6 +167,26 @@
     border-color: #007bff;
 }
 
+.form-group textarea {
+    padding: 0.75rem;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    
+    transition: border-color 0.2s;
+    background-color: #fff;
+
+    font-family: sans-serif;
+    width: 100%;
+    resize: vertical;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: #007bff;
+}
+
 .form-actions {
     margin-top: 2rem;
     padding-top: 1.5rem;
@@ -524,7 +544,7 @@
     text-overflow: ellipsis;
 }
 
- 
+
 .preview-overlay {
     position: fixed;
     top: 0;
@@ -539,7 +559,7 @@
     cursor: zoom-out;
     padding: 20px;
 }
- 
+
 /* The container for the image */
 .preview-box {
     position: relative;
@@ -554,7 +574,7 @@
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
     cursor: default;
 }
- 
+
 /* The actual image inside the box */
 .preview-box img {
     max-width: 100%;
@@ -565,7 +585,7 @@
     display: block;
     border-radius: 4px;
 }
- 
+
 /* Optional: Add a Close Button 'X' inside the preview box */
 .preview-box::after {
     position: absolute;
@@ -578,22 +598,24 @@
 }
 
 input[type="file"] {
-  cursor: pointer;
-}
- 
-input[type="file"]::file-selector-button {
-  cursor: pointer;
+    cursor: pointer;
 }
 
-.date-of-birth:hover , .date-of-birth::-webkit-calendar-picker-indicator {
+input[type="file"]::file-selector-button {
     cursor: pointer;
 }
- 
- .cursor-as-pointer::-webkit-calendar-picker-indicator {
+
+.date-of-birth:hover,
+.date-of-birth::-webkit-calendar-picker-indicator {
     cursor: pointer;
 }
-   
-select, select:hover, select option {
+
+.cursor-as-pointer::-webkit-calendar-picker-indicator {
     cursor: pointer;
 }
- 
+
+select,
+select:hover,
+select option {
+    cursor: pointer;
+}

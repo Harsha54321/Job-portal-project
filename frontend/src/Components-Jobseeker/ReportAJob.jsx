@@ -33,14 +33,14 @@ export const ReportAJob = () => {
         }
     }, [id]);
 
-    // ✅ Validation for alphabets only (no spaces, no numbers, no special characters)
+    // Validation for alphabets only (no spaces, no numbers, no special characters)
     const isValidName = (name) => {
         // Only letters A-Z and a-z allowed
         const nameRegex = /^[A-Za-z]+$/;
         return nameRegex.test(name);
     };
 
-    // ✅ Validation for alphabets with spaces (for reason and explanation)
+    // Validation for alphabets with spaces (for reason and explanation)
     const isValidTextWithSpaces = (text) => {
         // Only letters A-Z, a-z, and spaces allowed
         const textRegex = /^[A-Za-z\s]*$/;
@@ -50,7 +50,7 @@ export const ReportAJob = () => {
     const validate = () => {
         let newErrors = {};
 
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        const emailRegex = /^[a-zA-Z][a-zA-Z0-9]*@(gmail|yahoo|outlook|hotmail|fabaos)\.[a-zA-Z]{2,}$/;
         if (!formValues.email) {
             newErrors.email = "Email is required";
         } else if (!emailRegex.test(formValues.email)) {
@@ -66,7 +66,7 @@ export const ReportAJob = () => {
             newErrors.mobile = "Number must start with 6, 7, 8, or 9 and be 10 digits";
         }
 
-        // ✅ First Name validation - alphabets only
+        // First Name validation - alphabets only
         if (!formValues.firstName.trim()) {
             newErrors.firstName = "First name is required";
         } else if (!isValidName(formValues.firstName)) {
@@ -75,7 +75,7 @@ export const ReportAJob = () => {
             newErrors.firstName = "First name cannot exceed 15 characters";
         }
 
-        // ✅ Last Name validation - alphabets only
+        // Last Name validation - alphabets only
         if (!formValues.lastName.trim()) {
             newErrors.lastName = "Last name is required";
         } else if (!isValidName(formValues.lastName)) {
@@ -84,7 +84,7 @@ export const ReportAJob = () => {
             newErrors.lastName = "Last name cannot exceed 15 characters";
         }
 
-        // ✅ Reason validation - alphabets and spaces only
+        // Reason validation - alphabets and spaces only
         if (!formValues.reason.trim()) {
             newErrors.reason = "Reason for complaint is required";
         } else if (!isValidTextWithSpaces(formValues.reason)) {
@@ -93,7 +93,7 @@ export const ReportAJob = () => {
             newErrors.reason = "Reason cannot exceed 100 characters";
         }
 
-        // ✅ Explanation validation - alphabets and spaces only
+        // Explanation validation - alphabets and spaces only
         if (!formValues.explanation.trim()) {
             newErrors.explanation = "Please provide an explanation";
         } else if (!isValidTextWithSpaces(formValues.explanation)) {
@@ -109,7 +109,7 @@ export const ReportAJob = () => {
     const handleChange = (e) => {
         const { name, value } = e.target;
 
-        // ✅ Handle First Name - Only alphabets, max 15 characters
+        // Handle First Name - Only alphabets, max 15 characters
         if (name === "firstName") {
             // Remove any non-alphabetic characters
             const onlyAlpha = value.replace(/[^A-Za-z]/g, "");
@@ -117,7 +117,7 @@ export const ReportAJob = () => {
             const limitedValue = onlyAlpha.slice(0, 15);
             setFormValues({ ...formValues, [name]: limitedValue });
         }
-        // ✅ Handle Last Name - Only alphabets, max 15 characters
+        // Handle Last Name - Only alphabets, max 15 characters
         else if (name === "lastName") {
             // Remove any non-alphabetic characters
             const onlyAlpha = value.replace(/[^A-Za-z]/g, "");
@@ -125,7 +125,7 @@ export const ReportAJob = () => {
             const limitedValue = onlyAlpha.slice(0, 15);
             setFormValues({ ...formValues, [name]: limitedValue });
         }
-        // ✅ Handle Reason - Only alphabets and spaces
+        // Handle Reason - Only alphabets and spaces
         else if (name === "reason") {
             // Remove numbers and special characters, keep alphabets and spaces
             const onlyAlphaAndSpace = value.replace(/[^A-Za-z\s]/g, "");
@@ -133,7 +133,7 @@ export const ReportAJob = () => {
             const limitedValue = onlyAlphaAndSpace.slice(0, 100);
             setFormValues({ ...formValues, [name]: limitedValue });
         }
-        // ✅ Handle Explanation - Only alphabets and spaces
+        //  Handle Explanation - Only alphabets and spaces
         else if (name === "explanation") {
             // Remove numbers and special characters, keep alphabets and spaces
             const onlyAlphaAndSpace = value.replace(/[^A-Za-z\s]/g, "");
@@ -190,7 +190,7 @@ export const ReportAJob = () => {
         }
     };
 
-    // ✅ Auto-capitalize first letter of each name
+    // Auto-capitalize first letter of each name
     const handleBlur = (e) => {
         const { name, value } = e.target;
         if ((name === "firstName" || name === "lastName") && value) {

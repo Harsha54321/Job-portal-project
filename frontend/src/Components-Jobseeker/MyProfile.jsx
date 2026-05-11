@@ -154,6 +154,7 @@ const PopupModal = ({
 
 // --- FORM SECTIONS ---
 
+
 const Profile = ({ data, onChange, onReset, onNext, setProfilePhoto, setRemovePhotoFlag }) => {
     const [errors, setErrors] = useState({});
     const [photo, setPhoto] = useState(null);
@@ -162,10 +163,17 @@ const Profile = ({ data, onChange, onReset, onNext, setProfilePhoto, setRemovePh
     const [imageLoading, setImageLoading] = useState(false);
 
     useEffect(() => {
-        if (data.profile_photo && !photoPreview && !photo) {
-            setPhotoPreview(data.profile_photo);
+        if (data.profile_photo && !photoPreview) {
+            if (typeof data.profile_photo === 'string') {
+                setPhotoPreview(data.profile_photo);
+            } else if (data.profile_photo instanceof File) {
+                const objectUrl = URL.createObjectURL(data.profile_photo);
+                setPhotoPreview(objectUrl);
+                // Cleanup function to prevent memory leaks
+                return () => URL.revokeObjectURL(objectUrl);
+            }
         }
-    }, [data.profile_photo]);
+    }, [data.profile_photo])
 
     const handleNationalitySelect = (val) => {
         handleChange({
@@ -199,7 +207,7 @@ const Profile = ({ data, onChange, onReset, onNext, setProfilePhoto, setRemovePh
         const file = e.target.files[0];
         if (!file) return;
 
-        // ✅ ONLY FILE TYPE VALIDATION (NO SIZE CHECK)
+        // ONLY FILE TYPE VALIDATION (NO SIZE CHECK)
         const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
 
         console.log("Selected file:", {
@@ -227,9 +235,12 @@ const Profile = ({ data, onChange, onReset, onNext, setProfilePhoto, setRemovePh
 
         try {
             // Create preview ONLY for valid image types
+            if (photoPreview && photoPreview.startsWith('blob:')) {
+                URL.revokeObjectURL(photoPreview);
+            }
+
             const previewUrl = URL.createObjectURL(file);
             setPhotoPreview(previewUrl);
-
             setPhoto(file);
             setProfilePhoto(file);
 
@@ -256,7 +267,6 @@ const Profile = ({ data, onChange, onReset, onNext, setProfilePhoto, setRemovePh
             setImageLoading(false);
         }
     };
-
 
     const removePhoto = () => {
         setImageError("");
@@ -730,6 +740,7 @@ const CurrentDetails = ({ data, onChange, onReset, onNext }) => {
                         type="text"
                         name="currentLocation"
                         value={data.currentLocation || ""}
+                        required
                         onChange={(e) => {
                             if (/^[A-Za-z\s,]*$/.test(e.target.value)) handleChange(e);
                         }}
@@ -745,6 +756,7 @@ const CurrentDetails = ({ data, onChange, onReset, onNext }) => {
                         type="text"
                         name="prefLocation"
                         value={data.prefLocation || ""}
+                        required
                         onChange={(e) => {
                             if (/^[A-Za-z\s,]*$/.test(e.target.value)) handleChange(e);
                         }}
@@ -1019,8 +1031,7 @@ const ResumeSection = ({
         if (data.resume_file) {
             setExistingResume(data.resume_file);
         } else if (resumeFile) {
-            // If there's a newly uploaded file in state
-            setExistingResume(resumeFile.name || resumeFile);
+            setExistingResume(resumeFile);
         } else {
             setExistingResume(null);
         }
@@ -1038,11 +1049,12 @@ const ResumeSection = ({
 
         if (!allowedTypes.includes(file.type)) {
             alert("Only PDF, DOC, DOCX allowed");
+            e.target.value = "";
             return;
         }
 
         setResumeFile(file);
-        setExistingResume(null);
+        setExistingResume(null); // Clear existing resume when new file is uploaded
         setErrors((prev) => ({ ...prev, resumeFile: "" }));
     };
 
@@ -1060,45 +1072,42 @@ const ResumeSection = ({
             setResumeFile(null);
             setExistingResume(null);
             setErrors({ ...errors, resumeFile: "" });
-            document.getElementById("resumeInput").value = "";
+
+            const fileInput = document.getElementById("resumeInput");
+            if (fileInput) {
+                fileInput.value = "";
+            }
         }
     };
 
     const handleViewResume = (e) => {
         e.stopPropagation();
 
-        if (resumeFile instanceof File) {
-            const fileURL = URL.createObjectURL(resumeFile);
+        const fileToView = resumeFile || data.resume_file || existingResume;
+
+        if (!fileToView) return;
+
+        if (fileToView instanceof File) {
+            const fileURL = URL.createObjectURL(fileToView);
             window.open(fileURL, "_blank");
             setTimeout(() => URL.revokeObjectURL(fileURL), 100);
-        } else if (typeof data.resume_file === "string" && data.resume_file) {
-            window.open(data.resume_file, "_blank");
-        } else if (existingResume instanceof File) {
-            const fileURL = URL.createObjectURL(existingResume);
-            window.open(fileURL, "_blank");
-            setTimeout(() => URL.revokeObjectURL(fileURL), 100);
-        } else if (typeof existingResume === "string" && existingResume) {
-            window.open(existingResume, "_blank");
+        } else if (typeof fileToView === "string" && fileToView) {
+            window.open(fileToView, "_blank");
         }
     };
-
-
 
     const handleSubmit = (e) => {
         e.preventDefault();
         const newErrors = {};
 
-        // 1. Validate Resume Presence
-        // Check if there's no file in state AND no existing file URL in data
         if (!resumeFile && !data.resume_file) {
             newErrors.resumeFile = "*Please upload your resume to continue";
         }
 
-        // 2. Validate Portfolio Link (if provided)
         if (data.portfolio_link && data.portfolio_link.trim() !== "") {
-            const urlPattern = /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([\/\w .-]*)*\/?$/;
-            if (!urlPattern.test(data.portfolio_link)) {
-                newErrors.portfolio_link = "*Please enter a valid URL (e.g., https://behance.net/user)";
+            const urlPattern = /^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/i;
+            if (!urlPattern.test(data.portfolio_link.trim())) {
+                newErrors.portfolio_link = "*Please enter a valid URL (e.g., https://example.com)";
             }
         }
 
@@ -1109,14 +1118,24 @@ const ResumeSection = ({
         }
     };
 
-
-
     return (
-        <form
-            className="content-card" onSubmit={handleSubmit} >
+        <form className="content-card" onSubmit={handleSubmit}>
             <div className="profile-header">
                 <h2>Resume</h2>
-                <button type="button" className="reset-link" onClick={() => { onReset(); setErrors({}); }}>
+                <button
+                    type="button"
+                    className="reset-link"
+                    onClick={() => {
+                        onReset();
+                        setErrors({});
+                        setResumeFile(null);
+                        setExistingResume(null);
+                        const fileInput = document.getElementById("resumeInput");
+                        if (fileInput) {
+                            fileInput.value = "";
+                        }
+                    }}
+                >
                     Reset
                 </button>
             </div>
@@ -1132,15 +1151,15 @@ const ResumeSection = ({
 
                 <div>
                     {existingResume ? (
-                        <div
-                            style={{ display: "flex", flexDirection: "column", gap: "5px" }}
-                        >
+                        <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
                             <div className="ResumeName">
                                 <img src={resumeIcon} className="resume-icon" alt="resume" />
                                 <h4>
-                                    {typeof existingResume === "string"
-                                        ? existingResume
-                                        : existingResume.name}
+                                    {existingResume instanceof File
+                                        ? existingResume.name
+                                        : typeof existingResume === "string"
+                                            ? existingResume.split('/').pop() || existingResume
+                                            : "Resume"}
                                 </h4>
                             </div>
 
@@ -1179,7 +1198,6 @@ const ResumeSection = ({
                             </div>
                         </div>
                     )}
-                    {/* Validation Message */}
                     {errors.resumeFile && (
                         <span className="error-message">{errors.resumeFile}</span>
                     )}
@@ -1196,7 +1214,9 @@ const ResumeSection = ({
                     placeholder="e.g., https://yourportfolio.com"
                     className={errors.portfolio_link ? "input-error" : ""}
                 />
-                {errors.portfolio_link && <span className="error-message">{errors.portfolio_link}</span>}
+                {errors.portfolio_link && (
+                    <span className="error-message">{errors.portfolio_link}</span>
+                )}
             </div>
 
             <div className="form-actions">
@@ -1273,7 +1293,12 @@ const EducationDetails = ({
     };
 
     function isValidInstitution(name) {
-        return /^(?=.*[a-zA-Z])[a-zA-Z&. ]+$/.test(name.trim());
+        if (!name || typeof name !== 'string') return false;
+        const trimmed = name.trim();
+        if (trimmed.length < 2) return false;
+        if (!/[A-Za-z]/.test(trimmed)) return false;
+        // Allow: letters, numbers, spaces, and special characters: . , ' " & - / ( )
+        return /^[A-Za-z0-9\s\.\,\’\'\"\&\-\/\(\)]+$/.test(trimmed);
     }
 
     const handleSubmit = (e) => {
@@ -1284,9 +1309,10 @@ const EducationDetails = ({
         if (!data.highestQual || data.highestQual === "Select")
             newErrors.highestQual = "*Please select your highest qualification";
 
-        if (!data.sslc.institution) newErrors.sslcinstitution = "*institution Required";
-        else if (!/^(?=.*[a-zA-Z])[a-zA-Z&. ]+$/.test(data.sslc.institution)) {
-            newErrors.sslcinstitution = "Must contain at least one alphabet";
+        if (!data.sslc.institution?.trim()) {
+            newErrors.sslcinstitution = "*Institution Required";
+        } else if (!isValidInstitution(data.sslc.institution)) {
+            newErrors.sslcinstitution = "*Invalid institution name";
         }
         if (!data.sslc.percentage) newErrors.sslcpercentage = "*percentage Required";
         else if (!percentageReg.test(data.sslc.percentage))
@@ -1300,9 +1326,10 @@ const EducationDetails = ({
 
         if (!data.hsc.stream || data.hsc.stream === "Select")
             newErrors.hscstream = "Select atleast One";
-        if (!data.hsc.institution?.trim()) newErrors.hscinstitution = "*institution Required";
-        else if (!/^(?=.*[a-zA-Z])[a-zA-Z&. ]+$/.test(data.hsc.institution)) {
-            newErrors.hscinstitution = "Must contain at least one alphabet";
+        if (!data.hsc.institution?.trim()) {
+            newErrors.hscinstitution = "*Institution Required";
+        } else if (!isValidInstitution(data.hsc.institution)) {
+            newErrors.hscinstitution = "*Invalid institution name";
         }
         if (!data.hsc.percentage) newErrors.hscpercentage = "* percentage Required";
         else if (!percentageReg.test(data.hsc.percentage))
@@ -1324,11 +1351,10 @@ const EducationDetails = ({
             if (!grad.status || grad.status === "Select") {
                 newErrors[`gradstatus${grad.id}`] = "Please select degree status";
             }
-            if (!grad.college || grad.college.trim() === "") {
+            if (!grad.college?.trim()) {
                 newErrors[`gradcollege${grad.id}`] = "Institution name is required";
-            }
-            else if (!/^(?=.*[a-zA-Z])[a-zA-Z&. ]+$/.test(grad.college)) {
-                newErrors[`gradcollege${grad.id}`] = "Must contain at least one alphabet";
+            } else if (!isValidInstitution(grad.college)) {
+                newErrors[`gradcollege${grad.id}`] = "Invalid institution name";
             }
             if (!grad.percentage || grad.percentage.trim() === "") {
                 newErrors[`gradpercentage${grad.id}`] = "Percentage is required";
@@ -1339,16 +1365,33 @@ const EducationDetails = ({
                 newErrors[`gradpercentage${grad.id}`] = "Percentage cannot exceed 100";
             }
             // Year Logic
-            const startY = parseInt(grad.startYear);
-            const endY = parseInt(grad.endYear);
+            const today = new Date();
+
+            const startDate = grad.startYear ? new Date(grad.startYear) : null;
+            const endDate = grad.endYear ? new Date(grad.endYear) : null;
 
             if (!grad.startYear) {
                 newErrors[`gradstartYear${grad.id}`] = "*Starting year is required";
             }
-            if (!grad.endYear) newErrors[`gradendYear${grad.id}`] = "* End year is Required";
-            else {
-                if (endY > currentYear + 5) newErrors[`gradendYear${grad.id}`] = "*Invalid Year";
-                if (startY && endY <= startY) newErrors[`gradendYear${grad.id}`] = "*Must be after start year";
+            else if (startDate > today) {
+                newErrors[`gradstartYear${grad.id}`] = "*Starting year cannot be in future";
+            }
+
+            if (!grad.endYear) {
+                newErrors[`gradendYear${grad.id}`] = "*Ending year is required";
+            }
+            else if (endDate > today) {
+                newErrors[`gradendYear${grad.id}`] = "*Ending year cannot be in future";
+            }
+            else if (startDate && endDate < startDate) {
+                newErrors[`gradendYear${grad.id}`] = "*Ending year cannot be before starting year";
+            }
+            else if (
+                startDate &&
+                endDate &&
+                endDate.getFullYear() - startDate.getFullYear() < 1
+            ) {
+                newErrors[`gradendYear${grad.id}`] = "*Course duration must be at least 1 year";
             }
             if (!grad.city) {
                 newErrors[`gradcity${grad.id}`] = "City is required";
@@ -1362,11 +1405,7 @@ const EducationDetails = ({
             if (!grad.dept) {
                 newErrors[`graddepartment${grad.id}`] = "department is required";
             }
-            if (!grad.endYear) {
-                newErrors[`gradendYear${grad.id}`] = "Ending year is required";
-            } else if (new Date(grad.endYear) < new Date(grad.startYear)) {
-                newErrors[`gradendYear${grad.id}`] = "Ending year cannot be before starting year";
-            }
+            
             else if (grad.startYear) {
                 const start = new Date(grad.startYear);
                 const end = new Date(grad.endYear);
@@ -1388,7 +1427,7 @@ const EducationDetails = ({
             // Auto-open the first section with an error
             if (newErrors.sslcinstitution || newErrors.sslcyear) setOpenSection("sslc");
             else if (newErrors.hscstream || newErrors.hscyear) setOpenSection("hsc");
-            alert("Please fix the errors in your education details.");
+            alert("Please fill the required fields in your education details.");
         }
     };
 
@@ -1443,10 +1482,9 @@ const EducationDetails = ({
                                         name="institution"
                                         value={data.sslc.institution}
                                         onChange={(e) => {
-
-                                            if (/^(?:[a-zA-Z][a-zA-Z&. ]*)?$/.test(e.target.value)) {
+                                            const val = e.target.value;
+                                            if (val === "" || /^[a-zA-Z0-9\s\.\,\’\'\"\&\-\/\(\)]*$/.test(val)) {
                                                 handleInputChange(e, 'sslc');
-
                                             }
                                         }}
                                         placeholder="e.g., XYZ School"
@@ -1499,7 +1537,7 @@ const EducationDetails = ({
                                         name="year"
                                         value={data.sslc.year || ""}
                                         onChange={(e) => handleInputChange(e, 'sslc')}
-                                        className={errors.sslcyear ? "input-error" : "", "cursor-as-pointer"}
+                                        className={`${errors.sslcyear ? "input-error" : ""} cursor-as-pointer`}
                                     />
                                     {errors.sslcyear && (
                                         <span className="error-msg">{errors.sslcyear}</span>
@@ -1547,10 +1585,9 @@ const EducationDetails = ({
                                         name="institution"
                                         value={data.hsc.institution || ""}
                                         onChange={(e) => {
-
-                                            if (/^(?:[a-zA-Z][a-zA-Z&. ]*)?$/.test(e.target.value)) {
+                                            const val = e.target.value;
+                                            if (val === "" || /^[a-zA-Z0-9\s\.\,\’\'\"\&\-\/\(\)]*$/.test(val)) {
                                                 handleInputChange(e, 'hsc');
-
                                             }
                                         }}
                                         placeholder="e.g., XYZ School"
@@ -1588,7 +1625,7 @@ const EducationDetails = ({
                                         name="year"
                                         value={data.hsc.year || ""}
                                         onChange={(e) => handleInputChange(e, 'hsc')}
-                                        className={errors.hscyear ? "input-error" : "", "cursor-as-pointer"}
+                                        className={`${errors.hscyear ? "input-error" : ""} cursor-as-pointer`}
 
                                     />
                                     {errors.hscyear && (
@@ -1726,7 +1763,7 @@ const EducationDetails = ({
                                             name="startYear"
                                             value={grad.startYear}
                                             onChange={(e) => handleInputChange(e, 'grad', grad.id)}
-                                            className={errors[`gradstartYear${grad.id}`] ? "input-error" : "", "cursor-as-pointer"}
+                                            className={`${errors[`gradstartYear${grad.id}`] ? "input-error" : ""} cursor-as-pointer`}
                                         />
                                         {errors[`gradstartYear${grad.id}`] && <span className="error-message">{errors[`gradstartYear${grad.id}`]}</span>}
                                     </div>
@@ -1737,7 +1774,7 @@ const EducationDetails = ({
                                             name="endYear"
                                             value={grad.endYear}
                                             onChange={(e) => handleInputChange(e, 'grad', grad.id)}
-                                            className={errors[`gradendYear${grad.id}`] ? "input-error" : "", "cursor-as-pointer"}
+                                            className={`${errors[`gradendYear${grad.id}`] ? "input-error" : ""} cursor-as-pointer`}
                                         />
                                         {errors[`gradendYear${grad.id}`] && <span className="error-message">{errors[`gradendYear${grad.id}`]}</span>}
                                     </div>
@@ -1748,8 +1785,9 @@ const EducationDetails = ({
                                             name="college"
                                             value={grad.college}
                                             onChange={(e) => {
-                                                if (/^[a-zA-Z&. ]*$/.test(e.target.value)) {
-                                                    handleInputChange(e, 'grad', grad.id)
+                                                const val = e.target.value;
+                                                if (val === "" || /^[a-zA-Z0-9\s\.\,\’\'\"\&\-\/\(\)]*$/.test(val)) {
+                                                    handleInputChange(e, 'grad', grad.id);
                                                 }
                                             }}
                                             placeholder="e.g., XYZ Institute"
@@ -1921,7 +1959,7 @@ const WorkExperience = ({
         }
     };
 
-    // ✅ Handle Status Change - Show alert or error message
+    // Handle Status Change - Show alert or error message
     const handleStatusChange = (newStatus) => {
         // Check if trying to change to Fresher when data exists
         if (newStatus === "Fresher" && (data.entries.length > 0 || data.hasExperience === "Yes")) {
@@ -3176,6 +3214,8 @@ export const MyProfile = () => {
 
         resume: {
             resume_file: null,
+            fileName: "",
+            isUploaded: false,
             portfolio_link: "",
         },
 

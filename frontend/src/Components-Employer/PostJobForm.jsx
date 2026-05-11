@@ -27,6 +27,7 @@ export const PostJobForm = ({ onCancel }) => {
     }
   };
 
+
   const categoryOptions = ["Aerospace & Defense", "Ai/MI", "Analytics", "Artificial Intelligence", "Automotive", "Big Data", "Biotechnology", "Business Consulting", "Business Intelligence", "Cloud Computing", "Cloud Services", "Construction", "Consulting", "Consumer Goods", "Consumer Tech", "Corporate", "Corporate Functions", "Customer Support", "Cybersecurity", "Data Infrastructure", "Data Science", "Design", "Digital Marketing", "Digital Media", "E-Commerce", "Ed-Tech", "Energy", "Enterprise Software", "Entertainment", "Finance", "Financial Services", "Fintech", "Fmcg", "Healthcare", "Hospital", "Hr Services", "Human Resources", "Internet", "It Consulting", "It Networking", "IT Services", "Logistics", "Marketing", "Marketing & Advertising", "Martech", "Mobile App Development", "Mobile Development", "Pharmaceutical", "Pharma", "Product Development", "Project Management", "Real Estate", "Recruitment", "Regional Sales", "Renewable Power", "Research", "Retail", "Retail Tech", "Saas", "Sales", "Site Reliability Engineering", "Software Development", "Software Product", "Software Testing", "Subscription Service", "Supply Chain", "Technology", "Telecommunications"];
   const educationOptions = [
     "BS", "B.A", "CA", "B.Ed", "M.Com", "B.Sc", "MCA", "BCA", "LLM", "MS/M.Sc", "Diploma", "B.Com", "M.Tech", "MBA/PGDM", "PG Diploma", "B.B.A/ B.M.S", "Medical-MS/MD", "B.Tech/B.E.", "Any Graduate", "Other Post Graduate", "ITI Certification", "Any Postgraduate", "Graduation Not Required", "Post Graduation Not Required", "Bachelor Of Science", "Business Economics"
@@ -38,23 +39,27 @@ export const PostJobForm = ({ onCancel }) => {
   ];
 
   const [formData, setFormData] = useState({
-    job_title: '',
-    industry_type: [],
+    job_title: '',  
+    industry_type: [],  
     department: [],
     education: [],
-    work_type: '',
+    work_type: '', 
     shift: '',
-    work_duration: '',
+    work_duration: '', 
     salary: '',
     experience: '',
+    location: [],  
     openings: '',
-    job_category: '',
-    job_highlights: [''],
-    job_description: '',
+    job_category: '',  
+    key_skills: [],  
+    job_highlights: [''], 
+    job_description: '',  
     responsibilities: ['']
-  });
 
-  const [skillInput, setSkillInput] = useState("");
+  });
+  console.log(formData)
+
+  const [skillInput, setSkillInput] = useState(""); // Track what user types
   const [filteredSkills, setFilteredSkills] = useState([]);
   const [skillsList, setSkillsList] = useState([]);
   const [locationList, setLocationList] = useState([]);
@@ -63,10 +68,12 @@ export const PostJobForm = ({ onCancel }) => {
 
   useEffect(() => {
     const handleClickOutside = (event) => {
+
       if (!event.target.closest('.jobpost-dropdown')) {
         setOpenDropdown(null);
       }
     };
+
     document.addEventListener("click", handleClickOutside);
     return () => {
       document.removeEventListener("click", handleClickOutside);
@@ -77,12 +84,15 @@ export const PostJobForm = ({ onCancel }) => {
     setOpenDropdown(openDropdown === name ? null : name);
   };
 
+  // Handle Skill Input Change
   const handleSkillChange = (e) => {
     const value = e.target.value;
     setSkillInput(value);
+
     if (value.trim()) {
       const filtered = availableSkills.filter(skill =>
-        skill.toLowerCase().includes(value.toLowerCase()) && !skillsList.includes(skill)
+        skill.toLowerCase().includes(value.toLowerCase()) &&
+        !skillsList.includes(skill)
       );
       setFilteredSkills(filtered);
     } else {
@@ -90,71 +100,104 @@ export const PostJobForm = ({ onCancel }) => {
     }
   };
 
+  // Select Skill from Suggestion
   const selectSkill = (skill) => {
-    setSkillsList(prev => [...prev, skill]);
+    setSkillsList([...skillsList, skill]);
     setSkillInput("");
     setFilteredSkills([]);
     setErrors({ ...errors, keySkills: "" });
   };
 
   const validateForm = () => {
+
     const newErrors = {};
     const jobTitleRegex = /^[a-zA-Z\s]{3,}$/;
+
     const durationRegex = /^(\d+\s*(month|months|year|years)|permanent)$/i;
+
     const openingsRegex = /^[1-9][0-9]{0,2}$/;
+
     const contentRegex = /^(?=.*[a-zA-Z])[a-zA-Z0-9\s.,-]{5,}$/;
     const expRegex = /^[0-9]+(\.[0-9]+)?(-[0-9]+(\.[0-9]+)?)?$/;
-    const salaryRegex = /^(\d{3,7})(\s?\/-\s?)?\s?(per\s?month|\/month|pm)$|^(\d+(\.\d{1,2})?)\s?(lpa)$|^(\d+(\.\d{1,2})?)\s?(cr|crore)\s?(per\s?year)?$/i;
 
+    // --- VALIDATION LOGIC ---
+
+    // Job Title
     if (!formData.job_title.trim()) {
       newErrors.job_title = "Job title is required";
     } else if (!jobTitleRegex.test(formData.job_title.trim())) {
       newErrors.job_title = "Only letters allowed (no numbers or symbols)";
     }
 
+    // Work Duration
     if (!formData.work_duration.trim()) {
       newErrors.work_duration = "Work duration is required";
     } else if (!durationRegex.test(formData.work_duration.trim())) {
       newErrors.work_duration = "Enter e.g. '6 Months' or 'Permanent'";
     }
 
+    // 5. Salary (Advanced Format Validation)
     const salaryInput = formData.salary.trim();
+
+    const salaryRegex = /^(\d{3,7})(\s?\/-\s?)?\s?(per\s?month|\/month|pm)$|^(\d+(\.\d{1,2})?)\s?(lpa)$|^(\d+(\.\d{1,2})?)\s?(cr|crore)\s?(per\s?year)?$/i;
+
     if (!salaryInput) {
       newErrors.salary = "Salary is required";
     } else if (!salaryRegex.test(salaryInput)) {
+
       if (/^\d+$/.test(salaryInput)) {
         newErrors.salary = "Please specify unit (e.g., 'LPA' or 'per month')";
-      } else if (/[^\w\s./-]/.test(salaryInput)) {
+      }
+      else if (/[^\w\s./-]/.test(salaryInput)) {
         newErrors.salary = "Invalid characters not allowed";
-      } else if (/lpa/i.test(salaryInput) && /(month|pm)/i.test(salaryInput)) {
+      }
+      else if (/lpa/i.test(salaryInput) && /(month|pm)/i.test(salaryInput)) {
         newErrors.salary = "Do not mix LPA with monthly format";
-      } else {
+      }
+      else {
         newErrors.salary = "Invalid format (e.g., 15000 per month, 5 LPA, 1 cr per year)";
       }
     }
 
+
     const expStr = formData.experience.trim().toLowerCase();
+
     if (!expStr) {
       newErrors.experience = "Experience is required";
-    } else if (/^\d+$/.test(expStr)) {
-      newErrors.experience = "Please specify unit (e.g., '3.0 years' or '2-4 years')";
-    } else if (/^\d+-\d+$/.test(expStr)) {
-      newErrors.experience = "Please specify unit (e.g., '2-4 years')";
-    } else if (expStr.includes('-')) {
-      const rangeWithUnitRegex = /^(\d+)-(\d+)\s*years?$/;
-      if (!rangeWithUnitRegex.test(expStr)) {
-        newErrors.experience = "Invalid range format. Use '2-4 years'";
-      } else {
-        const match = expStr.match(rangeWithUnitRegex);
-        const start = parseFloat(match[1]);
-        const end = parseFloat(match[2]);
-        if (end <= start) {
-          newErrors.experience = "End year must be greater than start year";
+    }
+    else {
+      // 1. BLOCKS PLAIN NUMBERS (e.g., "3")
+      if (/^\d+$/.test(expStr)) {
+        newErrors.experience = "Please specify unit (e.g., '3.0 years' or '2-4 years')";
+      }
+
+      // 2. BLOCKS PLAIN RANGES WITHOUT "years" (e.g., "2-4")
+      else if (/^\d+-\d+$/.test(expStr)) {
+        newErrors.experience = "Please specify unit (e.g., '2-4 years')";
+      }
+
+      // 3. VALIDATE CORRECT RANGE FORMAT (e.g., "2-4 years")
+      else if (expStr.includes('-')) {
+        // Regex to check for: number-number followed by "years"
+        const rangeWithUnitRegex = /^(\d+)-(\d+)\s*years?$/;
+
+        if (!rangeWithUnitRegex.test(expStr)) {
+          newErrors.experience = "Invalid range format. Use '2-4 years'";
+        } else {
+          const match = expStr.match(rangeWithUnitRegex);
+          const start = parseFloat(match[1]);
+          const end = parseFloat(match[2]);
+
+          if (end <= start) {
+            newErrors.experience = "End year must be greater than start year";
+          } else {
+            newErrors.experience_label = `${start}-${end} Years (Range)`;
+          }
         }
       }
 
       // 4. VALIDATE DECIMAL FORMAT (e.g., "2.5 years")
-       if (expStr.includes('.') || expStr.includes('years')) {
+      else if (expStr.includes('.') || expStr.includes('years')) {
         const decimalWithUnitRegex = /^(\d+(\.\d+)?)\s*years?$/;
 
         if (!decimalWithUnitRegex.test(expStr)) {
@@ -178,7 +221,6 @@ export const PostJobForm = ({ onCancel }) => {
       }
     }
 
-
     // Openings
     const openingsStr = String(formData.openings).trim();
     if (!openingsStr || openingsStr === '0') {
@@ -187,18 +229,21 @@ export const PostJobForm = ({ onCancel }) => {
       newErrors.openings = "Enter a valid count (max 999)";
     }
 
+    // Job Highlights
     if (!formData.job_highlights[0]?.trim()) {
       newErrors.job_highlights = "First highlight is required";
     } else if (!contentRegex.test(formData.job_highlights[0])) {
       newErrors.job_highlights = "Must contain letters (no symbols)";
     }
 
+    // Responsibilities
     if (!formData.responsibilities[0]?.trim()) {
       newErrors.responsibilities = "First responsibility is required";
     } else if (!contentRegex.test(formData.responsibilities[0])) {
       newErrors.responsibilities = "Must contain letters (no symbols)";
     }
 
+    // Standard checks for the rest
     if (formData.industry_type.length === 0) newErrors.industry_type = "Select industrial type";
     if (formData.department.length === 0) newErrors.department = "Select department";
     if (formData.education.length === 0) newErrors.education = "Select education";
@@ -207,21 +252,28 @@ export const PostJobForm = ({ onCancel }) => {
     if (!formData.shift) newErrors.shift = "Select shift";
     if (!formData.job_category) newErrors.job_category = "Select job category";
     if (skillsList.length === 0) newErrors.key_skills = "Add at least one skill";
+
     if (!formData.job_description.trim() || formData.job_description.length < 50) {
       newErrors.job_description = "Description must be at least 50 characters";
     }
 
     setErrors(newErrors);
+
     if (Object.keys(newErrors).length > 0) {
       window.scrollTo({ top: 150, behavior: 'smooth' });
     }
+
     return Object.keys(newErrors).length === 0;
   };
 
+
+
   const handleCheckboxChange = (name, value, allOptions = []) => {
     setErrors({ ...errors, [name]: "" });
+
     setFormData(prev => {
       const currentList = prev[name] || [];
+
       if (value === "all") {
         const isAllSelected = currentList.length === allOptions.length;
         return { ...prev, [name]: isAllSelected ? [] : allOptions };
@@ -233,9 +285,11 @@ export const PostJobForm = ({ onCancel }) => {
     });
   };
 
+
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     setErrors({ ...errors, [name]: "" });
+
     if (type === 'checkbox') {
       if (name.includes('.')) {
         const [group, field] = name.split('.');
@@ -250,13 +304,13 @@ export const PostJobForm = ({ onCancel }) => {
   };
 
   const handleKeyDown = (e) => {
-    if (e.key === 'Enter') {
+    if (e.key === 'Enter' && e.target.name === 'key_skills_input') {
       e.preventDefault();
-      const newSkill = skillInput.trim();
+      const newSkill = e.target.value.trim();
       if (newSkill && !skillsList.includes(newSkill)) {
-        setSkillsList(prev => [...prev, newSkill]);
-        setSkillInput("");
-        setErrors(prev => ({ ...prev, key_skills: "" }));
+        setSkillsList([...skillsList, newSkill]);
+        setFormData({ ...formData, key_skills_input: '' });
+        setErrors({ ...errors, key_skills: "" });
       }
     }
   };
@@ -279,18 +333,18 @@ export const PostJobForm = ({ onCancel }) => {
     });
   };
 
-  const removeHighlightField = (index) => {
-    if (formData.job_highlights.length > 1) {
-      const newHighlights = formData.job_highlights.filter((_, i) => i !== index);
-      setFormData({ ...formData, job_highlights: newHighlights });
-    }
-  };
-
   const handleResponsibilityChange = (index, value) => {
     const updatedRes = [...formData.responsibilities];
     updatedRes[index] = value;
     setFormData({ ...formData, responsibilities: updatedRes });
     setErrors({ ...errors, responsibilities: "" });
+  };
+
+  const removeHighlightField = (index) => {
+    if (formData.job_highlights.length > 1) {
+      const newHighlights = formData.job_highlights.filter((_, i) => i !== index);
+      setFormData({ ...formData, job_highlights: newHighlights });
+    }
   };
 
   const addResponsibilityField = () => {
@@ -300,6 +354,7 @@ export const PostJobForm = ({ onCancel }) => {
     });
   };
 
+  // Handle removing a responsibility
   const removeResponsibilityField = (index) => {
     if (formData.responsibilities.length > 1) {
       const newRes = formData.responsibilities.filter((_, i) => i !== index);
@@ -309,8 +364,14 @@ export const PostJobForm = ({ onCancel }) => {
 
   const handleSubmit = (e) => {
     if (e) e.preventDefault();
-    if (!validateForm()) return;
+    if (!validateForm()) {
+      return false; // stops form submit if errors
+    }
 
+    // Convert location array to comma-separated string
+    const locationString = locationList.join(', ');
+
+    // Prepare data for backend - match PostAJob model exactly
     const submissionData = {
       job_title: formData.job_title,
       industry_type: formData.industry_type,
@@ -320,7 +381,7 @@ export const PostJobForm = ({ onCancel }) => {
       work_duration: formData.work_duration,
       salary: parseFloat(formData.salary) || 0,
       experience: formData.experience,
-      location: locationList,
+      location: locationList,  // Send as string, not array
       openings: parseInt(formData.openings) || 0,
       job_category: formData.job_category,
       education: formData.education,
@@ -330,11 +391,13 @@ export const PostJobForm = ({ onCancel }) => {
       responsibilities: formData.responsibilities.filter(r => r && r.trim())
     };
 
+    console.log('📤 Submitting job data:', submissionData);
     navigate('/Job-portal/Employer/PostJobpreview', { state: submissionData });
   };
 
   return (
     <>
+      {/* <EHeader />  */}
       <div className="jobpost-page-title">
         <main className="jobpost-main-content">
           <header className="jobpost-form-header">
@@ -389,13 +452,22 @@ export const PostJobForm = ({ onCancel }) => {
                     </div>
                     <div className="jobpost-dropdown-panel">
                       <label className="jobpost-select-all">
-                        <input type="checkbox" onChange={() => handleCheckboxChange('department', 'all', departmentOptions)} checked={formData.department.length === departmentOptions.length} />
+                        <input
+                          type="checkbox"
+                          onChange={() => handleCheckboxChange('department', 'all', departmentOptions)}
+                          checked={formData.department.length === departmentOptions.length}
+                        />
                         <strong>Select all Departments</strong>
                       </label>
                       <div className="jobpost-options-grid">
                         {departmentOptions.map(dept => (
                           <label key={dept} className="jobpost-option-item">
-                            <input type="checkbox" checked={formData.department.includes(dept)} onChange={() => handleCheckboxChange('department', dept)} /> {dept}
+                            <input
+                              type="checkbox"
+                              checked={formData.department.includes(dept)}
+                              onChange={() => handleCheckboxChange('department', dept)}
+                            />
+                            {dept}
                           </label>
                         ))}
                       </div>
@@ -467,37 +539,59 @@ export const PostJobForm = ({ onCancel }) => {
 
               <div className="jobpost-form-row jobpost-top-align">
                 <label className="jobpost-label">Location</label>
+
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
                   <div className={`jobpost-dropdown ${openDropdown === 'location' ? 'jobpost-is-active' : ''} ${errors.location ? "input-error" : ""}`}>
+
                     <div className="jobpost-dropdown-trigger" onClick={() => toggleDropdown('location')}>
                       {locationList.length > 0 ? locationList.join(', ') : 'Select Locations'}
                       <i className="fas fa-angle-down jobpost-arrow"></i>
                     </div>
+
                     <div className="jobpost-dropdown-panel">
                       <label className="jobpost-select-all">
-                        <input type="checkbox" onChange={() => {
-                          if (locationList.length === locationsList.length) {
-                            setLocationList([]);
-                          } else {
-                            setLocationList(locationsList);
+                        <input
+                          type="checkbox"
+                          onChange={() => {
+                            if (locationList.length === locationsList.length) {
+                              setLocationList([]);
+                            } else {
+                              setLocationList(locationsList);
+                            }
+                            setErrors({ ...errors, location: "" });
+                          }}
+                          checked={
+                            locationList.length === locationsList.length &&
+                            locationsList.length > 0
                           }
-                          setErrors({ ...errors, location: "" });
-                        }} checked={locationList.length === locationsList.length && locationsList.length > 0} />
+                        />
                         <strong>Select all Locations</strong>
                       </label>
+
+                      {/* Options */}
                       <div className="jobpost-options-grid">
                         {locationsList.map((loc) => (
                           <label key={loc} className="jobpost-option-item">
-                            <input type="checkbox" checked={locationList.includes(loc)} onChange={() => {
-                              const updated = locationList.includes(loc) ? locationList.filter(l => l !== loc) : [...locationList, loc];
-                              setLocationList(updated);
-                              setErrors({ ...errors, location: "" });
-                            }} /> {loc}
+                            <input
+                              type="checkbox"
+                              checked={locationList.includes(loc)}
+                              onChange={() => {
+                                const updated = locationList.includes(loc)
+                                  ? locationList.filter(l => l !== loc)
+                                  : [...locationList, loc];
+
+                                setLocationList(updated);
+                                setErrors({ ...errors, location: "" });
+                              }}
+                            />
+                            {loc}
                           </label>
                         ))}
+
                       </div>
                     </div>
                   </div>
+
                   {errors.location && <span className="error-msg">{errors.location}</span>}
                 </div>
               </div>
@@ -551,15 +645,27 @@ export const PostJobForm = ({ onCancel }) => {
                 <label className="jobpost-label">Key skills</label>
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
                   <div className={`jobpost-skills-titile ${errors.key_skills ? "input-error" : ""}`}>
-                    <input className="jobpost-input skills-input" style={errors.key_skills ? { borderColor: '#d93025' } : {}} type="text" name="keySkills" placeholder="Press Enter to add skills  (e.g., Python, AWS, React etc...)" value={skillInput} onChange={handleSkillChange} onKeyDown={handleKeyDown} />
+                    <input
+                      className="jobpost-input skills-input"
+                      style={errors.key_skills ? { borderColor: '#d93025' } : {}}
+                      type="text"
+                      name="keySkills"
+                      placeholder="Press Enter to add skills  (e.g., Python, AWS, React etc...)"
+                      value={skillInput}
+                      onChange={handleSkillChange}
+                      onKeyDown={handleKeyDown}
+                    />
+                    {/* SUGGESTIONS LIST */}
                     {filteredSkills.length > 0 && (
                       <ul className="skills-suggestions-list">
                         {filteredSkills.map((skill, index) => (
-                          <li key={index} onClick={() => selectSkill(skill)}>{skill}</li>
+                          <li key={index} onClick={() => selectSkill(skill)}>
+                            {skill}
+                          </li>
                         ))}
                       </ul>
                     )}
-                    <div className="jobpost-tags-area">
+                    <div className="jobpost-tags-area" style={errors.keySkills ? { borderColor: '#d93025' } : {}}>
                       {skillsList.map((skill, index) => (
                         <span key={index} className="jobpost-tag">
                           {skill} <button type="button" onClick={() => removeSkill(skill)}>×</button>
@@ -576,16 +682,39 @@ export const PostJobForm = ({ onCancel }) => {
                 <div className="highlights-container" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
                   {formData.job_highlights.map((highlight, index) => (
                     <div key={index} className="jobpost-input-icon-titile">
-                      <input className={`jobpost-input ${errors.job_highlights && index === 0 ? "input-error" : ""}`} type="text" placeholder="Add top 3-5 selling points of the role" value={highlight} onChange={(e) => handleHighlightChange(index, e.target.value)} />
+
+                      <input
+                        className={`jobpost-input ${errors.job_highlights && index === 0 ? "input-error" : ""}`}
+                        type="text"
+                        placeholder="Add top 3-5 selling points of the role"
+                        value={highlight}
+                        onChange={(e) => handleHighlightChange(index, e.target.value)}
+                      />
+
                       {index !== formData.job_highlights.length - 1 && (
-                        <span className="jobpost-minus-icon" onClick={() => removeHighlightField(index)}>-</span>
+                        <span
+                          className="jobpost-minus-icon"
+                          onClick={() => removeHighlightField(index)}
+                        >
+                          -
+                        </span>
                       )}
+
                       {index === formData.job_highlights.length - 1 && (
-                        <span className="jobpost-plus-icon" onClick={addHighlightField}>+</span>
+                        <span
+                          className="jobpost-plus-icon"
+                          onClick={addHighlightField}
+                        >
+                          +
+                        </span>
                       )}
+
                     </div>
                   ))}
-                  {errors.job_highlights && <span className="error-msg">{errors.job_highlights}</span>}
+
+                  {errors.job_highlights && (
+                    <span className="error-msg">{errors.job_highlights}</span>
+                  )}
                 </div>
               </div>
 
@@ -602,16 +731,39 @@ export const PostJobForm = ({ onCancel }) => {
                 <div className="responsibilities-list" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
                   {formData.responsibilities.map((res, index) => (
                     <div key={index} className="jobpost-input-icon-titile">
-                      <input className={`jobpost-input ${errors.responsibilities && index === 0 ? "input-error" : ""}`} type="text" placeholder="Specific day-to-day tasks" value={res} onChange={(e) => handleResponsibilityChange(index, e.target.value)} />
+
+                      <input
+                        className={`jobpost-input ${errors.responsibilities && index === 0 ? "input-error" : ""}`}
+                        type="text"
+                        placeholder="Specific day-to-day tasks"
+                        value={res}
+                        onChange={(e) => handleResponsibilityChange(index, e.target.value)}
+                      />
+
                       {index !== formData.responsibilities.length - 1 && (
-                        <span className="jobpost-minus-icon" onClick={() => removeResponsibilityField(index)}>-</span>
+                        <span
+                          className="jobpost-minus-icon"
+                          onClick={() => removeResponsibilityField(index)}
+                        >
+                          -
+                        </span>
                       )}
+
                       {index === formData.responsibilities.length - 1 && (
-                        <span className="jobpost-plus-icon" onClick={addResponsibilityField}>+</span>
+                        <span
+                          className="jobpost-plus-icon"
+                          onClick={addResponsibilityField}
+                        >
+                          +
+                        </span>
                       )}
+
                     </div>
                   ))}
-                  {errors.responsibilities && <span className="error-msg">{errors.responsibilities}</span>}
+
+                  {errors.responsibilities && (
+                    <span className="error-msg">{errors.responsibilities}</span>
+                  )}
                 </div>
               </div>
             </form>
@@ -622,7 +774,9 @@ export const PostJobForm = ({ onCancel }) => {
             <button type="button" className="jobpost-btn-preview" onClick={handleSubmit}>Preview</button>
           </div>
         </main>
+
       </div>
+      {/* <Footer /> */}
     </>
   );
 };
