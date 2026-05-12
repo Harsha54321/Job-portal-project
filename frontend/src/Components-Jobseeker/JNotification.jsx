@@ -22,7 +22,7 @@ export const JNotification = ({  }) => {
     const navigate = useNavigate();
     const containerRef = useRef(null);
 
-    // ✅ Filter notifications for current user
+    // Filter notifications for current user
     const myPersonalNotifs = notificationsData.filter(n => 
         !n.targetId || String(n.targetId) === String(currentUserId)
     );

@@ -40,13 +40,13 @@ import api from "../api/axios";
 
 export const EmployerDashboard = () => {
     const { currentEmployer, getJobStats, refreshEmployerData } = useJobs();
-    
+
     // ============ ALL HOOKS AT THE TOP ============
     const [showLogoutModal, setShowLogoutModal] = useState(false);
     const [applications, setApplications] = useState([]);
     const [loadingStats, setLoadingStats] = useState(true);
     const [isDataLoading, setIsDataLoading] = useState(true);
-    
+
     const [verificationStatus, setVerificationStatus] = useState({
         isLoading: true,
         isVerified: false,
@@ -54,18 +54,36 @@ export const EmployerDashboard = () => {
     });
 
     const [activeMenu, setActiveMenu] = useState(null);
-    const [activetab, setActiveTab] = useState('Dashboard');
+    const [activetab, setActiveTab] = useState(() => {
+        return localStorage.getItem('employerActiveTab') || 'Dashboard';
+    });
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
     const [selectedJob, setSelectedJob] = useState(null);
 
- 
+    useEffect(() => {
+        if (
+            activetab === "ViewApplicants" &&
+            !selectedJob
+        ) {
+            setActiveTab("My job post");
+        }
+    }, [activetab, selectedJob]);
+
+
     // const PostedJob = currentEmployer?.jobPosted || [];
     const PostedJob = useMemo(() => {
         return currentEmployer?.jobPosted || [];
     }, [currentEmployer]);
- 
+
     const location = useLocation();
     const navigate = useNavigate();
+
+    // Add this alongside your other useEffects
+    useEffect(() => {
+        if (activetab) {
+            localStorage.setItem('employerActiveTab', activetab);
+        }
+    }, [activetab]);
 
     // ============ AUTO REFRESH ON MOUNT AND AFTER LOGIN ============
     useEffect(() => {
@@ -75,17 +93,17 @@ export const EmployerDashboard = () => {
                 const justLoggedIn = location.state?.justLoggedIn || false;
                 const fromVerify = location.state?.fromVerify || false;
                 const verificationSubmitted = location.state?.verificationSubmitted || false;
-                
+
                 console.log("📊 Loading employer data...");
                 console.log("Just logged in:", justLoggedIn);
                 console.log("From verify:", fromVerify);
-                
+
                 // Use refreshEmployerData from context
                 if (refreshEmployerData) {
                     await refreshEmployerData();
                     console.log("✅ Employer data refreshed");
                 }
-                
+
                 // Clear navigation state after processing
                 if (justLoggedIn || fromVerify || verificationSubmitted) {
                     navigate(location.pathname, { replace: true, state: {} });
@@ -96,7 +114,7 @@ export const EmployerDashboard = () => {
                 setIsDataLoading(false);
             }
         };
-        
+
         loadEmployerData();
     }, [refreshEmployerData]); // Run when refreshEmployerData changes and on mount
 
@@ -157,30 +175,36 @@ export const EmployerDashboard = () => {
                 setLoadingStats(false);
             }
         };
- 
+
         fetchApplications();
     }, []);
 
     // ============ HANDLE TARGET TAB FROM FOOTER ============
     useEffect(() => {
         if (location.state?.targetTab) {
-            setActiveTab(location.state.targetTab);
+            const targetTab = location.state.targetTab;
+
+            setActiveTab(targetTab);
+            localStorage.setItem(
+                "employerActiveTab",
+                targetTab
+            );
         }
-    }, [location.state]);
+    }, [location.state?.targetTab]);
 
     // ============ MEMOIZED STATS ============
     const jobStats = useMemo(() => {
         if (!PostedJob.length || !applications.length) {
             return { totalApps: 0, totalShortlisted: 0, totalInterview: 0 };
         }
- 
+
         const employerJobIds = PostedJob.map(job => String(job.id));
- 
+
         // Filter applications for employer's jobs
         const employerApplications = applications.filter(app =>
             employerJobIds.includes(String(app.job?.id))
         );
- 
+
         const totalApps = employerApplications.length;
         const totalShortlisted = employerApplications.filter(app =>
             app.status?.toLowerCase() === 'shortlisted'
@@ -188,9 +212,9 @@ export const EmployerDashboard = () => {
         const totalInterview = employerApplications.filter(app =>
             app.status?.toLowerCase() === 'interview_called'
         ).length;
- 
+
         console.log("Dashboard Stats:", { totalApps, totalShortlisted, totalInterview });
- 
+
         return { totalApps, totalShortlisted, totalInterview };
     }, [applications, PostedJob]);
 
@@ -231,29 +255,30 @@ export const EmployerDashboard = () => {
         } catch (err) {
             console.error("Logout failed:", err);
         } finally {
- 
+
             localStorage.clear();
             sessionStorage.clear();
- 
+
+            localStorage.removeItem("employerActiveTab");
             localStorage.removeItem("access");
             localStorage.removeItem("refresh");
             localStorage.removeItem("userRole");
             localStorage.removeItem("user_id");
             localStorage.removeItem("user_type");
             localStorage.removeItem("profile_id");
- 
+
             navigate('/');
         }
     };
- 
+
     const toggleMenu = (id) => {
         setActiveMenu(activeMenu === id ? null : id);
     };
- 
+
     // const location = useLocation();
     // const fromVerify = location.state?.fromVerify || false;
     // const [isVerifying, setIsVerifying] = useState(fromVerify);
- 
+
     // useEffect(() => {
     //     if (fromVerify) {
     //         const timer = setTimeout(() => {
@@ -262,18 +287,18 @@ export const EmployerDashboard = () => {
     //         return () => clearTimeout(timer);
     //     }
     // }, [fromVerify]);
- 
+
     useEffect(() => {
         const token = localStorage.getItem("access");
         const isInsidePortal = location.pathname.includes("/Job-portal/employer") ||
             location.pathname.includes("/Job-portal/jobseeker");
- 
+
         // If they are inside a protected area without a token, kick them out
         if (!token && isInsidePortal && !location.pathname.includes("login")) {
             window.location.replace("/");
         }
     }, [location.pathname]);
- 
+
     const ToggleSidebar = () => {
         setIsSidebarOpen(!isSidebarOpen)
     }
@@ -316,7 +341,7 @@ export const EmployerDashboard = () => {
                         <div>
                             <div style={{ display: "flex", justifyContent: "space-between", textAlign: "center", alignItems: "center", marginTop: "35px", marginBottom: "35px" }}>
                                 <h3 style={{ color: "snow", margin: "25px", fontWeight: "900" }}>{currentEmployer?.hrName || "User"}</h3>
-                                <img src={Close} width={10} style={{ backgroundColor: "white", padding: '5px', margin: "25px", borderRadius: "30px", cursor:"pointer" }} onClick={() => ToggleSidebar()} title='Close Sidebar' />
+                                <img src={Close} width={10} style={{ backgroundColor: "white", padding: '5px', margin: "25px", borderRadius: "30px", cursor: "pointer" }} onClick={() => ToggleSidebar()} title='Close Sidebar' />
                             </div>
                             <h3 className='Aside-Title'>Overview</h3>
                             <div className='ENavbar'>
@@ -485,8 +510,8 @@ export const EmployerDashboard = () => {
                                                                 <div />
                                                                 <span className="postedjobs-label">Applicants</span>
                                                                 <span className="postedjobs-label" title="Candidates who applied but not yet reviewed">
-                                                                                New ⓘ
-                                                                            </span>
+                                                                    New ⓘ
+                                                                </span>
                                                                 <span className="postedjobs-label">Shortlisted</span>
                                                                 <span className="postedjobs-label">Interview</span>
                                                                 <span className="postedjobs-label">Rejected</span>
@@ -547,34 +572,39 @@ export const EmployerDashboard = () => {
 
                         </>
                     )}
- 
+
                     {activetab === 'Post a Job' && verificationStatus.isVerified && (
                         <PostJobForm
                             onCancel={() => setActiveTab('Dashboard')}
                             showHomeIcon={location.state?.fromFooter}
                         />
                     )}
- 
+
                     {activetab === 'My job post' && verificationStatus.isVerified && (
                         <PostedJobs onViewApplicants={(job) => { setSelectedJob(job); setActiveTab('ViewApplicants'); }} />
                     )}
- 
-                    {activetab === 'ViewApplicants' && verificationStatus.isVerified && (
-                        <ViewApplicants job={selectedJob} onBack={() => setActiveTab('My job post')} />
-                    )}
- 
+
+                    {activetab === 'ViewApplicants' &&
+                        verificationStatus.isVerified &&
+                        selectedJob && (
+                            <ViewApplicants
+                                job={selectedJob}
+                                onBack={() => setActiveTab('My job post')}
+                            />
+                        )}
+
                     {activetab === 'Find Talent' && verificationStatus.isVerified && (
                         <FindTalent showHomeIcon={location.state?.fromFooter} />
                     )}
- 
+
                     {activetab === 'Analytics' && verificationStatus.isVerified && (
                         <AnalyticsPage />
                     )}
- 
+
                     {activetab === 'Billing' && verificationStatus.isVerified && (
                         <PlansBilling />
                     )}
-                    
+
                     {activetab === 'My Profile' && (
                         <AboutYourCompany hideNavigation={true} setActiveTab={setActiveTab} />
                     )}
