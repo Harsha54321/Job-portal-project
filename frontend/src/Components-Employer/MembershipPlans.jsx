@@ -18,12 +18,12 @@ export const MembershipPlans = ({ onSelectPlan }) => {
     };
 
     const getDisplayName = (planName) => {
-    const normalizedName = normalizePlanName(planName);
-    if (normalizedName === 'STARTER PLAN') return 'STARTER PLAN';
-    if (normalizedName === 'BUSINESS PLAN') return 'BUSINESS PLAN';
-    if (normalizedName === 'ENTERPRISE PLAN') return 'ENTERPRISE PLAN';
-    return planName.toUpperCase();
-};
+        const normalizedName = normalizePlanName(planName);
+        if (normalizedName === 'STARTER PLAN') return 'STARTER PLAN';
+        if (normalizedName === 'BUSINESS PLAN') return 'BUSINESS PLAN';
+        if (normalizedName === 'ENTERPRISE PLAN') return 'ENTERPRISE PLAN';
+        return planName.toUpperCase();
+    };
 
     useEffect(() => {
         fetchPlans();
@@ -142,35 +142,18 @@ export const MembershipPlans = ({ onSelectPlan }) => {
 
     const handleGetStarted = (plan) => {
 
-         const normalizedName = normalizePlanName(plan.name);
-    
-    if (normalizedName === 'STARTER PLAN') {
-        const freePlanData = {
-            id: plan.id,
-            name: plan.name,
-            price: 0,
-            subtotal: 0,
-            cgst: 0,
-            sgst: 0,
-            discount_percent: 0,
-            original_price: 0,
-            savings: 0,
-            duration: activeTab,
-            duration_days: plan.pricing?.duration_days || 30
-        };
-        onSelectPlan(freePlanData, activeTab);
-        return;
-    }
-        
-
+        const normalizedName = normalizePlanName(plan.name);
 
         const pricing = plan.pricing;
+
+        const isStarterPlan =
+            normalizePlanName(plan.name) === 'STARTER PLAN';
 
         const planData = {
             id: plan.id,
             name: plan.name,
-            price: pricing.total,
-            subtotal: pricing.subtotal,
+            price: isStarterPlan ? 1 : pricing.total,
+            subtotal: isStarterPlan ? 1 : pricing.subtotal,
             cgst: pricing.cgst,
             sgst: pricing.sgst,
             discount_percent: pricing.discount_percent,

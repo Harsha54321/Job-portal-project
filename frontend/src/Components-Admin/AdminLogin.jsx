@@ -5,7 +5,7 @@ import eye from '../assets/show_password.png';
 import eyeHide from '../assets/eye-hide.png';
 import './AdminLogin.css'
 import api from '../api/axios'; // Add this line
- 
+
 export const AdminLogin = () => {
     const navigate = useNavigate();
     const [passwordShow, setPasswordShow] = useState(true);
@@ -15,22 +15,22 @@ export const AdminLogin = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [serverError, setServerError] = useState("");
     const [rememberMe, setRememberMe] = useState(false);  // ← ADDED
- 
- 
+
+
     // const AdminID = "Admin5122";
     // const AdminPwd = "Admin@123";
- 
+
     const togglePasswordView = () => {
         setPasswordShow((prev) => !prev);
     };
- 
+
     const handleForm = (e) => {
         const { name, value } = e.target;
         setFormValues({ ...formValues, [name]: value });
         setErrors({ ...errors, [name]: "" });
         setServerError("");
     };
- 
+
     // ADDED after handleForm:
     useEffect(() => {
         const savedRemember = localStorage.getItem("admin_remember_me") === "true";
@@ -41,7 +41,7 @@ export const AdminLogin = () => {
             setRememberMe(true);
         }
     }, []);
- 
+
     const handleRememberMe = (e) => {
         const checked = e.target.checked;
         setRememberMe(checked);
@@ -51,7 +51,7 @@ export const AdminLogin = () => {
             localStorage.removeItem("admin_saved_password");
         }
     };
- 
+
     // 2. Function for Verify Button
     // const handleVerify = () => {
     //     const mobileRegex = /^[6-9]\d{9}$/;
@@ -70,7 +70,7 @@ export const AdminLogin = () => {
     // });
     //     }
     // };
- 
+
     const validateForm = () => {
         const newErrors = {};
         if (!formValues.adminID.trim()) {
@@ -86,7 +86,7 @@ export const AdminLogin = () => {
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
- 
+
     // const handleSubmit = (e) => {
     //     e.preventDefault();
     //     if (validateForm()) {
@@ -96,20 +96,20 @@ export const AdminLogin = () => {
     // };
     const handleSubmit = async (e) => {
         e.preventDefault();
- 
+
         if (!validateForm()) {
             return;
         }
- 
+
         setIsLoading(true);
         setServerError("");
- 
+
         try {
             const response = await api.post('admin-login/', {
                 email: formValues.adminID,
                 password: formValues.password
             });
- 
+
             //  if (response.data.status === "success") {
             //     if (response.data.access) {
             //         localStorage.setItem("access", response.data.access);
@@ -119,20 +119,22 @@ export const AdminLogin = () => {
             //     }
             //     localStorage.setItem("user_type", response.data.user_type || "admin");
             //     localStorage.setItem("admin_id", response.data.admin_id || formValues.adminID);
- 
+
             //     console.log("Admin Login Data:", formValues);
             //     navigate("/Job-portal/admin/dashboard");
             // } else {
             //     setServerError(response.data.message || "Login failed");
             // }
- 
- 
+
+
             // AFTER:
             if (response.data.access) {
                 localStorage.setItem("access", response.data.access);
                 localStorage.setItem("refresh", response.data.refresh);
                 localStorage.setItem("user_type", response.data.user?.user_type || "admin");
                 localStorage.setItem("admin_id", response.data.user?.id || formValues.adminID);
+                localStorage.setItem('token', response.data.access);
+                localStorage.setItem('access_token', response.data.access);
                 // AFTER:
                 if (rememberMe) {
                     localStorage.setItem("admin_remember_me", "true");
@@ -179,7 +181,7 @@ export const AdminLogin = () => {
             setIsLoading(false);
         }
     };
- 
+
     return (
         <div className="login-page">
             <header className="login-header">
@@ -191,7 +193,7 @@ export const AdminLogin = () => {
                     <p className="employer-redirect-link" >Login to manage users and postings</p>
                 </div>
             </header>
- 
+
             <div className="Admin-Login-Module">
                 <form onSubmit={handleSubmit} className="admin-login-form">
                     <h2>Login as Administrator</h2>
@@ -219,7 +221,7 @@ export const AdminLogin = () => {
                         className={errors.adminID ? "input-error" : ""}
                     />
                     {errors.adminID && <span className="error-msg">{errors.adminID}</span>}
- 
+
                     <label>Password</label>
                     <div className="password-wrapper">
                         <input
@@ -235,7 +237,7 @@ export const AdminLogin = () => {
                         </span>
                     </div>
                     {errors.password && <span className="error-msg">{errors.password}</span>}
- 
+
                     <div className="form-options">
                         <label>
                             <input
@@ -245,15 +247,15 @@ export const AdminLogin = () => {
                             />
                             {' '}Remember Session
                         </label>                    </div>
- 
- 
+
+
                     {/* <button style={{ marginBottom: "10px" }} type="submit" className="j-login-btn">Admin Login</button> */}
                     <button style={{ marginBottom: "10px" }} type="submit" className="j-login-btn" disabled={isLoading}>
                         {isLoading ? "Logging in..." : "Admin Login"}
                     </button>
- 
+
                     {/* <div className="divider">Or Continue with</div> */}
- 
+
                     {/* <h3 style={{textAlign:"center"}}>Login With Mobile</h3> */}
                     {/* <div>
                    
@@ -278,12 +280,11 @@ export const AdminLogin = () => {
                     </div>
                     {errors.mobile && <span className="error-msg">{errors.mobile}</span>}
                 </div> */}
- 
+
                 </form>
- 
+
             </div>
         </div>
     );
 };
- 
- 
+

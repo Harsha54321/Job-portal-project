@@ -19,6 +19,8 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
   const [originalData, setOriginalData] = useState(null);
   const [showPopup, setShowPopup] = useState(false);
   const [pendingCompanyName, setPendingCompanyName] = useState("");
+  const [showMenu, setShowMenu] = useState(false);
+  const [existingLogoSize, setExistingLogoSize] = useState("");
 
   const fromSignup = location.state?.fromSignup || false;
 
@@ -136,6 +138,12 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
         console.log(companyData, "company data ::");
         setHasExistingProfile(true);
         setExistingLogo(companyData.logo_absolute_url || companyData.logo_url);
+
+        setExistingLogoSize(
+          companyData.logo_size
+            ? `${(companyData.logo_size / 1024 / 1024).toFixed(2)} MB`
+            : ""
+        );
       } catch (err) {
         console.error("Company error:", err);
         if (err.response?.status === 401) {
@@ -332,6 +340,34 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
     } else {
       setFormData({ ...formData, [name]: value });
     }
+  };
+
+  const handleRemoveLogo = () => {
+    setFormData((prev) => ({
+      ...prev,
+      companyLogo: null,
+    }));
+
+    setExistingLogo(null);
+    setShowMenu(false);
+  };
+
+
+  const handleViewLogo = () => {
+    let fileUrl = null;
+
+    if (formData.companyLogo) {
+      fileUrl = URL.createObjectURL(formData.companyLogo);
+    }
+    else if (existingLogo) {
+      fileUrl = existingLogo;
+    }
+
+    if (fileUrl) {
+      window.open(fileUrl, "_blank");
+    }
+
+    setShowMenu(false);
   };
 
   const linkToExistingCompany = async (companyName) => {
@@ -1192,7 +1228,7 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
                 className={errors.website ? "input-error" : ""}
                 type="text"
                 name="website"
-                maxLength={150}
+                maxLength={100}
                 placeholder="e.g., https://www.company.com"
                 value={formData.website}
                 onChange={handleChange}
@@ -1204,60 +1240,108 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
 
           <div className="aboutcompany-form-group">
             <label>Company Logo *</label>
-            <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-              <div className={`aboutcompany-file-upload-box ${errors.companyLogo ? "input-error" : ""}`}>
-                <input
-                  type="file"
-                  name="companyLogo"
-                  accept="image/png, image/jpeg, image/jpg, image/webp"
-                  id="logoUpload"
-                  onChange={handleChange}
-                  hidden
-                  disabled={isLoading}
-                />
 
-                {!formData.companyLogo && !existingLogo && (
-                  <button
-                    type="button"
-                    onClick={() => document.getElementById("logoUpload").click()}
-                    className="change-logo-btn"
+            <div style={{ flex: 1 }}>
+
+              <input
+                type="file"
+                name="companyLogo"
+                id="logoUpload"
+                hidden
+                accept="image/png,image/jpeg,image/jpg,image/webp"
+                onChange={handleChange}
+              />
+
+
+              {!formData.companyLogo && !existingLogo && (
+                <div
+                  className="upload-box"
+                  onClick={() =>
+                    document.getElementById("logoUpload").click()
+                  }
+                >
+                  Click here to upload
+                </div>
+              )}
+
+
+              {(formData.companyLogo || existingLogo) && (
+                <div className="file-card">
+
+                  <div
+                    className="aboutcompany-file-left"
+                    onClick={handleViewLogo}
                   >
-                    Change Logo
-                  </button>
-                )}
+                    <img src={fileIcon} alt="" />
 
-                {existingLogo && !formData.companyLogo && (
-                  <div style={{ padding: "15px", textAlign: "center" }}>
-                    <img src={existingLogo} alt="Current Logo" style={{ maxWidth: "100px", maxHeight: "100px" }} />
+                    <div>
+
+                      <p>
+                        {formData.companyLogo
+                          ? formData.companyLogo.name
+                          : "company-logo"}
+                      </p>
+
+                      <span>
+                        {formData.companyLogo
+                          ? `${(
+                            formData.companyLogo.size /
+                            1024 /
+                            1024
+                          ).toFixed(2)} MB`
+                          : existingLogoSize}
+                      </span>
+
+                    </div>
+                  </div>
+
+
+                  <div className="menu-wrapper">
+
                     <button
                       type="button"
-                      onClick={() => {
-                        setExistingLogo(null);
-                        setFormData(prev => ({ ...prev, companyLogo: null }))
-                      }}
-                      className="remove-logo-btn"
+                      className="dots-btn"
+                      onClick={() =>
+                        setShowMenu(!showMenu)
+                      }
                     >
-                      Remove
+                      ⋮
                     </button>
-                  </div>
-                )}
 
-                {formData.companyLogo && (
-                  <div className="aboutcompany-file-preview">
-                    <label htmlFor="logoUpload" className="aboutcompany-file-left clickable-area">
-                      <img src={fileIcon} alt="Current Logo" style={{ maxWidth: "100px", maxHeight: "100px" }} />
-                      <div>
-                        <p>{formData.companyLogo.name}</p>
-                        <span>{(formData.companyLogo.size / 1024 / 1024).toFixed(2)} MB</span>
-                        <label htmlFor="logoUpload" style={{ cursor: "pointer", color: "#007bff", display: "block" }}>
-                          Click to change
-                        </label>
+
+                    {showMenu && (
+                      <div className="file-menu">
+
+                        <button
+                          type="button"
+                          onClick={handleViewLogo}
+                        >
+                          View
+                        </button>
+
+
+                        <button
+                          type="button"
+                          onClick={handleRemoveLogo}
+                        >
+                          Remove
+                        </button>
+
                       </div>
-                    </label>
+                    )}
+
                   </div>
-                )}
-              </div>
-              {errors.companyLogo && <span className="error-msg">{errors.companyLogo}</span>}
+
+                </div>
+              )}
+
+
+              {errors.companyLogo && (
+                <span className="error-msg">
+                  {errors.companyLogo}
+                </span>
+              )}
+
             </div>
           </div>
 
@@ -1354,7 +1438,7 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
                 onClick={handleDiscard}
                 disabled={isLoading}
               >
-                Discard
+                Cancel
               </button>
             </div>
           )}

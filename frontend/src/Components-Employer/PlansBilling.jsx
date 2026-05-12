@@ -288,9 +288,9 @@ export const PlansBilling = () => {
                 setSavedCards(uniqueCards);
             }
 
-            // Available plans 
+            // Available plans
             const plansRes = await api.get('/plans/');
-            setAvailablePlans(plansRes.data);  // ✅ raw data
+            setAvailablePlans(plansRes.data);  // raw data
 
         } catch (error) {
             console.error('Error fetching billing data:', error);
@@ -427,33 +427,33 @@ export const PlansBilling = () => {
 
         console.log('billingCycle received:', billingCycle);
         const normalizedName = normalizePlanName(newPlan.name);
-        const isStarterPlan = normalizedName === 'STARTER PLAN' || newPlan.price === 0;
+        // const isStarterPlan = normalizedName === 'STARTER PLAN' || newPlan.price === 0;
 
-        if (isStarterPlan) {
-            setIsProcessing(true);
+        // if (isStarterPlan) {
+        //     setIsProcessing(true);
 
-            const activePlanData = {
-                id: newPlan.id,
-                name: 'STARTER PLAN',
-                price: 0,
-                status: 'ACTIVE',
-                planType: billingCycle === 'monthly' ? 'Monthly' :
-                    billingCycle === '6 Months' ? '6 Months' : 'Yearly',
-                nextInvoice: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', {
-                    month: 'long', day: 'numeric', year: 'numeric'
-                })
-            };
+        //     const activePlanData = {
+        //         id: newPlan.id,
+        //         name: 'STARTER PLAN',
+        //         price: 0,
+        //         status: 'ACTIVE',
+        //         planType: billingCycle === 'monthly' ? 'Monthly' :
+        //             billingCycle === '6 Months' ? '6 Months' : 'Yearly',
+        //         nextInvoice: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', {
+        //             month: 'long', day: 'numeric', year: 'numeric'
+        //         })
+        //     };
 
-            setActivePlan(activePlanData);
-            setPlanStatus('ACTIVE');
-            setPendingInvoices([]);
+        //     setActivePlan(activePlanData);
+        //     setPlanStatus('ACTIVE');
+        //     setPendingInvoices([]);
 
-            alert('STARTER PLAN activated successfully!');
-            setView('overview');
-            setIsProcessing(false);
-            await fetchRealData();
-            return;
-        }
+        //     alert('STARTER PLAN activated successfully!');
+        //     setView('overview');
+        //     setIsProcessing(false);
+        //     await fetchRealData();
+        //     return;
+        // }
 
         // const calculateNextInvoice = (cycle) => {
         //     const date = new Date();
@@ -644,13 +644,19 @@ export const PlansBilling = () => {
     const openDeletePopup = (id, e) => { if (e) e.stopPropagation(); setCardToDelete(id); };
 
     const confirmDeleteCard = async () => {
+        if (!cardToDelete) return;
         try {
+            const idToDelete = typeof cardToDelete === 'object' ? cardToDelete.id : cardToDelete;
             await api.delete(`/payment-methods/${cardToDelete}/`);
+            setSavedCards(prev => prev.filter(card => card.id !== idToDelete));
             await fetchRealData();
+            alert('Card removed successfully');
         } catch (error) {
             console.error('Failed to delete card:', error);
+            alert('Failed to remove card');
+        } finally {
+            setCardToDelete(null);
         }
-        setCardToDelete(null);
     };
 
     const handleMakeDefault = async (id) => {
@@ -676,6 +682,23 @@ export const PlansBilling = () => {
         );
     }
 
+    const renderDeleteModal = () => {
+        if (!cardToDelete) return null;
+
+        return (
+            <div className="PlansBilling-modal-overlay">
+                <div className="PlansBilling-modal-content">
+                    <h2 className="PlansBilling-modal-title">DELETE CARD?</h2>
+                    <p className="PlansBilling-modal-text">Are you sure you want to remove this payment method? This action cannot be undone.</p>
+                    <div className="PlansBilling-modal-actions">
+                        <button className="PlansBilling-modal-btn-grey" onClick={() => setCardToDelete(null)}>Cancel</button>
+                        <button className="PlansBilling-modal-btn-confirm" style={{ backgroundColor: '#ff4757' }} onClick={confirmDeleteCard}>Delete Card</button>
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
     if (view === 'payment') {
         return (
             <div className="PlansBilling-container PlansBilling-animate-view">
@@ -694,9 +717,10 @@ export const PlansBilling = () => {
                     onProcessPayment={handleProcessPayment}
                     savedCards={savedCards}
                     onMakeDefault={handleMakeDefault}
-                    onDelete={openDeletePopup}
+                    onDelete={(id) => setCardToDelete(id)}
                     cardOnlyMode={isCardOnly}
                 />
+                {cardToDelete && renderDeleteModal()}
             </div>
         );
     }
@@ -785,7 +809,7 @@ export const PlansBilling = () => {
                                 <div className="Billing-Payment-actions">
                                     <button className="Billing-btn-change" onClick={handleAddCardOnly}>Change Card</button>
                                     <button className="Billing-btn-delete-icon" onClick={(e) => openDeletePopup(defaultCard.id, e)}>
-                                        <img src={DeleteIcon} alt="Delete" />
+                                        <img src={DeleteIcon} alt="Delete" title='Remove' />
                                     </button>
                                 </div>
                             </div>

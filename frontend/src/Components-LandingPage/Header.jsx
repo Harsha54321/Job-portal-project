@@ -94,7 +94,7 @@ export const Header = () => {
   return (
     <header className="header">
       <div className="logo-container">
-        <Link to="/Job-portal/jobseeker" className="logo">
+        <Link to="/" className="logo">
           <span className="logo-text">Job portal</span>
         </Link>
         {!isLoggedIn && (

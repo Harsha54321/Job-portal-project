@@ -1188,4 +1188,51 @@ class AJob(models.Model):
  
     def __str__(self):
         return self.title
-    
+
+
+# ============================================================
+# ADD THESE TO THE BOTTOM OF YOUR EXISTING models.py
+# Remove the old: Role, Module, Permission, Employer models
+# ============================================================
+
+# Role Management
+
+class Role(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+    description = models.TextField(blank=True)
+
+    # DO NOT store user_count as a field — compute it live from User table
+    # user_count = models.IntegerField(default=0)  ← REMOVED
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.name
+
+
+class Module(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+
+    def __str__(self):
+        return self.name
+
+
+class Permission(models.Model):
+    role = models.ForeignKey(Role, on_delete=models.CASCADE, related_name='permissions')
+    module = models.ForeignKey(Module, on_delete=models.CASCADE, related_name='permissions')
+
+    read   = models.BooleanField(default=False)
+    create = models.BooleanField(default=False)
+    update = models.BooleanField(default=False)
+    delete = models.BooleanField(default=False)
+
+    class Meta:
+        unique_together = ['role', 'module']  # one permission row per role+module combo
+
+    def __str__(self):
+        return f"{self.role.name} → {self.module.name}"
+
+
+# NOTE: Do NOT create a separate Employer model.
+# Use the existing User + EmployerProfile + CompanyProfile + Subscription models.
+# The employer list in RoleManagement reads from those real tables.

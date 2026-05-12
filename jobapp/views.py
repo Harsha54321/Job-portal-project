@@ -213,7 +213,7 @@ class JobSeekerProfileView(generics.RetrieveUpdateAPIView):
                 for key, value in json_data.items():
                     combined_data[key] = value
 
-                # ✅ IMPORTANT: Check for delete_profile_photo flag in FormData
+                # IMPORTANT: Check for delete_profile_photo flag in FormData
                 if 'delete_profile_photo' in request.data:
                     combined_data['delete_profile_photo'] = request.data.get('delete_profile_photo') == 'true'
                     print(f"📸 Found delete_profile_photo flag: {combined_data['delete_profile_photo']}")
@@ -419,21 +419,17 @@ class CreateJobPreviewView(generics.CreateAPIView):
     def perform_create(self, serializer):
         user = self.request.user
  
-        # Only employer allowed
         if user.user_type != "employer":
             raise PermissionDenied("Only employers can post jobs")
  
-        # Employer profile check
         if not hasattr(user, "employer_profile"):
             raise PermissionDenied("Employer profile not found")
  
         employer_profile = user.employer_profile
  
-        # Company linked?
         if not employer_profile.company:
             raise PermissionDenied("You must link a company first")
  
-        # Company verified?
         verification = CompanyVerification.objects.filter(
             employer=user,
             status="Verified"
@@ -510,8 +506,6 @@ class PublishJobView(APIView):
     permission_classes = [IsAuthenticated]
  
     def patch(self, request, pk):
- 
-        # Only employer allowed
         if request.user.user_type != "employer":
             raise PermissionDenied("Only employers can submit jobs")
  
@@ -636,7 +630,6 @@ class JobSeekerJobListView(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
  
     def get_queryset(self):
-        # ONLY approved jobs visible to jobseekers
         return PostAJob.objects.filter(
             is_published=True,
             approval_status=PostAJob.ApprovalStatus.APPROVED
@@ -673,7 +666,7 @@ class JobSeekerJobListView(generics.ListAPIView):
 class JobSeekerJobDetailView(generics.RetrieveAPIView):
     serializer_class = PostAJobSerializer
     permission_classes = [IsAuthenticated]
- 
+   
     def get_queryset(self):
         # ONLY approved + published jobs accessible
         return PostAJob.objects.filter(
@@ -2103,10 +2096,33 @@ class CreateOrderView(APIView):
         }
  
 class CurrentSubscriptionView(APIView):
+
     permission_classes = [IsAuthenticated]
  
     def get(self, request):
-        sub = Subscription.objects.filter(user=request.user, status='active').first()
+
+        # first sees active after sees cancelled
+
+        sub = Subscription.objects.filter(
+
+            user=request.user,
+
+            status='active'
+
+        ).order_by('-start_date').first()
+
+        # shows active or cancelled
+
+        if not sub:
+
+            sub = Subscription.objects.filter(
+
+                user=request.user,
+
+                status='cancelled'
+
+            ).order_by('-start_date').first()
+
         return Response(SubscriptionSerializer(sub).data if sub else {})
  
  
@@ -3087,13 +3103,17 @@ class UserStatsView(APIView):
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from .models import AJob
- 
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from .models import AJob
+
 class AJobListView(APIView):
- 
+    permission_classes = [IsAdminUserType]
     def get(self, request):
         jobs = AJob.objects.all().order_by('-created_at')
  
         job_data = []
+        
         for job in jobs:
             job_data.append({
                 "title": job.title,
@@ -3102,9 +3122,8 @@ class AJobListView(APIView):
                 "waiting": 20,
                 "total": 200
             })
- 
-        return Response(job_data)
-    
+        
+        return Response(job_data, status=status.HTTP_200_OK)
 # job monitoring
 class AdminJobListView(APIView):
     """Admin view to get all jobs with approval & verification status"""
@@ -3379,4 +3398,664 @@ class JobHighlightLimitView(APIView):
             "total": total_limit,
             "used": used_highlights,
             "remaining": max(0, remaining)
-        })
+        })      
+    
+class AdminDashboardStats(APIView):
+    permission_classes = [IsAdminUserType]
+ 
+    def get(self, request):
+        data = {
+            "total_jobs": PostAJob.objects.count(),
+            "total_companies": CompanyProfile.objects.count(),
+            "total_employers": User.objects.filter(user_type='employer').count(),
+            "total_jobseekers": User.objects.filter(user_type='jobseeker').count(),
+            "total_applications": JobApplication.objects.count(),
+            "pending_verifications": CompanyVerification.objects.filter(status='Pending').count(),
+        }
+        return Response(data)
+
+# ============ ADMIN DASHBOARD WIDGETS ============
+
+class AdminDashboardOverviewView(APIView):
+    """
+    Powers two widgets on the Admin Dashboard:
+    1. Top Experience Levels  — applicants bucketed by years of experience
+    2. Total Overview         — donut chart of application pipeline stages
+    """
+    permission_classes = [IsAdminUserType]
+
+    def get(self, request):
+
+        # ── 1. TOTAL OVERVIEW (donut chart) ──────────────────────────────────
+        # Map your JobApplication.Status values to the frontend labels
+        from django.db.models import Count
+
+        application_counts = JobApplication.objects.aggregate(
+            applicants   = Count('id', filter=Q(status=JobApplication.Status.APPLIED)),
+            recommended  = Count('id', filter=Q(status=JobApplication.Status.RECRUITER_REVIEW)),
+            shortlisted  = Count('id', filter=Q(status=JobApplication.Status.SHORTLISTED)),
+            interview    = Count('id', filter=Q(status=JobApplication.Status.INTERVIEW_CALLED)),
+            rejected     = Count('id', filter=Q(status=JobApplication.Status.REJECTED)),
+            hired        = Count('id', filter=Q(status=JobApplication.Status.HIRED)),
+        )
+
+        total_candidates = sum(application_counts.values())
+
+        total_overview = {
+            "total_candidates": total_candidates,
+            "recommended": application_counts["recommended"],
+            "shortlisted": application_counts["shortlisted"],
+            "applicants":  application_counts["applicants"],
+            "interview":   application_counts["interview"],
+            "rejected":    application_counts["rejected"],
+            "hired":       application_counts["hired"],
+        }
+
+        # ── 2. TOP EXPERIENCE LEVELS (bar chart) ─────────────────────────────
+        # Uses total_experience_years on JobSeekerProfile
+        # Buckets:  Entry (0–1), Junior (1–3), Mid (3–6), Senior (6+)
+
+        from .models import JobSeekerProfile
+
+        profiles = JobSeekerProfile.objects.filter(
+            total_experience_years__isnull=False
+        ).values_list('total_experience_years', flat=True)
+
+        entry  = sum(1 for y in profiles if float(y) <= 1)
+        junior = sum(1 for y in profiles if 1 < float(y) <= 3)
+        mid    = sum(1 for y in profiles if 3 < float(y) <= 6)
+        senior = sum(1 for y in profiles if float(y) > 6)
+
+        max_count = max(entry, junior, mid, senior, 1)  # avoid div-by-zero
+
+        experience_levels = [
+            {
+                "label":      "Entry Level",
+                "count":      entry,
+                "percentage": round((entry / max_count) * 100),
+            },
+            {
+                "label":      "Junior Level",
+                "count":      junior,
+                "percentage": round((junior / max_count) * 100),
+            },
+            {
+                "label":      "Mid Level",
+                "count":      mid,
+                "percentage": round((mid / max_count) * 100),
+            },
+            {
+                "label":      "Senior Level",
+                "count":      senior,
+                "percentage": round((senior / max_count) * 100),
+            },
+        ]
+
+        return Response({
+            "experience_levels": experience_levels,
+            "total_overview":    total_overview,
+        }, status=status.HTTP_200_OK)
+    
+ 
+class JobApplicationReportView(APIView):
+    #permission_classes = [IsAuthenticated, IsAdminUserType]
+ 
+    def get(self, request):
+        now = timezone.now()
+        last_30_days = now - timedelta(days=30)
+        one_year_ago = now - timedelta(days=365)
+ 
+ 
+ 
+#for stats
+ 
+ 
+        # LIVE JOBS
+        live_now = PostAJob.objects.filter(
+            is_published=True
+        ).exclude(
+            job_status=PostAJob.JobStatus.HIRING_DONE
+        ).count()
+ 
+        live_ly = PostAJob.objects.filter(
+            is_published=True,
+            created_at__lte=one_year_ago
+        ).exclude(
+            job_status=PostAJob.JobStatus.HIRING_DONE
+        ).count()
+ 
+ 
+        # CLOSED JOBS (using created_at)
+        closed_30d = PostAJob.objects.filter(
+            job_status=PostAJob.JobStatus.HIRING_DONE,
+            created_at__gte=last_30_days
+        ).count()
+ 
+        closed_30d_ly = PostAJob.objects.filter(
+            job_status=PostAJob.JobStatus.HIRING_DONE,
+            created_at__gte=(last_30_days - timedelta(days=365)),
+            created_at__lte=(now - timedelta(days=365))
+        ).count()
+ 
+ 
+        # APPLICATIONS
+        apps_now = JobApplication.objects.count()
+ 
+        apps_ly = JobApplication.objects.filter(
+            applied_date__lte=one_year_ago
+        ).count()
+ 
+ 
+        # HELPERS INLINE
+        def pct_change(current, previous):
+            if previous == 0:
+                return None
+            return round((current - previous) / previous * 100, 1)
+ 
+        '''def trend(pct):
+            if pct is None or pct == 0:
+                return "neutral"
+            return "up" if pct > 0 else "down"'''
+ 
+        def display(pct):
+            if pct is None:
+                return "N/A"
+            if pct > 0:
+                return f"+{pct}% vs LY"
+            if pct < 0:
+                return f"{pct}% vs LY"
+            return "Neutral"
+ 
+ 
+        # CALCULATE
+        live_pct = pct_change(live_now, live_ly)
+        closed_pct = pct_change(closed_30d, closed_30d_ly)
+        apps_pct = pct_change(apps_now, apps_ly)
+ 
+ 
+# for offer_conversion_rate
+ 
+        offered = JobApplication.objects.filter(
+            status__in=["offered", "hired"]
+        ).count()
+ 
+        total_apps = JobApplication.objects.count()
+ 
+        rate = round((offered / total_apps) * 100, 1) if total_apps else 0
+ 
+        # LABEL LOGIC
+        if rate >= 50:
+            label = "Very High"
+        elif rate >= 25 :
+            label = "High"
+        elif rate >= 10:
+            label = "Moderate"
+        else:
+            label = "Low"
+ 
+ 
+#table_data need to confirm
+ 
+       
+ 
+ #  FLAGGED APPLICATIONS TABLE
+ 
+        flags = ApplicationFlag.objects.select_related(
+            "application__user",
+            "application__job"
+        ).order_by("-created_at")
+ 
+        table_data = [
+    {
+        "flagId": f.id,  
+        "id": f"#USR-{f.application.user.id}" if f.application.user else "#USR-0000",
+        "jobId": f"#JOB-{f.application.job.id}" if f.application.job else "#JOB-0000",
+        "reason": f.flag_reason.replace("_", " ").upper(),
+        "method": f.detected_method,
+        "risk": f.risk_level.upper(),
+        "isRead": f.is_reviewed
+    }
+    for f in flags
+]
+ #  NEW FLAGS COUNT
+       
+        new_flags = ApplicationFlag.objects.filter(
+            is_reviewed=False
+        ).count()
+ 
+ 
+ 
+#catogoeries
+       
+ 
+        SUPPORTED_ICONS =  {
+                "fullstack": "Fullstack Dev",
+                "fullstack dev": "Fullstack Dev",
+                "fullstack developer": "Fullstack Dev",
+ 
+                "cloud architect": "Cloud Architect",
+                "cloud_architect": "Cloud Architect",
+ 
+                "product design": "Product Design",
+                "product_design": "Product Design",
+            }
+ 
+        categories_qs = PostAJob.objects.values("job_category").annotate(
+            count=Count("id")
+        )
+ 
+        total_jobs = PostAJob.objects.count()
+ 
+        categories_data = []
+ 
+        for index, item in enumerate(categories_qs, start=1):
+ 
+            raw_name = str(item["job_category"] or "").strip()
+ 
+            normalized_key = raw_name.lower()
+ 
+            icon_key = SUPPORTED_ICONS.get(
+                normalized_key,
+                "Other"
+            )
+ 
+            percentage = (
+                round((item["count"] / total_jobs) * 100)
+                if total_jobs else 0
+            )
+ 
+            categories_data.append({
+                "id": index,
+                "name": icon_key,          
+                "other_name": raw_name,   # safe for debug  
+                "percentage": percentage,
+            })
+ 
+ 
+       
+ # FUNNEL DATA
+       
+ 
+        applied_statuses = {
+            "applied",
+            "resume_screening",
+            "recruiter_review"
+        }
+ 
+        funnel_buckets = {}
+ 
+        # only fetch required fields
+        applications_for_funnel = JobApplication.objects.values(
+            "status",
+            "job__department"
+        )
+ 
+       
+       
+ 
+        for app in applications_for_funnel:
+ 
+            department_raw = app.get("job__department")
+ 
+            # if department stored as list
+            if isinstance(department_raw, list) and department_raw:
+                primary_department = department_raw[0]
+            else:
+                primary_department = department_raw
+ 
+            # fallback
+            department_display = (
+                str(primary_department).strip()
+                if primary_department
+                else "Other"
+            )
+ 
+            # frontend style
+            department_key = department_display.upper()
+ 
+            # create bucket if not exists
+            if department_key not in funnel_buckets:
+                funnel_buckets[department_key] = {
+                    "department": department_key,
+                    "departmentDisplay": department_display,
+                    "total": 0,
+                    "applied": 0,
+                    "interviewed": 0,
+                    "offered": 0,
+                }
+ 
+            bucket = funnel_buckets[department_key]
+ 
+            # total applications
+            bucket["total"] += 1
+ 
+            status_value = app.get("status")
+ 
+           
+ 
+            if status_value in applied_statuses:
+                bucket["applied"] += 1
+ 
+ 
+            if status_value == "interview_called":
+                bucket["interviewed"] += 1
+ 
+           
+ 
+            if status_value in {"offered", "hired"}:
+                bucket["offered"] += 1
+ 
+ 
+ 
+ 
+        funnel_data = []
+ 
+        for bucket in sorted(
+            funnel_buckets.values(),
+            key=lambda item: (-item["total"], item["department"])
+        ):
+ 
+            total = bucket["total"]
+ 
+            if not total:
+                continue
+ 
+            funnel_data.append({
+                "department": bucket["department"],
+                #"departmentDisplay": bucket["departmentDisplay"],  # no needed for integration
+                "totalApps": f"{total:,}",
+                #"totalAppsCount": total, # no needed for integration
+                "appliedPct": round(
+                    (bucket["applied"] / total) * 100
+                ),
+                "interviewedPct": round(
+                    (bucket["interviewed"] / total) * 100
+                ),
+                "offeredPct": round(
+                    (bucket["offered"] / total) * 100
+                ),
+            })
+ 
+ 
+        return Response({
+    "stats": [
+        {
+            "label": "Live Job Postings",
+            "value": f"{live_now:,}",
+            "change": display(live_pct)
+        },
+        {
+            "label": "Closed (Last 30d)",
+            "value": f"{closed_30d:,}",
+            "change": display(closed_pct)
+        },
+        {
+            "label": "Applications Submitted",
+            "value": f"{apps_now:,}",
+            "change": display(apps_pct)
+        }
+    ],
+    "offer_conversion_rate": {
+        "value": rate,
+        "label": label
+    },
+    "tableData": table_data,
+    "newFlags": new_flags,
+    "categories": categories_data,
+    "funnelData": funnel_data
+   
+    })
+           
+ 
+ # for changing is read
+ 
+ 
+class ApplicationFlagReadStatusView(APIView):
+ 
+    def patch(self, request, flag_id):
+ 
+        try:
+            flag = ApplicationFlag.objects.get(id=flag_id)
+ 
+        except ApplicationFlag.DoesNotExist:
+            return Response(
+                {
+                    "success": False,
+                    "message": "Flag not found"
+                },
+                status=status.HTTP_404_NOT_FOUND
+            )
+ 
+       
+        if flag.is_reviewed:
+            return Response(
+                {
+                    "success": False,
+                    "message": "Flag already marked as read",
+                    "data": {
+                        "flagId": flag.id,
+                        "isRead": True
+                    }
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+ 
+       
+        flag.is_reviewed = True
+        flag.save(update_fields=["is_reviewed"])
+ 
+        return Response(
+            {
+                "success": True,
+                "message": "Flag marked as read successfully",
+                "data": {
+                    "flagId": flag.id,
+                    "isRead": True
+                }
+            },
+            status=status.HTTP_200_OK
+        )
+
+
+# ============================================================
+# ADD THESE TO THE BOTTOM OF YOUR EXISTING views.py
+# Also add Role, Module, Permission to your models import line
+# Also add RoleSerializer, PermissionSerializer, EmployerRoleSerializer
+# to your serializers import line
+# ============================================================
+
+from .models import Role, Module, Permission
+from .serializers import RoleSerializer, PermissionSerializer, EmployerRoleSerializer
+
+
+# ── GET all roles (with live user_count + permissions) ──────────────────────
+class RoleListView(APIView):
+    permission_classes = [IsAdminUserType]
+
+    def get(self, request):
+        roles = Role.objects.prefetch_related('permissions__module').all()
+        serializer = RoleSerializer(roles, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+# ── CREATE a new role (also auto-creates permission rows for all modules) ────
+class RoleCreateView(APIView):
+    permission_classes = [IsAdminUserType]
+
+    def post(self, request):
+        name        = request.data.get('name', '').strip()
+        description = request.data.get('description', '').strip()
+
+        if not name:
+            return Response(
+                {"error": "Role name is required."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if Role.objects.filter(name__iexact=name).exists():
+            return Response(
+                {"error": f"Role '{name}' already exists."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        role = Role.objects.create(name=name, description=description)
+
+        # Auto-create a default permission row (all False) for every module
+        modules = Module.objects.all()
+        for module in modules:
+            Permission.objects.create(
+                role=role,
+                module=module,
+                read=False, create=False, update=False, delete=False
+            )
+
+        serializer = RoleSerializer(role)
+        return Response(
+            {"message": f"Role '{name}' created successfully.", "role": serializer.data},
+            status=status.HTTP_201_CREATED
+        )
+
+
+# ── DELETE a role ────────────────────────────────────────────────────────────
+class RoleDeleteView(APIView):
+    permission_classes = [IsAdminUserType]
+
+    def delete(self, request, role_id):
+        role = get_object_or_404(Role, id=role_id)
+
+        # Prevent deleting built-in roles
+        if role.name.lower() in ['candidate', 'employer']:
+            return Response(
+                {"error": "Built-in roles cannot be deleted."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        role.delete()
+        return Response(
+            {"message": f"Role deleted successfully."},
+            status=status.HTTP_200_OK
+        )
+
+
+# ── GET permissions for a specific role ──────────────────────────────────────
+class RolePermissionView(APIView):
+    permission_classes = [IsAdminUserType]
+
+    def get(self, request, role_id):
+        role = get_object_or_404(Role, id=role_id)
+        permissions = Permission.objects.filter(role=role).select_related('module')
+        serializer = PermissionSerializer(permissions, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+# ── UPDATE a single permission row (toggle read/create/update/delete) ────────
+class UpdatePermissionView(APIView):
+    permission_classes = [IsAdminUserType]
+
+    def patch(self, request, permission_id):
+        # get_object_or_404 — safe, no DoesNotExist crash
+        permission = get_object_or_404(Permission, id=permission_id)
+
+        serializer = PermissionSerializer(
+            permission,
+            data=request.data,
+            partial=True   # allows sending only the fields you want to change
+        )
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response(
+                {"message": "Permission updated successfully.", "permission": serializer.data},
+                status=status.HTTP_200_OK
+            )
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+# ── BULK UPDATE all permissions for a role (from the Save button) ────────────
+class BulkUpdatePermissionsView(APIView):
+    """
+    Frontend sends the entire permission table state on 'Edit Permissions' click.
+
+    Expected body:
+    {
+        "permissions": [
+            { "id": 1, "read": true, "create": false, "update": true, "delete": false },
+            { "id": 2, "read": false, "create": true, "update": false, "delete": false },
+            ...
+        ]
+    }
+    """
+    permission_classes = [IsAdminUserType]
+
+    def patch(self, request, role_id):
+        get_object_or_404(Role, id=role_id)  # confirm role exists
+
+        permissions_data = request.data.get('permissions', [])
+
+        if not permissions_data:
+            return Response(
+                {"error": "No permissions data provided."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        updated = []
+        errors  = []
+
+        for item in permissions_data:
+            perm_id = item.get('id')
+            perm = Permission.objects.filter(id=perm_id, role_id=role_id).first()
+
+            if not perm:
+                errors.append(f"Permission id={perm_id} not found for this role.")
+                continue
+
+            perm.read   = item.get('read',   perm.read)
+            perm.create = item.get('create', perm.create)
+            perm.update = item.get('update', perm.update)
+            perm.delete = item.get('delete', perm.delete)
+            perm.save()
+            updated.append(perm_id)
+
+        return Response({
+            "message": f"{len(updated)} permissions updated.",
+            "updated": updated,
+            "errors":  errors
+        }, status=status.HTTP_200_OK)
+
+
+# ── GET employer list for RoleManagement (reads REAL data) ───────────────────
+class EmployerRoleListView(APIView):
+    """
+    Returns real employer users with their company, subscription status,
+    and join date. Used by the Employers table inside Role Management.
+    """
+    permission_classes = [IsAdminUserType]
+
+    def get(self, request):
+        employers = User.objects.filter(
+            user_type='employer'
+        ).select_related(
+            'employer_profile__company'
+        ).prefetch_related(
+            'subscription_set'
+        ).order_by('-date_joined')
+
+        serializer = EmployerRoleSerializer(employers, many=True)
+        return Response({
+            "total": employers.count(),
+            "employers": serializer.data
+        }, status=status.HTTP_200_OK)
+
+
+# ── DELETE an employer user (from the trash button) ──────────────────────────
+class EmployerRoleDeleteView(APIView):
+    permission_classes = [IsAdminUserType]
+
+    def delete(self, request, pk):
+        employer = get_object_or_404(User, id=pk, user_type='employer')
+        employer.delete()
+        return Response(
+            {"message": "Employer deleted successfully."},
+            status=status.HTTP_200_OK
+        )

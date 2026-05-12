@@ -69,7 +69,18 @@
     font-size: 14px;
     color: #666;
     display: flex;
-    gap: 4px;
+    align-items: flex-start;   /* important */
+    gap: 6px;
+    line-height: 1.4;
+    word-break: break-word;
+}
+
+.post-job-locationicon {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;       /* icon shrink avvakudadhu */
+    margin-top: 2px;      /* text first line ki align */
+    object-fit: contain;
 }
 
 .postedjobs-actions {

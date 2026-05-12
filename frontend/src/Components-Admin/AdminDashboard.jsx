@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import "./AdminDashboard.css"
 import Dashboard from '../assets/Employer/DashboardIC.png'
 import DashboardInact from '../assets/Employer/Dashboard_Inactive.png'
@@ -26,55 +27,263 @@ import TotalCompanies from '../assets/AdminAssets/TotalCompanies.png'
 import ViewMore from '../assets/AdminAssets/ViewMore.png'
 import { TotalOverview } from './TotalOverview'
 import { AdminExperience } from './AdminExperience'
-import { Calendar } from './Calender'
 import { useJobs } from '../JobContext'
 import { UserManagement } from './UserManagement'
 import { ActivityMonitor } from './ActivityMonitor'
 import { AdminReports } from './AdminReports'
 import { JobMonitoring } from './JobMonitoring'
-// import { RolePermission } from './RolePermission'
-// import { RoleManagement } from './RoleManagement'
 import { Membership } from './Membership'
 import api from '../api/axios'
-
 
 export const AdminDashboard = () => {
     const { jobs, Alluser, currentEmployer } = useJobs();
     const [activetab, setActiveTab] = useState('Dashboard');
-    // ADDED:
     const [totalCompanies, setTotalCompanies] = useState(0);
     const [totalEmployers, setTotalEmployers] = useState(0);
     const [overviewLoading, setOverviewLoading] = useState(true);
+    const [dashboardData, setDashboardData] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [isAuthorized, setIsAuthorized] = useState(null);
+    const [authError, setAuthError] = useState(null);
+    const navigate = useNavigate()
+
+    const [totalStats, setTotalStats] = useState({
+        total_jobs: 0,
+        total_companies: 0,
+        total_employers: 0,
+        total_jobseekers: 0,
+    });
+    const [statsLoading, setStatsLoading] = useState(true);
+    const [statsError, setStatsError] = useState(null);
+
+    const [jobAds, setJobAds] = useState([]);
+    const [jobAdsLoading, setJobAdsLoading] = useState(true);
+    const [jobAdsError, setJobAdsError] = useState(null);
+
+    const [experienceData, setExperienceData] = useState(null);
+    const [totalOverviewData, setTotalOverviewData] = useState(null);
+    const [overviewError, setOverviewError] = useState(null);
+
+useEffect(() => {
+    const checkAuthorization = async () => {
+        try {
+            const token = localStorage.getItem('token');
+            const accessToken = localStorage.getItem('access_token');
+            const userData = localStorage.getItem('user');
+            const userType = localStorage.getItem('user_type');
+            
+            const authToken = token || accessToken;
+            
+            console.log("Checking authorization...");
+            console.log("Token exists:", !!authToken);
+            console.log("User type from storage:", userType);
+            
+            if (!authToken) {
+                setIsAuthorized(false);
+                setAuthError("No authentication token found. Please login.");
+                setLoading(false);
+                return;
+            }
+
+            // Check if user is admin from stored data
+            let isAdmin = false;
+            
+            if (userData) {
+                try {
+                    const parsedUser = JSON.parse(userData);
+                    console.log("User data from storage:", parsedUser);
+                    
+                    // Check for admin status
+                    if (parsedUser.user_type === 'admin' || 
+                        parsedUser.role === 'admin' || 
+                        parsedUser.is_admin === true ||
+                        parsedUser.isAdmin === true) {
+                        isAdmin = true;
+                    }
+                } catch (e) {
+                    console.error("Error parsing user data:", e);
+                }
+            }
+            
+            // Also check user_type directly
+            if (userType === 'admin') {
+                isAdmin = true;
+            }
+            
+            if (isAdmin) {
+                setIsAuthorized(true);
+                setLoading(false);
+                return;
+            }
+
+            setIsAuthorized(false);
+            setAuthError("You are not authorized to access the Admin Dashboard. Admin privileges required.");
+            setLoading(false);
+            
+        } catch (error) {
+            console.error("Authorization check failed:", error);
+            setIsAuthorized(false);
+            setAuthError("Unable to verify authorization. Please contact support.");
+            setLoading(false);
+        }
+    };
+
+    checkAuthorization();
+}, []);
 
     useEffect(() => {
-        const fetchOverviewCounts = async () => {
+        const fetchOverview = async () => {
+            if (!isAuthorized) return;
+            
             setOverviewLoading(true);
+            setOverviewError(null);
             try {
-                const companyRes = await api.get('company/');
-                setTotalCompanies(companyRes.data.length);
-
-                const usersRes = await api.get('jobseekers/');
-                const employers = usersRes.data.filter(
-                    (u) => u.user_type === 'employer' || u.user?.user_type === 'employer'
-                );
-                setTotalEmployers(employers.length);
+                const response = await api.get('admin/dashboard/overview/');
+                setExperienceData(response.data.experience_levels);
+                setTotalOverviewData(response.data.total_overview);
+                console.log("dashboard overview:", response.data)
             } catch (error) {
-                console.error("Overview counts fetch error:", error);
+                console.log("Failed to fetch overview data:", error);
+                setOverviewError("Could not load overview data");
+                
+                if (error.response?.status === 401 || error.response?.status === 403) {
+                    setIsAuthorized(false);
+                    setAuthError("Session expired. Please login again.");
+                }
             } finally {
                 setOverviewLoading(false);
             }
         };
-        fetchOverviewCounts();
-    }, []);
+        
+        if (isAuthorized) {
+            fetchOverview();
+        }
+    }, [isAuthorized]);
+
+    useEffect(() => {
+        const fetchJobAds = async () => {
+            if (!isAuthorized) return;
+            
+            setJobAdsLoading(true);
+            setJobAdsError(null);
+            try {
+                const response = await api.get('admin/jobs/ajoblist/');
+                setJobAds(response.data);
+                console.log("admin jobs", response.data)
+            } catch (error) {
+                console.error("Failed to fetch job ads:", error);
+                setJobAdsError("Could not load job ads");
+                
+                if (error.response?.status === 401 || error.response?.status === 403) {
+                    setIsAuthorized(false);
+                    setAuthError("Session expired. Please login again.");
+                }
+            } finally {
+                setJobAdsLoading(false);
+            }
+        };
+        
+        if (isAuthorized) {
+            fetchJobAds();
+        }
+    }, [isAuthorized]);
+
+    useEffect(() => {
+        const fetchDashboard = async () => {
+            if (!isAuthorized) return;
+            
+            setLoading(true); 
+            try {
+                const res = await api.get('admin/dashboard/');
+                setDashboardData(res.data);
+                console.log("Dashboard data:", res.data)
+                
+                if (res.data) {
+                    setTotalStats({
+                        total_jobs: res.data.total_jobs || 0,
+                        total_companies: res.data.total_companies || 0,
+                        total_employers: res.data.total_employers || 0,
+                        total_jobseekers: res.data.total_jobseekers || 0,
+                    });
+                    setTotalEmployers(res.data.total_employers || 0);
+                    setTotalCompanies(res.data.total_companies || 0);
+                }
+            } catch (error) {
+                console.error("Dashboard data error", error);
+                
+                if (error.response?.status === 401 || error.response?.status === 403) {
+                    setIsAuthorized(false);
+                    setAuthError("Session expired. Please login again.");
+                }
+            } finally {
+                setLoading(false);
+            }
+        };
+        
+        if (isAuthorized) {
+            fetchDashboard();
+        }
+    }, [isAuthorized]);
+
+    if (loading || isAuthorized === null) {
+        return (
+            <>
+                <EHeader />
+                <div className='loading-container'>
+                    <div className='loading-card'>
+                        <div className='spinner'></div>
+                        <p className='loading-text'>Verifying credentials...</p>
+                    </div>
+                </div>
+            </>
+        );
+    }
+
+    if (!isAuthorized) {
+        return (
+            <>
+                <EHeader />
+                <div className='unauthorized-container'>
+                    <div className='unauthorized-card unauthorized-card-premium'>
+                        <div className='unauthorized-icon'>
+                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M12 8V12M12 16H12.01M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2Z" stroke="#d32f2f" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                <path d="M12 12V16" stroke="#d32f2f" strokeWidth="2" strokeLinecap="round"/>
+                            </svg>
+                        </div>
+                        <h2 className='unauthorized-title'>Access Denied</h2>
+                        <p className='unauthorized-message'>
+                            {authError || "You are not authorized to access the Admin Dashboard. Admin privileges required."}
+                        </p>
+                        <div className='unauthorized-actions'>
+                    
+                            <button 
+                                onClick={() => {
+                                    localStorage.removeItem('token');
+                                    localStorage.removeItem('access_token');
+                                    localStorage.removeItem('refresh');
+                                    localStorage.removeItem('user');
+                                    localStorage.removeItem('userData');
+                                    navigate('/Job-portal/Admin/login')
+                                }} 
+                                className='unauthorized-btn unauthorized-btn-primary'
+                            >
+                                Login Again
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </>
+        );
+    }
 
     return (
         <>
             <EHeader />
             <div className='AdminContainer'>
                 <div className='Admin-Sidebar'>
-                    <h2 style={{ textAlign: "center", marginTop: "35px" }}>Adminstrator</h2>
+                    <h2 style={{ textAlign: "center", marginTop: "35px" }}>Administrator</h2>
                     <div className='Admin-Sidebar-list'>
-
                         <div onClick={() => setActiveTab('Dashboard')} className={activetab === 'Dashboard' ? "Admin-Active" : 'Admin-Navbar'}>
                             <div className='Admin-Navbox'>
                                 {activetab === 'Dashboard' ? <img src={Dashboard} width={15} height={15} alt="dashboard" />
@@ -110,7 +319,6 @@ export const AdminDashboard = () => {
                                 <div className='Enav-item'>Role Management</div>
                             </div>
                         </div>
-
                         <div onClick={() => setActiveTab('Membership')} className={activetab === "Membership" ? "Admin-Active" : 'Admin-Navbar'}>
                             <div className='Admin-Navbox'>
                                 {activetab === "Membership" ? <img src={MembershipsAct} width={15} height={15} alt="dashboard" />
@@ -140,14 +348,13 @@ export const AdminDashboard = () => {
                             </div>
                         </div>
                     </div>
-
                 </div>
                 <div className='Admin-MainSec'>
                     {activetab === 'Dashboard' && (
                         <div>
                             <div className='Admin-Welcome-Container'>
-                                <p className='Admin-Welcome-Note' >Welcome Back, Admin</p>
-                                <p className='Admin-Welcome-para'>Your team’s success start here. lets make progress together!</p>
+                                <p className='Admin-Welcome-Note'>Welcome Back, Admin</p>
+                                <p className='Admin-Welcome-para'>Your team's success start here. lets make progress together!</p>
                             </div>
 
                             <div className='Admin-Overview'>
@@ -155,7 +362,9 @@ export const AdminDashboard = () => {
                                     <div className='Admin-Overview-Data'>
                                         <div style={{ display: "flex", alignItems: "center", gap: "10px", justifyContent: "center" }}>
                                             <img src={TotalJobs} width={25} height={25} alt="Jobs" />
-                                            <p style={{ fontSize: "24px", fontWeight: "700", color: "#484848" }}>{jobs.length}</p>
+                                            <p style={{ fontSize: "24px", fontWeight: "700", color: "#484848" }}>
+                                                {dashboardData?.total_jobs || 0}
+                                            </p>
                                         </div>
                                         <div>
                                             <p style={{ fontWeight: "bold", color: "#484848" }}>All Jobs</p>
@@ -165,14 +374,13 @@ export const AdminDashboard = () => {
                                         <p style={{ fontSize: "14px", fontWeight: "500" }}>View more</p>
                                         <img src={ViewMore} width={30} height={30} alt="Viewmore" />
                                     </div>
-
                                 </div>
                                 <div className='Admin-Overview-Container'>
                                     <div className='Admin-Overview-Data'>
                                         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                                             <img src={TotalCompanies} width={25} height={25} alt="Jobs" />
                                             <p style={{ fontSize: "24px", fontWeight: "700", color: "#484848" }}>
-                                                {overviewLoading ? '...' : totalCompanies}
+                                                {dashboardData?.total_companies || 0}
                                             </p>
                                         </div>
                                         <div>
@@ -189,36 +397,34 @@ export const AdminDashboard = () => {
                                         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                                             <img src={TotalEmployers} width={25} height={25} alt="Jobs" />
                                             <p style={{ fontSize: "24px", fontWeight: "700", color: "#484848" }}>
-                                                {overviewLoading ? '...' : totalEmployers}
+                                                {dashboardData?.total_employers || 0}
                                             </p>
                                         </div>
                                         <div>
-                                            <p style={{ fontWeight: "bold", color: "#484848" }} >Total Employers</p>
+                                            <p style={{ fontWeight: "bold", color: "#484848" }}>Total Employers</p>
                                         </div>
                                     </div>
-
                                     <div className='Admin-Viewmore'>
                                         <p style={{ fontSize: "14px", fontWeight: "500" }}>View more</p>
                                         <img src={ViewMore} width={30} height={30} alt="Viewmore" />
                                     </div>
-
                                 </div>
                                 <div className='Admin-Overview-Container'>
                                     <div className='Admin-Overview-Data'>
                                         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                                             <img src={TotalJobseekers} width={25} height={25} alt="Total Jobseekers" />
-                                            <p style={{ fontSize: "24px", fontWeight: "700", color: "#484848" }}>{Alluser.length}</p>
+                                            <p style={{ fontSize: "24px", fontWeight: "700", color: "#484848" }}>
+                                                {dashboardData?.total_jobseekers || 0}
+                                            </p>
                                         </div>
                                         <div>
                                             <p style={{ fontWeight: "bold", color: "#484848" }}>Total Jobseekers</p>
                                         </div>
                                     </div>
-
                                     <div className='Admin-Viewmore'>
                                         <p style={{ fontSize: "14px", fontWeight: "500" }}>View more</p>
                                         <img src={ViewMore} width={30} height={30} alt="Viewmore" />
                                     </div>
-
                                 </div>
                             </div>
                             <div style={{ display: "flex", gap: "10px", marginTop: "20px" }}>
@@ -240,19 +446,15 @@ export const AdminDashboard = () => {
                                                 <p className="Ads-Count">185</p>
                                                 <span>New</span>
                                             </div>
-
                                             <div className="Ads-Count-Cont">
                                                 <p className="Ads-Count">0</p>
                                                 <span>Waiting</span>
                                             </div>
-
                                             <div className="Ads-Count-Cont">
                                                 <p className="Ads-Count">250</p>
                                                 <span>Total</span>
                                             </div>
-
                                         </div>
-
                                     </div>
                                     <div className="Admin-job-card">
                                         <div className="Admin-job-left">
@@ -276,12 +478,8 @@ export const AdminDashboard = () => {
                                     </div>
                                     <div className="Admin-job-card">
                                         <div className="Admin-job-left">
-                                            <p className="Admin-job-title">
-                                                Marketing Specialist
-                                            </p>
-                                            <span className="Admin-job-under">
-                                                W1
-                                            </span>
+                                            <p className="Admin-job-title">Marketing Specialist</p>
+                                            <span className="Admin-job-under">W1</span>
                                         </div>
                                         <div className="Admin-job-right">
                                             <div className="Ads-Count-Cont">
@@ -299,18 +497,11 @@ export const AdminDashboard = () => {
                                         </div>
                                     </div>
                                     <div className="Admin-job-card">
-
                                         <div className="Admin-job-left">
-                                            <p className="Admin-job-title">
-                                                Software Engineer
-                                            </p>
-                                            <span className="Admin-job-under">
-                                                W1
-                                            </span>
+                                            <p className="Admin-job-title">Software Engineer</p>
+                                            <span className="Admin-job-under">W1</span>
                                         </div>
-
                                         <div className="Admin-job-right">
-
                                             <div className="Ads-Count-Cont">
                                                 <p className="Ads-Count">135</p>
                                                 <span>New</span>
@@ -319,81 +510,19 @@ export const AdminDashboard = () => {
                                                 <p className="Ads-Count">25</p>
                                                 <span>Waiting</span>
                                             </div>
-
                                             <div className="Ads-Count-Cont">
                                                 <p className="Ads-Count">200</p>
                                                 <span>Total</span>
                                             </div>
-
                                         </div>
-
                                     </div>
                                 </div>
                             </div>
 
                             <div style={{ display: "flex", gap: "10px", marginTop: "20px" }}>
-                                <div className='Admin-Experience'><AdminExperience /></div>
-
-
-                                <div className='Admin-overview-cont' > <TotalOverview /></div>
-                                {/* <div className="Admin-Amount-bal-cont">
-
-                                    <div className="balance-card">
-                                        <h3 className="card-title">Account Balance</h3>
-                                        <hr className="divider" />
-                                        <div className="stats-row">
-                                            <div className="stat-item">
-                                                <span className="stat-value">264</span>
-                                                <span className="stat-label">Purchased</span>
-                                            </div>
-                                            <div className="stat-item border-left">
-                                                <span className="stat-value">250</span>
-                                                <span className="stat-label">Remaining</span>
-                                            </div>
-                                        </div>
-                                        <p className="footer-link">
-                                            Subscription(s) <a href="#">Expiry Dates</a>
-                                        </p>
-                                    </div>
-
-
-                                    <div className="balance-card margin-top">
-                                        <h3 className="card-title">Video Resume & CV Database</h3>
-                                        <hr className="divider" />
-                                        <p className="card-desc">
-                                            Buy 1 month Access online or <a href="#">get in touch</a> <br /> with your account Manager
-                                        </p>
-                                    </div>
-                                </div> */}
+                                <div className='Admin-Experience'><AdminExperience experienceData={experienceData} /></div>
+                                <div className='Admin-overview-cont'><TotalOverview totalOverview={totalOverviewData} /></div>
                             </div>
-
-                            {/* <div style={{ display: "flex", gap: "10px", marginTop: "20px" }}>
-                                
-                                <div className='Adminpending-total'>
-                                    <div className="Adminpending-container">
-                                        <div className='Adminpending-head'>
-                                            <h4>Pending quizs</h4>
-                                        </div>
-                                        <div className='Adminpending-subhead'>
-                                            <p>Applicants By Experience Level</p>
-                                        </div><hr />
-                                        <div className='Adminquiz-content'>
-                                            <p>Which type of work environment do you prefer?</p>
-                                        </div><hr />
-                                        <div className='Adminquiz-content'>
-                                            <p>What type of task do you enjoy the most?</p>
-                                        </div><hr />
-                                        <div className='Adminquiz-content'>
-                                            <p>Which industry are you most interested in working?</p>
-                                        </div><hr />
-                                        <div className='Adminquiz-content'>
-                                            <p>How do you pressure and tight deadlines?</p>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className='Admin-calender'><Calendar /></div>
-                            </div> */}
                         </div>
                     )}
                     {activetab === 'Job Monitoring' && <JobMonitoring />}

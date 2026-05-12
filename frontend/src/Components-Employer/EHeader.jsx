@@ -11,7 +11,7 @@ import { useJobs } from '../JobContext'
 
 export const EHeader = () => {
 
-    // ✅ FIXED: Match the exact variable name from JobContext
+    // FIXED: Match the exact variable name from JobContext
     const { employershowNotification, setEmployerShowNotification, employerNotifications = [] } = useJobs();
     const location = useLocation();
 
@@ -25,7 +25,11 @@ export const EHeader = () => {
 
     return (
         <header className="header">
-            <Link to="/Job-portal/employer/dashboard" className="logo">
+            <Link
+                to="/Job-portal/Employer/Dashboard"
+                className="logo"
+                state={{ fromFooter: true, targetTab: 'Dashboard' }}
+            >
                 <span className="logo-text">Job portal</span>
             </Link>
 

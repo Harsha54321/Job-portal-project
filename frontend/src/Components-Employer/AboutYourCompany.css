@@ -149,8 +149,35 @@
  
 .aboutcompany-file-left {
   display: flex;
-  align-items: center;
-  gap: 12px;
+  align-items: center;   /* <-- alignment fix */
+  gap: 14px;
+  flex: 1;
+}
+
+.aboutcompany-file-left img {
+  width: 45px;
+  height: 45px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.aboutcompany-file-left div {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.aboutcompany-file-left p {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.aboutcompany-file-left span {
+  margin-top: 4px;
+  font-size: 13px;
+  color: #666;
 }
  
 .aboutcompany-clickable-area {
@@ -277,3 +304,66 @@
 .popup-btn-confirm:hover {
   background: #1565c0;
 }
+
+.upload-box{
+  border:1px dashed #ccc;
+  padding:20px;
+  border-radius:8px;
+  cursor:pointer;
+}
+
+
+.file-card{
+  border:1px solid #ddd;
+  border-radius:8px;
+  padding:12px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  position:relative;
+}
+
+.menu-wrapper{
+  position:relative;
+}
+
+
+.dots-btn{
+  border:none;
+  background:none;
+  font-size:20px;
+  cursor:pointer;
+}
+
+
+.file-menu{
+  position:absolute;
+  right:0;
+  top:35px;
+  background:white;
+  border:1px solid #ddd;
+  border-radius:6px;
+  min-width:100px;
+  z-index:100;
+}
+
+
+.file-menu button{
+  width:100%;
+  padding:10px;
+  border:none;
+  background:white;
+  cursor:pointer;
+  text-align:left;
+}
+
+
+.file-menu button:hover{
+  background: #a5a5a5;
+}
+
+.file-menu button:last-child:hover{
+  background: #fff1f1;
+  color: #e53935;
+}
+

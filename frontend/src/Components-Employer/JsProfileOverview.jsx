@@ -117,7 +117,7 @@ export const JsProfileOverview = () => {
             <span className="back-icon">←</span> Back to Find Talent
           </button>
           <div className="page-header">
-            <h1>{currentUser.full_name || currentUser.profile?.fullName}'s Profile Overview</h1>
+            <h1>{currentUser.full_name || currentUser.profile?.fullName}{ currentUser.full_name ? `'s`:''} Profile Overview</h1>
           </div>
 
           <div className="profile-card-placeholder">

@@ -1,7 +1,10 @@
 from django.urls import path
 from rest_framework_simplejwt.views import TokenRefreshView
 from .views import (
+    AJobListView,
     AdminCompanyListView,
+    AdminDashboardOverviewView,
+    AdminDashboardStats,
     AdminLoginView,
     AdminUpdateComplaintView,
     CompanyProfileCreateView,
@@ -260,4 +263,9 @@ urlpatterns = [
 
     #job highlight limits
     path('jobs/highlight-limit/', JobHighlightLimitView.as_view(), name='job-highlight-limit'),
+
+    #admin dashboard
+    path('admin/dashboard/', AdminDashboardStats.as_view()),
+    path('admin/jobs/ajoblist/', AJobListView.as_view()),
+    path('admin/dashboard/overview/', AdminDashboardOverviewView.as_view(), name='admin-dashboard-overview'),
 ]

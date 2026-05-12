@@ -111,14 +111,14 @@ export const PostJobForm = ({ onCancel }) => {
   const validateForm = () => {
 
     const newErrors = {};
-    const jobTitleRegex = /^[a-zA-Z\s]{3,}$/;
+    const jobTitleRegex = /^[a-zA-Z][a-zA-Z0-9\s&/_@.+()!-]{3,}$/;
 
     const durationRegex = /^(\d+\s*(month|months|year|years)|permanent)$/i;
 
     const openingsRegex = /^[1-9][0-9]{0,2}$/;
 
     const contentRegex = /^(?=.*[a-zA-Z])[a-zA-Z0-9\s.,-]{5,}$/;
-    const expRegex = /^[0-9]+(\.[0-9]+)?(-[0-9]+(\.[0-9]+)?)?$/;
+    const expRegex = /^(\d+(\.\d+)?)\s*(to|-|—)?\s*(\d+(\.\d+)?)?\s*(years?|yrs?)$/i;
 
     // --- VALIDATION LOGIC ---
 
@@ -126,7 +126,7 @@ export const PostJobForm = ({ onCancel }) => {
     if (!formData.job_title.trim()) {
       newErrors.job_title = "Job title is required";
     } else if (!jobTitleRegex.test(formData.job_title.trim())) {
-      newErrors.job_title = "Only letters allowed (no numbers or symbols)";
+      newErrors.job_title = "Minimum 3 characters; letters, numbers, and common symbols allowed)";
     }
 
     // Work Duration
@@ -160,66 +160,40 @@ export const PostJobForm = ({ onCancel }) => {
     }
 
 
-    const expStr = formData.experience.trim().toLowerCase();
+    
 
-    if (!expStr) {
-      newErrors.experience = "Experience is required";
+const expStr = formData.experience.trim().toLowerCase();
+
+  if (!expStr) {
+
+    newErrors.experience = "Experience is required";
+
+  } else if (!expRegex.test(expStr)) {
+
+    newErrors.experience = "Invalid format (e.g., '2.5 years' or '2.5 to 3.5 years')";
+
+  } else {
+
+    // Logic to verify range validity (start must be less than end)
+
+    const isRange = expStr.includes('-') || expStr.includes('to');
+
+    if (isRange) {
+
+      const parts = expStr.split(/\s*(?:to|-)\s*/).map(p => parseFloat(p));
+
+      if (parts.length >= 2 && parts[1] <= parts[0]) {
+
+        newErrors.experience = "End year must be greater than start year";
+
+      }
+
     }
-    else {
-      // 1. BLOCKS PLAIN NUMBERS (e.g., "3")
-      if (/^\d+$/.test(expStr)) {
-        newErrors.experience = "Please specify unit (e.g., '3.0 years' or '2-4 years')";
-      }
 
-      // 2. BLOCKS PLAIN RANGES WITHOUT "years" (e.g., "2-4")
-      else if (/^\d+-\d+$/.test(expStr)) {
-        newErrors.experience = "Please specify unit (e.g., '2-4 years')";
-      }
+  }
+ 
 
-      // 3. VALIDATE CORRECT RANGE FORMAT (e.g., "2-4 years")
-      else if (expStr.includes('-')) {
-        // Regex to check for: number-number followed by "years"
-        const rangeWithUnitRegex = /^(\d+)-(\d+)\s*years?$/;
-
-        if (!rangeWithUnitRegex.test(expStr)) {
-          newErrors.experience = "Invalid range format. Use '2-4 years'";
-        } else {
-          const match = expStr.match(rangeWithUnitRegex);
-          const start = parseFloat(match[1]);
-          const end = parseFloat(match[2]);
-
-          if (end <= start) {
-            newErrors.experience = "End year must be greater than start year";
-          } else {
-            newErrors.experience_label = `${start}-${end} Years (Range)`;
-          }
-        }
-      }
-
-      // 4. VALIDATE DECIMAL FORMAT (e.g., "2.5 years")
-      else if (expStr.includes('.') || expStr.includes('years')) {
-        const decimalWithUnitRegex = /^(\d+(\.\d+)?)\s*years?$/;
-
-        if (!decimalWithUnitRegex.test(expStr)) {
-          newErrors.experience = "Invalid format. Use '2.5 years' or '3.0 years'";
-        } else {
-          const val = expStr.replace(/[^0-9.]/g, '');
-          if (val.includes('.')) {
-            const parts = val.split('.');
-            const y = parseInt(parts[0] || 0);
-            const m = parseInt(parts[1] || 0);
-
-            if (m >= 12) {
-              newErrors.experience = "Months cannot be 12 or more";
-            } else {
-              newErrors.experience_label = `${y > 0 ? y + ' Years, ' : ''}${m} Months`;
-            }
-          } else {
-            newErrors.experience_label = `${val} Years`;
-          }
-        }
-      }
-    }
+    
 
     // Openings
     const openingsStr = String(formData.openings).trim();

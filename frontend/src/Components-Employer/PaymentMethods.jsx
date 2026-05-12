@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import './PaymentMethods.css';
 
@@ -80,7 +79,7 @@ const bankList = [
     { id: 'kotak', name: 'Kotak Mahindra', logo: kotak_mahindra_logo }
 ];
 
-export const PaymentMethods = ({ onBack, onSave, onCancel, cardOnlyMode = false, defaultTab = 'card', onAddMethod, savedCards = [], onMakeDefault, onDelete ,onProcessPayment}) => {
+export const PaymentMethods = ({ onBack, onSave, onCancel, cardOnlyMode = false, defaultTab = 'card', onAddMethod, savedCards = [], onMakeDefault, onDelete, onProcessPayment }) => {
     const [cardColor, setCardColor] = useState('#2d3436');
     const [activeTab, setActiveTab] = useState(defaultTab);
     const [selectedUpiApp, setSelectedUpiApp] = useState(null);
@@ -124,53 +123,66 @@ export const PaymentMethods = ({ onBack, onSave, onCancel, cardOnlyMode = false,
     const handleCardChange = (e) => {
         const { name, value } = e.target;
         let formattedValue = value;
+
         if (name === 'number') {
-            formattedValue = value.replace(/\W/gi, '').replace(/(.{4})/g, '$1 ').trim();
+            // Remove any non-digit characters
+            const cleaned = value.replace(/\D/g, '');
+            // Limit to 16 digits
+            const truncated = cleaned.slice(0, 16);
+            // Add space every 4 digits
+            formattedValue = truncated.replace(/(.{4})/g, '$1 ').trim();
         }
-        if (name === 'expiry') {
-            // Auto-format expiry as MM/YY
+        else if (name === 'expiry') {
+            // Remove any non-digit characters
             let cleaned = value.replace(/\D/g, '');
+            // Limit to 4 digits (MMYY)
+            cleaned = cleaned.slice(0, 4);
             if (cleaned.length >= 2) {
-                formattedValue = cleaned.slice(0, 2) + '/' + cleaned.slice(2, 4);
+                formattedValue = cleaned.slice(0, 2) + '/' + cleaned.slice(2);
             } else {
                 formattedValue = cleaned;
             }
         }
+        else if (name === 'cvc') {
+            formattedValue = value.replace(/\D/g, '');
+            formattedValue = formattedValue.slice(0, 3);
+        }
+        else {
+            formattedValue = value.replace(/[^a-zA-Z\s\-]/g, '');
+        }
+
         setCardData(prev => ({ ...prev, [name]: formattedValue }));
     };
-
     const handleSavedCardClick = (card) => {
         setSelectedCardForOtp(card);
         setShowOtp(true);
     };
 
-    //  Card Submit - Send expiry in MM/YY format
     const handleCardSubmit = (e) => {
         e.preventDefault();
-        
+
         if (!cardData.number || !cardData.cvc || !cardData.expiry) {
             alert("Please fill all card details");
             return;
         }
-        
-        // Validate expiry format (MM/YY)
+
         const expiryPattern = /^(0[1-9]|1[0-2])\/(\d{2})$/;
         if (!expiryPattern.test(cardData.expiry)) {
             alert("Please enter valid expiry date in MM/YY format");
             return;
         }
-        
+
         const last4 = cardData.number.slice(-4) || 'XXXX';
-        
+
         const paymentData = {
             method_type: "card",
             card_last4: last4,
             card_holder_name: cardData.name,
-            expiry_date: cardData.expiry  // Send as MM/YY (e.g., "12/30")
+            expiry_date: cardData.expiry
         };
-        
+
         console.log('Sending payment data:', paymentData);
-        
+
         setIsVerifying(true);
         setTimeout(() => {
             setIsVerifying(false);
@@ -181,62 +193,62 @@ export const PaymentMethods = ({ onBack, onSave, onCancel, cardOnlyMode = false,
 
     // UPI Submit - CORRECT
     const handleUpiVerifyAndPay = (e) => {
-    if (e) e.preventDefault();
-    if (!upiId.includes('@')) return alert("Please enter a valid UPI ID");
-    
-    const paymentData = {
-        method_type: "upi",
-        upi_id: upiId
+        if (e) e.preventDefault();
+        if (!upiId.includes('@')) return alert("Please enter a valid UPI ID");
+
+        const paymentData = {
+            method_type: "upi",
+            upi_id: upiId
+        };
+
+        setIsVerifying(true);
+        setTimeout(() => {
+            onSave(paymentData);
+            //  Only process payment, don't save UPI as card
+            if (onProcessPayment) {
+                onProcessPayment(paymentData);
+            }
+            setIsVerifying(false);
+            setUpiId('');
+            setSelectedUpiApp(null);
+        }, 2000);
     };
-    
-    setIsVerifying(true);
-    setTimeout(() => {
-        onSave(paymentData);
-        //  Only process payment, don't save UPI as card
-        if (onProcessPayment) {
-            onProcessPayment(paymentData);
-        }
-        setIsVerifying(false);
-        setUpiId('');
-        setSelectedUpiApp(null);
-    }, 2000);
-};
 
     //  Net Banking Submit - CORRECT
     const handleNetBankingSubmit = () => {
-    if (!selectedBank) return;
-    const bankDetails = bankList.find(b => b.id === selectedBank);
-    const paymentData = {
-        method_type: "netbanking",
-        bank_name: bankDetails.name
-    };
-    onSave(paymentData);
-    //  Only process payment, don't save NetBanking as card
-    if (onProcessPayment) {
-        onProcessPayment(paymentData);
-    }
-    setSelectedBank(null);
-    setBankSearch('');
-};
-    const handleVerifyOtp = (e) => {
-    if (e) e.preventDefault();
-    if (otp.length !== 6) return alert("Please enter a 6-digit OTP");
-    
-    setIsVerifying(true);
-    setTimeout(() => {
+        if (!selectedBank) return;
+        const bankDetails = bankList.find(b => b.id === selectedBank);
+        const paymentData = {
+            method_type: "netbanking",
+            bank_name: bankDetails.name
+        };
+        onSave(paymentData);
+        //  Only process payment, don't save NetBanking as card
         if (onProcessPayment) {
-            onProcessPayment({
-                method_type: selectedCardForOtp.type || "card",
-                card_last4: selectedCardForOtp.number.slice(-4),
-                card_holder_name: selectedCardForOtp.name,
-                expiry_date: selectedCardForOtp.expiry
-            });
+            onProcessPayment(paymentData);
         }
-        setIsVerifying(false);
-        setShowOtp(false);
-        setOtp('');
-    }, 2000);
-};
+        setSelectedBank(null);
+        setBankSearch('');
+    };
+    const handleVerifyOtp = (e) => {
+        if (e) e.preventDefault();
+        if (otp.length !== 6) return alert("Please enter a 6-digit OTP");
+
+        setIsVerifying(true);
+        setTimeout(() => {
+            if (onProcessPayment) {
+                onProcessPayment({
+                    method_type: selectedCardForOtp.type || "card",
+                    card_last4: selectedCardForOtp.number.slice(-4),
+                    card_holder_name: selectedCardForOtp.name,
+                    expiry_date: selectedCardForOtp.expiry
+                });
+            }
+            setIsVerifying(false);
+            setShowOtp(false);
+            setOtp('');
+        }, 2000);
+    };
 
     const handleAppClick = (idx, appName) => {
         setSelectedUpiApp(idx);
@@ -279,7 +291,7 @@ export const PaymentMethods = ({ onBack, onSave, onCancel, cardOnlyMode = false,
                                             <div className={`Payment-card-item ${card.type?.toLowerCase() === 'visa' ? 'visa-active' : 'master-card'}`}>
                                                 <div className="card-header-row">
                                                     <span>{card.type?.toUpperCase() || 'CARD'}</span>
-                                                    <button type="button" className="delete-x" data-title="Remove Card" onClick={(e) => { e.stopPropagation(); onDelete(card.id); }} > ✕ </button>
+                                                    <button type="button" className="delete-x" data-title="Remove Card" onClick={(e) => { e.stopPropagation(); console.log("Delete clicked for ID:", card.id); onDelete(card.id); }} > ✕ </button>
                                                 </div>
                                                 <div className="card-number-display">{card.number}</div>
                                                 <div className="card-footer-info">
@@ -288,8 +300,8 @@ export const PaymentMethods = ({ onBack, onSave, onCancel, cardOnlyMode = false,
                                                 </div>
                                             </div>
                                             <button type="button" className="btn-make-default" onClick={(e) => {
-                                                e.stopPropagation(); 
-                                                onMakeDefault(card.id);  
+                                                e.stopPropagation();
+                                                onMakeDefault(card.id);
                                             }}>
                                                 {card.isDefault ? '★ DEFAULT' : 'MAKE DEFAULT'}
                                             </button>
@@ -298,7 +310,7 @@ export const PaymentMethods = ({ onBack, onSave, onCancel, cardOnlyMode = false,
                                 </div>
                             </>
                         )}
-                        
+
                         {/* --- OTP OVERLAY --- */}
                         {showOtp && (
                             <div className="Payment-Processing-Overlay">
@@ -357,7 +369,7 @@ export const PaymentMethods = ({ onBack, onSave, onCancel, cardOnlyMode = false,
                                 </div>
                                 <div className="PaymentMethods-form-group">
                                     <label>CVV</label>
-                                    <input name="cvc" type="password" placeholder="654" maxLength="3" value={cardData.cvc} onChange={handleCardChange} required />
+                                    <input inputMode='number' name="cvc" type="password" placeholder="654" maxLength="3" value={cardData.cvc} onChange={handleCardChange} required />
                                 </div>
                             </div>
 
