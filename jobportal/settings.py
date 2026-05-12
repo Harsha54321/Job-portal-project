@@ -195,8 +195,8 @@ CHANNEL_LAYERS = {
     }
 }
  
-RAZORPAY_KEY = 'rzp_test_Sas2pzeBQ0EZAi'
-RAZORPAY_SECRET = '517P0G6FJx9HqA3w4t3aOn4o'
+RAZORPAY_KEY = 'rzp_test_SoLg0asGleZ7ek'
+RAZORPAY_SECRET = 'tL6rUUEqZkMjpcK0QKoNiigP'
 RAZORPAY_WEBHOOK_SECRET = ''
  
 import os

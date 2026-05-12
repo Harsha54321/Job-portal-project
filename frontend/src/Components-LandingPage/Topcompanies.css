@@ -1,3 +1,23 @@
+/* --- BULLETPROOF SLICK CAROUSEL FIXES --- */
+.slick-track {
+  display: flex !important;
+  align-items: stretch !important; /* Forces all slides to stretch to the tallest one */
+}
+ 
+.slick-slide {
+  display: flex !important;
+  height: auto !important; /* Safari fix: auto works better with stretch than inherit */
+  float: none !important; /* Overrides Slick's default float which breaks flexbox on older browsers */
+}
+ 
+/* Forces React-Slick's invisible wrapper to pass the height down */
+.slick-slide > div {
+  width: 100%;
+  display: flex;
+  height: 100%; /* Explicitly tell wrapper to fill the stretched slide */
+}
+ 
+/* --- Main Component Styles --- */
 .carousel-wrapper {
   padding: 1px;
   max-width: 100%;
@@ -17,32 +37,39 @@
 .carousel-card {
   background: #ffffff;
   border-radius: 16px;
-  padding: 40px 20px 0 20px;
+  padding: 40px 20px 24px 20px;
   box-shadow:
     0 -6px 10px -4px rgba(0, 0, 0, 0.12),
     0 6px 10px -4px rgba(0, 0, 0, 0.15);
   text-align: center;
-  height: 300px;
+ 
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   align-items: center;
-  max-width: 280px;
+ 
+  height: 100%; /* Reliably fills the stretched wrapper */
+  width: 100%;
+  max-width: 320px;
   margin-left: 3rem;
+ 
   border-top: 2px solid #d9d9d940;
   border-bottom: 3px solid #d9d9d940;
 }
  
+/* --- LOGO: Fixed uniform height to align headers --- */
 .carousel-company-logo {
-  height: 32px;
+  height: 80px;
+  max-width: 160px;
   width: auto;
   object-fit: contain;
-  margin: 0 auto 2rem;
+  margin: 0 auto 24px auto;
   display: block;
 }
  
 .carousel-company-logo.placeholder {
-  width: 88px;
-  height: 88px;
+  width: 80px;
+  height: 80px;
   border-radius: 50%;
   background: #edf4fb;
   color: #1e88e5;
@@ -51,47 +78,66 @@
   justify-content: center;
   font-size: 38px;
   font-weight: 700;
-  margin: 0 auto 2rem;
+  margin: 0 auto 24px auto;
 }
  
+/* --- HEADER BOX: Fixed minimum height to align descriptions --- */
 .carousel-card-header {
-  padding: 10px;
-  background-color: #d9d9d940;
+  padding: 12px 10px;
+  background-color: #f5f5f5;
   border-radius: 8px;
-  width: 220px;
-  margin-left: 20px;
+  width: 90%;
+  margin: 0 auto;
+  box-sizing: border-box;
+ 
+  /* Forces all rating boxes to be equal height */
+  min-height: 110px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
  
 .carousel-card-header > h3 {
   margin: 0;
-  font-size: 18px;
+  font-size: 16px;
   font-weight: bold;
   color: #0a0a0a;
+ 
+  /* Adds an ellipsis (...) if a title exceeds 3 lines */
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
  
 .carousel-card-header > p {
   font-size: 14px;
   color: #555;
-  margin-top: 5px;
+  margin-top: 8px;
 }
  
 .carousel-company-rating {
   display: flex;
   justify-content: center;
-  gap: 5px;
+  align-items: center;
+  gap: 6px;
 }
  
 .star > img {
   height: 15px;
 }
  
-.carousel-desc {
+/* --- DESCRIPTION --- */
+.carousel-des {
   font-size: 14px;
-  color: #333;
-  margin: 20px 5px;
-  flex-grow: 1;
+  color: #555;
+  margin: 24px 10px;
+  line-height: 1.5;
+  min-height: 84px;
+  flex-grow: 1; /* Pushes the button down to the bottom */
 }
  
+/* --- BUTTON: Pinned to bottom --- */
 .carousel-view-jobs {
   background-color: #1e88e5;
   color: white;
@@ -100,9 +146,13 @@
   padding: 10px 18px;
   font-weight: bold;
   cursor: pointer;
-  margin-top: 25px;
-  height: 40px;
-  width: 120px;
+ 
+  margin-top: auto; /* Guarantees absolute bottom alignment */
+  margin-bottom: 0;
+ 
+  height: 44px;
+  width: 140px;
+  font-size: 15px;
   transition: background-color 0.25s ease;
 }
  
@@ -110,6 +160,7 @@
   background-color: #005dc1;
 }
  
+/* --- External Buttons & Popups --- */
 .carousel-view-all-wrapper {
   text-align: center;
   margin-top: 80px;
@@ -254,12 +305,12 @@
   .carousel-card {
     margin-left: 0 !important;
     margin: 0 auto 20px auto;
-    width: 80% !important;
-    max-width: 300px;
+    width: 90% !important;
+    max-width: 320px;
   }
  
   .carousel-card-header {
-    width: auto;
+    width: 100%;
     margin-left: 0;
     display: flex;
     flex-direction: column;
@@ -294,3 +345,4 @@
     width: 100%;
   }
 }
+ 

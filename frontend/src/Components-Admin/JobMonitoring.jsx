@@ -17,13 +17,17 @@ export const JobMonitoring = () => {
         setTimeout(() => setToast(null), 3000);
     };
 
-    const normalizeStatus = (is_published, job_status) => {
-        if (!is_published && job_status === 'Reviewing Application') return 'Posted';
-        if (!is_published && job_status === 'Hiring in Progress') return 'Updated';
-        if (is_published) return 'Approved';
-        if (job_status === 'Hiring Done') return 'Approved';
+    // ONLY CHANGE 1: Updated normalizeStatus
+    const normalizeStatus = (approval_status) => {
+        if (approval_status === 'pending') return 'Posted';
+        if (approval_status === 'approved') return 'Approved';
+        if (approval_status === 'rejected') return 'Rejected';
+        if (approval_status === 'highlighted') return 'Highlighted';
+
         return 'Posted';
     };
+
+
 
     const fetchJobs = useCallback(async () => {
         setLoading(true);
@@ -31,23 +35,55 @@ export const JobMonitoring = () => {
         try {
             const response = await api.get('admin/jobs/');
             const rawJobs = response.data.jobs || response.data;
+            // const normalized = rawJobs.map(job => ({
+            //     id: job.id,
+            //     role: job.job_title,
+            //     company: job.company_name || 'N/A',
+            //     status: normalizeStatus(job.is_published, job.job_status),
+            //     date: job.created_at ? job.created_at.split('T')[0] : '',
+            //     isFlagged: job.flagged ?? false,
+            //     location: Array.isArray(job.location) ? job.location.join(', ') : job.location || '',
+            //     experience: job.experience || '',
+            //     salary: job.salary ? `₹ ${parseFloat(job.salary).toLocaleString('en-IN')}` : '',
+            //     type: job.work_type || '',
+            //     openings: job.openings || 0,
+            //     applicants: job.applicants_count !== undefined ? `${job.applicants_count}+` : '0',
+            //     skills: job.key_skills || [],
+            //     job_description: job.job_description || '',
+            //     employer_email: job.employer_email || '',
+            // }));
+
             const normalized = rawJobs.map(job => ({
                 id: job.id,
                 role: job.job_title,
-                company: job.company_name || 'N/A',
-                status: normalizeStatus(job.is_published, job.job_status),
+                company: job.company?.company_name || job.company_name || 'N/A',
+                status: filterType === 'Updated'
+                    ? job.job_status
+                    : normalizeStatus(job.approval_status),
+                approval_status: job.approval_status,
+
                 date: job.created_at ? job.created_at.split('T')[0] : '',
+                created_at: job.created_at,
                 isFlagged: job.flagged ?? false,
                 location: Array.isArray(job.location) ? job.location.join(', ') : job.location || '',
                 experience: job.experience || '',
                 salary: job.salary ? `₹ ${parseFloat(job.salary).toLocaleString('en-IN')}` : '',
                 type: job.work_type || '',
                 openings: job.openings || 0,
-                applicants: job.applicants_count !== undefined ? `${job.applicants_count}+` : '0',
+                applicants: job.applicants_count !== undefined ? `${job.applicants_count}` : '0',
                 skills: job.key_skills || [],
                 job_description: job.job_description || '',
-                employer_email: job.employer_email || '',
+                responsibilities: job.responsibilities || [],
+                shift: job.shift,
+                work_duration: job.work_duration || '',
+                education: job.education || [],
+                job_highlights: job.job_highlights || [],
+                job_status: job.job_status,
+                is_highlighted: job.is_highlighted ?? false,
+                plan_type: job.plan_type || '',  // 'premium' | 'gold' | ''
+
             }));
+            console.log(normalized)
             setJobs(normalized);
         } catch (err) {
             setError(err.response?.data?.detail || 'Failed to load jobs. Please try again.');
@@ -63,7 +99,7 @@ export const JobMonitoring = () => {
 
     const [activeMenu, setActiveMenu] = useState(null);
     const menuRef = useRef(null);
-    const [filterType, setFilterType] = useState('Newest');
+    const [filterType, setFilterType] = useState('Recent');
 
 
     useEffect(() => {
@@ -98,16 +134,23 @@ export const JobMonitoring = () => {
         };
 
         switch (filterType) {
-            case 'Recent': case 'Newest':
+            case 'Recent': 
                 result.sort((a, b) => new Date(b.date) - new Date(a.date));
                 break;
             case 'Last 10': result = result.slice(0, 10); break;
             case 'Last 20': result = result.slice(0, 20); break;
             case 'Flagged': result = result.filter(j => j.isFlagged); break;
-            case 'Rejected': result = result.filter(j => j.status === 'Rejected'); break;
-            case 'Approved': result = result.filter(j => j.status === 'Approved'); break;
-            case 'Posted': result = result.filter(j => j.status === 'Posted'); break;
-            case 'Updated': result = result.filter(j => j.status === 'Updated'); break;
+            case 'Rejected': result = result.filter(j => j.approval_status === 'rejected'); break;
+            case 'Approved': result = result.filter(j => j.approval_status === 'approved'); break;
+            case 'Posted': result = result.filter(j => j.approval_status === 'pending'); break;
+            case 'Highlighted': result = result.filter(j => j.is_highlighted === true); break;
+            // case 'Updated': result = result.filter(j => j.status === 'Updated'); break;
+            case 'Updated':
+
+                result = result.filter(j => j.job_status);
+
+                break;
+
             case '1 Day': result = result.filter(j => getDaysDiff(j.date) <= 1); break;
             case '2 Days': result = result.filter(j => getDaysDiff(j.date) <= 2); break;
             case '3 Days': result = result.filter(j => getDaysDiff(j.date) <= 3); break;
@@ -161,7 +204,8 @@ export const JobMonitoring = () => {
         setActiveMenu(null);
         try {
             await api.patch(`admin/jobs/${id}/approve/`);
-            setJobs(prev => prev.map(j => j.id === id ? { ...j, status: 'Approved' } : j));
+            // setJobs(prev => prev.map(j => j.id === id ? { ...j, status: 'Approved' } : j));
+            setJobs(prev => prev.map(j => j.id === id ? { ...j, status: 'Approved', approval_status: 'approved' } : j));
             showToast('Job approved successfully!');
         } catch (err) {
             showToast(err.response?.data?.error || 'Failed to approve job.', 'error');
@@ -176,7 +220,8 @@ export const JobMonitoring = () => {
         setActiveMenu(null);
         try {
             await api.patch(`admin/jobs/${id}/reject/`);
-            setJobs(prev => prev.map(j => j.id === id ? { ...j, status: 'Rejected' } : j));
+            // setJobs(prev => prev.map(j => j.id === id ? { ...j, status: 'Rejected' } : j));
+            setJobs(prev => prev.map(j => j.id === id ? { ...j, status: 'Rejected', approval_status: 'rejected' } : j));
             showToast('Job rejected successfully!');
         } catch (err) {
             showToast(err.response?.data?.error || 'Failed to reject job.', 'error');
@@ -257,7 +302,7 @@ export const JobMonitoring = () => {
                 <div className="sort-group">
                     <span>Sort by:</span>
                     <select className="sort-select" onChange={(e) => setFilterType(e.target.value)}>
-                        <option value="Newest">Newest</option>
+                        {/* <option value="Newest">Newest</option> */}
                         <option value="Recent">Recent</option>
                         <option value="Last 10">Last 10</option>
                         <option value="Last 20">Last 20</option>
@@ -265,6 +310,7 @@ export const JobMonitoring = () => {
                         <option value="Approved">Verified/Approved</option>
                         <option value="Rejected">Deactivated/Rejected</option>
                         <option value="Posted">Posted Jobs</option>
+                        <option value="Highlighted">⭐ Highlighted Jobs</option>
                         <option value="Updated">Updated Jobs</option>
                         <option value="1 Day">Last 1 Day</option>
                         <option value="2 Days">Last 2 Days</option>
@@ -288,7 +334,9 @@ export const JobMonitoring = () => {
                 {currentPosts.length > 0 ? (
                     currentPosts.map((job) => (
                         // <div key={job.id} className={`job-row ${job.isFlagged ? 'flagged-row' : ''}`}>
-                        <div key={job.id} className={`job-row ${job.isFlagged ? 'flagged-row' : ''}`}
+                        // <div key={job.id} className={`job-row ${job.isFlagged ? 'flagged-row' : ''}`}
+                        //     style={actionLoading === job.id ? { opacity: 0.5, pointerEvents: 'none' } : {}}>
+                       <div key={job.id} className={`job-row ${job.isFlagged ? 'flagged-row' : job.is_highlighted ? 'highlighted-row' : ''}`}
                             style={actionLoading === job.id ? { opacity: 0.5, pointerEvents: 'none' } : {}}>
 
 
@@ -296,10 +344,31 @@ export const JobMonitoring = () => {
                             <div className="cell role-col">
                                 <span className="text-role">{job.role}</span>
                                 {job.isFlagged && <span className="flag-indicator">🚩</span>}
+                                {job.is_highlighted && (
+                                    <span style={{
+                                        fontSize: '11px', padding: '2px 7px',
+                                        borderRadius: '4px', marginLeft: '6px',
+                                        background: '#fef3c7', color: '#92400e',
+                                        border: '1px solid #fcd34d', fontWeight: 500
+                                    }}>
+                                        {/* ⭐ {job.plan_type || 'Highlighted'} */}
+                                        ⭐
+                                    </span>
+                                )}
                             </div>
+
+
+
+
                             <div className="cell company-col text-company">{job.company}</div>
                             <div className="cell status-col">
-                                <span className={`status-pill ${job.status.toLowerCase()}`}>{job.status}</span>
+                                {/* <span className={`status-pill ${job.status.toLowerCase()}`}>{job.status}</span> */}
+                                <span className={`status-pill ${(filterType === 'Updated' ? job.job_status : normalizeStatus(job.approval_status)).toLowerCase()
+                                    }`}>
+                                    {filterType === 'Updated'
+                                        ? job.job_status
+                                        : normalizeStatus(job.approval_status)}
+                                </span>
                             </div>
                             <div className="cell date-col text-date">{job.date}</div>
                             <div className="cell actions-col">

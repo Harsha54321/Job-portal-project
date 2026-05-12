@@ -83,7 +83,9 @@ from .views import (
     AdminJobApproveView,
     AdminJobRejectView,
     AdminJobFlagView,
-    AdminJobListView
+    AdminJobListView,
+    JobHighlightLimitView
+    
 
     # REMOVED: Company-related view imports (CompanyListView, CompanyDetailView, etc.)
 )
@@ -255,4 +257,7 @@ urlpatterns = [
     path('admin/jobs/<int:pk>/flag/', AdminJobFlagView.as_view(), name='admin-job-flag'),
     path('admin/jobs/<int:pk>/delete/', AdminJobDeleteView.as_view(), name='admin-job-delete'),
     path('admin/jobs/stats/', AdminJobStatsView.as_view(), name='admin-job-stats'),
+
+    #job highlight limits
+    path('jobs/highlight-limit/', JobHighlightLimitView.as_view(), name='job-highlight-limit'),
 ]

@@ -659,7 +659,10 @@ class PostAJobSerializer(serializers.ModelSerializer):
 
             'company',
 
-            'applicants_count'
+            'applicants_count',
+
+            'is_highlighted',
+            'highlighted_at'
 
         ]
 
@@ -681,7 +684,7 @@ class PostAJobSerializer(serializers.ModelSerializer):
 
             if obj.employer.employer_profile.company:
 
-                # ✅ Pass the context to CompanyProfileSerializer
+                # Pass the context to CompanyProfileSerializer
 
                 return CompanyProfileSerializer(
 
@@ -860,7 +863,7 @@ class JobReadSerializer(serializers.ModelSerializer):
 
             if obj.employer.employer_profile.company:
 
-                # ✅ Pass the context to CompanyProfileSerializer
+                # Pass the context to CompanyProfileSerializer
 
                 return CompanyProfileSerializer(
 
@@ -913,7 +916,7 @@ class JobWriteSerializer(serializers.ModelSerializer):
 
             if obj.employer.employer_profile.company:
 
-                # ✅ Pass the context to CompanyProfileSerializer
+                # Pass the context to CompanyProfileSerializer
 
                 return CompanyProfileSerializer(
 
@@ -1014,7 +1017,7 @@ class JobUpdateSerializer(serializers.ModelSerializer):
 
             if obj.employer.employer_profile.company:
 
-                # ✅ Pass the context to CompanyProfileSerializer
+                # Pass the context to CompanyProfileSerializer
 
                 return CompanyProfileSerializer(
 

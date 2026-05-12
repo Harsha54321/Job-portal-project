@@ -518,3 +518,37 @@
 .btn-preview-post:hover {
   background: #bae6fd;
 }
+
+
+
+.status-pill.highlighted {
+
+    background: #fef3c7;   /* amber-100 */
+
+   color: #92400e;         /* amber-800 */
+
+   border: 1px solid #fcd34d;
+
+    font-weight: 500;
+
+}
+
+
+/* Highlighted job row */
+/* .highlighted-row {
+  background-color: #fffbeb;
+  border-left: 4px solid #f59e0b;  
+} */
+
+.job-row.highlighted-row {
+  background-color: #fffbeb;
+  border-left: 4px solid #f59e0b;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .highlighted-row {
+    background-color: rgba(245, 158, 11, 0.08);
+    border-left: 3px solid #f59e0b;
+  }
+}

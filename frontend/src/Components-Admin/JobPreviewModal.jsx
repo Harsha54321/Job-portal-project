@@ -7,6 +7,25 @@ import starIcon from '../assets/Star_icon.png';
 export const JobPreviewModal = ({ job, onClose }) => {
   if (!job) return null;
 
+  // Helper function to format date
+  const getTimeAgo = (dateString) => {
+    if (!dateString) return 'Recently';
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInDays = Math.floor((now - date) / (1000 * 60 * 60 * 24));
+    const diffInHours = Math.floor((now - date) / (1000 * 60 * 60));
+    const diffInMinutes = Math.floor((now - date) / (1000 * 60));
+    
+    if (diffInMinutes < 1) return 'Just now';
+    if (diffInMinutes < 60) return `${diffInMinutes} minutes ago`;
+    if (diffInHours < 24) return `${diffInHours} hours ago`;
+    if (diffInDays === 1) return 'Yesterday';
+    if (diffInDays < 7) return `${diffInDays} days ago`;
+    if (diffInDays < 30) return `${Math.floor(diffInDays / 7)} weeks ago`;
+    if (diffInDays < 365) return `${Math.floor(diffInDays / 30)} months ago`;
+    return `${Math.floor(diffInDays / 365)} years ago`;
+  };
+
   return (
     <div className="job-preview-overlay" onClick={onClose}>
       <div className="job-preview-modal" onClick={(e) => e.stopPropagation()}>
@@ -30,23 +49,24 @@ export const JobPreviewModal = ({ job, onClose }) => {
                 </div>
                 
                 <div className="job-preview-meta-grid">
-                  <div className="meta-item"><img src={time} className='card-icons' alt="time" /> {job.experience || '2-3 years'}</div>
-                  <div className="meta-item">₹ {job.salary || '20,000 - 25,000'}/month</div>
-                  <div className="meta-item"><img src={place} className='card-icons' alt="loc" /> {job.location || 'Chennai'}</div>
+                  <div className="meta-item"><img src={time} className='card-icons' alt="time" /> {job.experience || ''}</div>
+                  <div className="meta-item"> {job.salary }LPA</div>
+                  <div className="meta-item"><img src={place} className='card-icons' alt="loc" /> {job.location || ''}</div>
                 </div>
 
                 <div className="job-preview-tags">
-                  <span className="tag-outline">{job.type || 'Full-Time'}</span>
-                  <span className="tag-outline">General Shift</span>
+                  <span className="tag-outline">{job.type || ''}</span>
+                  {job.shift && <span className="tag-outline">{job.shift} Shift</span>}
+                  {job.work_duration && <span className="tag-outline">{job.work_duration}</span>}
                 </div>
               </div>
               <div className="job-preview-logo-box">
-                {job.company.charAt(0)}
+                {job.company?.charAt(0) || 'J'}
               </div>
             </div>
             
             <div className="job-preview-header-footer">
-               <span>Posted: 3 days ago</span>
+               <span>Posted: {getTimeAgo(job.created_at || job.date)}</span>
                <span>Openings: {job.openings || 2}</span>
                <span>Applicants: {job.applicants || '100+'}</span>
             </div>
@@ -57,35 +77,56 @@ export const JobPreviewModal = ({ job, onClose }) => {
             <section className="job-preview-section">
               <h3 className="section-title">Job highlights</h3>
               <ul className="job-preview-list">
-                <li>Candidates With {job.experience || 'Relevant'} Experience Preferred.</li>
-                <li>Proven Work Experience As A {job.role} Or In A Similar Role.</li>
-                <li>Strong Communication Skills</li>
+                {job.job_highlights && job.job_highlights.length > 0 ? (
+                  job.job_highlights.map((highlight, index) => (
+                    <li key={index}>{highlight}</li>
+                  ))
+                ) : (
+                  <>
+                    <li>Candidates With {job.experience || 'Relevant'} Experience Preferred.</li>
+                    <li>Proven Work Experience As A {job.role} Or In A Similar Role.</li>
+                    <li>Strong Communication Skills</li>
+                  </>
+                )}
               </ul>
             </section>
 
             <section className="job-preview-section">
               <h3 className="section-title">Job description</h3>
               <p className="job-preview-text">
-                We Are Looking For A Talented {job.role} To Join Our Growing Team. 
-                The Ideal Candidate Should Have A Strong Portfolio Showcasing User-Centric Design Solutions.
+                {job.job_description || `We Are Looking For A Talented ${job.role} To Join Our Growing Team. The Ideal Candidate Should Have A Strong Portfolio Showcasing User-Centric Design Solutions.`}
               </p>
             </section>
 
             <section className="job-preview-section">
               <h3 className="section-title">Responsibilities</h3>
               <ul className="job-preview-list">
-                {/* Null check using optional chaining */}
-                {job.responsibilities?.map((item, index) => (
-                  <li key={index}>{item}</li>
-                )) || <li>Collaborate with cross-functional teams to define and implement innovative solutions.</li>}
+                {job.responsibilities && job.responsibilities.length > 0 ? (
+                  job.responsibilities.map((item, index) => (
+                    <li key={index}>{item}</li>
+                  ))
+                ) : (
+                  <li>Collaborate with cross-functional teams to define and implement innovative solutions.</li>
+                )}
               </ul>
             </section>
+
+            {/* Optional: Education Section */}
+            {/* {job.education && job.education.length > 0 && (
+              <section className="job-preview-section">
+                <h3 className="section-title">Education Required</h3>
+                <ul className="job-preview-list">
+                  {job.education.map((edu, index) => (
+                    <li key={index}>{edu}</li>
+                  ))}
+                </ul>
+              </section>
+            )} */}
 
             <section className="job-preview-section">
               <h3 className="section-title">Key Skills</h3>
               <div className="job-preview-skills-cloud">
-                {/* Defensive mapping to prevent "map of undefined" error */}
-                {(job.skills || ['Figma', 'Wireframing', 'UI Design']).map((skill, index) => (
+                {(job.skills && job.skills.length > 0 ? job.skills : ['Figma', 'Wireframing', 'UI Design']).map((skill, index) => (
                   <span key={index} className="skill-chip">{skill}</span>
                 ))}
               </div>

@@ -306,36 +306,53 @@ class EmployerProfileView(generics.RetrieveUpdateAPIView):
 
 class JobListView(generics.ListAPIView):
     permission_classes = [AllowAny]
-    
+    serializer_class = PostAJobSerializer
+ 
     def get_queryset(self):
-        return PostAJob.objects.filter(is_published=True)
-    
+        # ONLY approved + published jobs visible
+        return PostAJob.objects.filter(
+            is_published=True,
+            approval_status=PostAJob.ApprovalStatus.APPROVED
+        )
+ 
     def list(self, request, *args, **kwargs):
         queryset = self.get_queryset()
-        
+ 
         search = request.query_params.get("search")
         location = request.query_params.get("location")
         experience = request.query_params.get("experience")
         company_id = request.query_params.get("company")
-        
+ 
+        # Company filter (safe)
         if company_id:
-            # Changed to use CompanyProfile
-            queryset = queryset.filter(employer__employer_profile__company_id=company_id)
-        
+            queryset = queryset.filter(
+                employer__employer_profile__company_id=company_id
+            )
+ 
+        # Search
         if search:
             queryset = queryset.filter(job_title__icontains=search)
-        
+ 
+        # location is JSONField → icontains may not work properly
         if location:
             queryset = queryset.filter(location__icontains=location)
-        
+ 
+        # Experience filter
         if experience:
             queryset = queryset.filter(experience__icontains=experience)
         
-        # Order by newest first
-        queryset = queryset.order_by('-created_at')
-        
-        serializer = PostAJobSerializer(queryset, many=True)
-        return Response(serializer.data)
+        queryset = queryset.order_by(
+            '-is_highlighted',
+            '-highlighted_at',
+            '-created_at'
+        )
+ 
+        serializer = self.get_serializer(queryset, many=True)
+ 
+        return Response({
+            "total_jobs": queryset.count(),
+            "jobs": serializer.data
+        })
  
 
 class JobDetailView(generics.RetrieveAPIView):
@@ -402,17 +419,21 @@ class CreateJobPreviewView(generics.CreateAPIView):
     def perform_create(self, serializer):
         user = self.request.user
  
+        # Only employer allowed
         if user.user_type != "employer":
             raise PermissionDenied("Only employers can post jobs")
  
+        # Employer profile check
         if not hasattr(user, "employer_profile"):
             raise PermissionDenied("Employer profile not found")
  
         employer_profile = user.employer_profile
  
+        # Company linked?
         if not employer_profile.company:
             raise PermissionDenied("You must link a company first")
  
+        # Company verified?
         verification = CompanyVerification.objects.filter(
             employer=user,
             status="Verified"
@@ -420,12 +441,58 @@ class CreateJobPreviewView(generics.CreateAPIView):
  
         if not verification:
             raise PermissionDenied("Company must be verified before posting jobs")
+        
+        is_highlighted = self.request.data.get('is_highlighted', False)
+        # Convert string to boolean
+        if isinstance(is_highlighted, str):
+            is_highlighted = is_highlighted.lower() == 'true'
+        # =============================
+        # PLAN-BASED HIGHLIGHT LIMIT
+        # =============================
+        if is_highlighted:
+            # Active subscription
+            subscription = Subscription.objects.filter(
+                # employer=user,
+                user=user,
+                status='active'
+            ).select_related('plan').first()
+            # No active plan
+            if not subscription:
+                raise ValidationError({
+                    "error": "You need an active subscription plan to use highlighted jobs"
+                })
+            total_limit = subscription.plan.highlight_limit
+            # Count already used highlighted jobs
+            used_highlights = PostAJob.objects.filter(
+                employer=user,
+                is_highlighted=True
+            ).count()
+            # Limit exceeded
+            if used_highlights >= total_limit:
+                raise ValidationError({
+                    "error": f"Highlight limit reached. Your current plan allows only {total_limit} highlighted jobs."
+                })
  
-        serializer.save(
+        # MAIN LOGIC (IMPORTANT)
+        job = serializer.save(
             employer=user,
-            is_published=False
+            is_published=False,
+            approval_status=PostAJob.ApprovalStatus.PENDING,
+            is_highlighted=is_highlighted,
+            highlighted_at=timezone.now() if is_highlighted else None
         )
-   
+ 
+        # OPTIONAL: Notify Admin (if you have admin users)
+        admins = User.objects.filter(user_type="admin")
+ 
+        for admin in admins:
+            Notification.objects.create(
+                user=admin,
+                message=f"New job '{job.job_title}' submitted for approval by {user.email}",
+                notification_type="job_pending",
+                job=job
+            )
+ 
     def handle_exception(self, exc):
         print(f"Exception occurred: {exc}")
         return super().handle_exception(exc)
@@ -443,8 +510,10 @@ class PublishJobView(APIView):
     permission_classes = [IsAuthenticated]
  
     def patch(self, request, pk):
+ 
+        # Only employer allowed
         if request.user.user_type != "employer":
-            raise PermissionDenied("Only employers can publish jobs")
+            raise PermissionDenied("Only employers can submit jobs")
  
         job = get_object_or_404(
             PostAJob,
@@ -452,13 +521,33 @@ class PublishJobView(APIView):
             employer=request.user
         )
  
-        job.is_published = True
+        # Prevent re-submitting approved job
+        if job.approval_status == PostAJob.ApprovalStatus.APPROVED:
+            return Response({
+                "message": "Job already approved and live"
+            }, status=status.HTTP_400_BAD_REQUEST)
+ 
+        # MAIN LOGIC (IMPORTANT)
+        job.approval_status = PostAJob.ApprovalStatus.PENDING
+        job.is_published = False
         job.save()
  
+        # Notify Admins
+        admins = User.objects.filter(user_type="admin")
+ 
+        for admin in admins:
+            Notification.objects.create(
+                user=admin,
+                message=f"Job '{job.job_title}' submitted for approval by {request.user.email}",
+                notification_type="job_pending",
+                job=job
+            )
+ 
         return Response({
-            "message": "Job posted successfully",
+            "message": "Job submitted for admin approval",
             "job_id": job.id,
-            "job_title": job.job_title
+            "job_title": job.job_title,
+            "status": "pending"
         }, status=status.HTTP_200_OK)
  
 
@@ -500,35 +589,97 @@ class EmployerJobListView(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
  
     def get_queryset(self):
-        return PostAJob.objects.filter(employer=self.request.user)
-
+        queryset = PostAJob.objects.filter(
+            employer=self.request.user
+        ).order_by('-created_at')
+ 
+        # Optional filter by status
+        status_filter = self.request.query_params.get("status")  # pending/approved/rejected
+ 
+        if status_filter:
+            queryset = queryset.filter(approval_status=status_filter)
+ 
+        return queryset
+ 
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+ 
+        serializer = self.get_serializer(queryset, many=True)
+ 
+        # Dashboard-style stats
+        total = PostAJob.objects.filter(employer=request.user).count()
+        pending = PostAJob.objects.filter(
+            employer=request.user,
+            approval_status=PostAJob.ApprovalStatus.PENDING
+        ).count()
+        approved = PostAJob.objects.filter(
+            employer=request.user,
+            approval_status=PostAJob.ApprovalStatus.APPROVED
+        ).count()
+        rejected = PostAJob.objects.filter(
+            employer=request.user,
+            approval_status=PostAJob.ApprovalStatus.REJECTED
+        ).count()
+ 
+        return Response({
+            "stats": {
+                "total_jobs": total,
+                "pending_jobs": pending,
+                "approved_jobs": approved,
+                "rejected_jobs": rejected,
+            },
+            "jobs": serializer.data
+        })
 
 class JobSeekerJobListView(generics.ListAPIView):
     serializer_class = PostAJobSerializer
     permission_classes = [IsAuthenticated]
-   
+ 
     def get_queryset(self):
+        # ONLY approved jobs visible to jobseekers
         return PostAJob.objects.filter(
-            is_published=True
-        ).order_by('-created_at')
-   
+            is_published=True,
+            approval_status=PostAJob.ApprovalStatus.APPROVED
+        ).order_by(
+            '-is_highlighted',
+            '-highlighted_at',
+            '-created_at'
+        )
+ 
     def list(self, request, *args, **kwargs):
         queryset = self.get_queryset()
+ 
+        # 🔍 Optional filters
+        search = request.query_params.get("search")
+        location = request.query_params.get("location")
+        experience = request.query_params.get("experience")
+ 
+        if search:
+            queryset = queryset.filter(job_title__icontains=search)
+ 
+        if location:
+            queryset = queryset.filter(location__icontains=location)
+ 
+        if experience:
+            queryset = queryset.filter(experience__icontains=experience)
+ 
         serializer = self.get_serializer(queryset, many=True)
-       
+ 
         return Response({
-            'total_jobs': queryset.count(),
-            'jobs': serializer.data
+            "total_jobs": queryset.count(),
+            "jobs": serializer.data
         })
-
-
+    
 class JobSeekerJobDetailView(generics.RetrieveAPIView):
     serializer_class = PostAJobSerializer
     permission_classes = [IsAuthenticated]
-   
+ 
     def get_queryset(self):
-        return PostAJob.objects.filter(is_published=True)
-
+        # ONLY approved + published jobs accessible
+        return PostAJob.objects.filter(
+            is_published=True,
+            approval_status=PostAJob.ApprovalStatus.APPROVED
+        )
 
 # ============ JOB APPLICATION & SAVED JOBS ============
 
@@ -2651,8 +2802,19 @@ class DashboardView(APIView):
             today=Count('id', filter=Q(created_at__date=today)),
             week=Count('id', filter=Q(created_at__date__gte=week_start)),
  
-            rejected=Count('id', filter=Q(employer__company_verification__status="Reject")),
-            approved=Count('id', filter=Q(employer__company_verification__status="Verified")),
+            rejected=Count(
+                'id',
+                filter=Q(approval_status="rejected")
+            ),
+            approved=Count(
+
+                'id',
+
+                filter=Q(approval_status="approved")
+
+            ),
+ 
+            highlighted=Count('id', filter=Q(is_highlighted=True)),
  
             
         )
@@ -2723,7 +2885,8 @@ class DashboardView(APIView):
                 "employer_activity": {
                     "new_employers": user_stats["new_employers"],
                     "job_postings": job_stats["total"],
-                    "rejected_jobs": job_stats["rejected"],
+                    # "rejected_jobs": job_stats["rejected"],
+                    "highlighted_jobs": job_stats["highlighted"],
                 },
             },
             "job_communication": {
@@ -2782,7 +2945,7 @@ class UpdateCompanyStatusView(APIView):
  
         valid_values = [choice[0] for choice in CompanyVerification.STATUS_CHOICES]
  
-        # 🔹 Validate value
+        # Validate value
         if new_status not in valid_values:
             return Response(
                 {"error": f"Invalid value. Allowed: {valid_values}"},
@@ -2944,102 +3107,165 @@ class AJobListView(APIView):
     
 # job monitoring
 class AdminJobListView(APIView):
-    """Admin view to get all jobs with company verification status"""
+    """Admin view to get all jobs with approval & verification status"""
     permission_classes = [IsAdminUserType]
-   
+ 
     def get(self, request):
+        # 🔍 Optional filters
+        approval_status = request.query_params.get("status")   # pending / approved / rejected
+        search = request.query_params.get("search")
+ 
         jobs = PostAJob.objects.all().select_related('employer').order_by('-created_at')
-       
+ 
+        # Filter by approval status
+        if approval_status:
+            jobs = jobs.filter(approval_status=approval_status)
+ 
+        # Search by job title
+        if search:
+            jobs = jobs.filter(job_title__icontains=search)
+ 
         job_data = []
+ 
         for job in jobs:
-            # Get company verification status
-            verification_status = None
-            if hasattr(job.employer, 'company_verification'):
-                verification_status = job.employer.company_verification.status
-           
+ 
+            # Safe company name
+            company_name = "N/A"
+            if hasattr(job.employer, "employer_profile") and job.employer.employer_profile.company:
+                company_name = job.employer.employer_profile.company.company_name
+ 
+            # Get company verification status safely
+            verification = CompanyVerification.objects.filter(
+                employer=job.employer
+            ).first()
+ 
+            verification_status = verification.status if verification else "Not Verified"
+ 
             job_data.append({
-                'id': job.id,
-                'job_title': job.job_title,
-                'company_name': job.employer.employer_profile.company.company_name if job.employer.employer_profile.company else 'N/A',
-                'job_status': job.job_status,
-                'is_published': job.is_published,
-                'flagged': job.flagged,
-                'created_at': job.created_at,
-                'location': job.location,
-                'experience': job.experience,
-                'salary': job.salary,
-                'work_type': job.work_type,
-                'openings': job.openings,
-                'key_skills': job.key_skills,
-                'applicants_count': job.applications.count(),
-                'company_verification_status': verification_status,
-                'employer_email': job.employer.email,
-                'employer_username': job.employer.username,
+                "id": job.id,
+                "job_title": job.job_title,
+                "company_name": company_name,
+ 
+                # NEW IMPORTANT FIELD
+                "approval_status": job.approval_status,
+ 
+                "job_status": job.job_status,
+                "is_published": job.is_published,
+                "flagged": job.flagged,
+ 
+                "created_at": job.created_at,
+                "location": job.location,
+                "experience": job.experience,
+                "salary": job.salary,
+                "work_type": job.work_type,
+                "openings": job.openings,
+                "key_skills": job.key_skills,
+ 
+                "applicants_count": job.applications.count(),
+ 
+                "company_verification_status": verification_status,
+ 
+                "employer_email": job.employer.email,
+                "employer_username": job.employer.username,
+                "job_highlights":job.job_highlights,
+                "job_description":job.job_description,
+                "responsibilities":job.responsibilities,
+                "is_highlighted": job.is_highlighted,          
+                "highlighted_at": job.highlighted_at,
             })
-       
+ 
         return Response({
-            'total_jobs': jobs.count(),
-            'jobs': job_data
+            "total_jobs": jobs.count(),
+            "jobs": job_data
         }, status=status.HTTP_200_OK)
  
  
 class AdminJobApproveView(APIView):
-    """Admin approve a job (publish it)"""
+    """Admin approve a job (make it live)"""
     permission_classes = [IsAdminUserType]
-   
+ 
     def patch(self, request, pk):
         job = get_object_or_404(PostAJob, pk=pk)
-       
-        # Can only approve if company is verified
+ 
+        # Check company verification
         verification = CompanyVerification.objects.filter(
             employer=job.employer,
-            status='Verified'
-        ).first()
-       
+            status__iexact='Verified'   # safer than 'Verified'
+        ).exists()
+ 
         if not verification:
             return Response({
                 "error": "Cannot approve job. Company is not verified."
             }, status=status.HTTP_400_BAD_REQUEST)
-       
+ 
+        # Prevent duplicate approval
+        if job.approval_status == PostAJob.ApprovalStatus.APPROVED:
+            return Response({
+                "message": "Job is already approved"
+            }, status=status.HTTP_400_BAD_REQUEST)
+ 
+        # MAIN APPROVAL LOGIC
+        job.approval_status = PostAJob.ApprovalStatus.APPROVED
         job.is_published = True
+        job.approved_by = request.user
+        job.approved_at = timezone.now()
         job.save()
-       
-        # Create notification for employer
+ 
+        # NOTIFY EMPLOYER
         Notification.objects.create(
             user=job.employer,
-            message=f"Your job '{job.job_title}' has been approved and is now live!",
-            notification_type='system'
+            message=f"Your job '{job.job_title}' has been approved and is now live.",
+            notification_type="job_approved",
+            job=job
         )
-       
+ 
         return Response({
             "message": "Job approved successfully",
             "job_id": job.id,
+            "status": "approved",
             "is_published": job.is_published
         }, status=status.HTTP_200_OK)
  
  
+ 
 class AdminJobRejectView(APIView):
-    """Admin reject a job (unpublish it)"""
+    """Admin reject a job (hide it from job seekers)"""
     permission_classes = [IsAdminUserType]
-   
+ 
     def patch(self, request, pk):
         job = get_object_or_404(PostAJob, pk=pk)
-        reason = request.data.get('reason', 'Job posting does not meet our guidelines.')
-       
+ 
+        # Get reject reason
+        reason = request.data.get(
+            'reason',
+            'Job posting does not meet our guidelines.'
+        )
+ 
+        # Prevent duplicate rejection
+        if job.approval_status == PostAJob.ApprovalStatus.REJECTED:
+            return Response({
+                "message": "Job is already rejected"
+            }, status=status.HTTP_400_BAD_REQUEST)
+ 
+        # MAIN REJECTION LOGIC
+        job.approval_status = PostAJob.ApprovalStatus.REJECTED
         job.is_published = False
         job.save()
-       
-        # Create notification for employer
+ 
+        # NOTIFY EMPLOYER
         Notification.objects.create(
             user=job.employer,
-            message=f"Your job '{job.job_title}' has been rejected. Reason: {reason}",
-            notification_type='system'
+            message=f"Your job '{job.job_title}' was rejected. Reason: {reason}",
+            notification_type="job_rejected",
+            job=job
         )
-       
+ 
         return Response({
             "message": "Job rejected successfully",
             "job_id": job.id,
-            "is_published": job.is_published
+            "status": "rejected",
+            "is_published": job.is_published,
+            "reason": reason
         }, status=status.HTTP_200_OK)
  
  
@@ -3113,4 +3339,44 @@ class AdminJobStatsView(APIView):
             }
         }
        
-        return Response(stats, status=status.HTTP_200_OK)        
+        return Response(stats, status=status.HTTP_200_OK)  
+
+class JobHighlightLimitView(APIView):
+    permission_classes = [IsAuthenticated]
+ 
+    def get(self, request):
+        user = request.user
+ 
+        print("Logged in user:", user.email)
+ 
+        subscription = Subscription.objects.filter(
+            user=user,
+            status='active'
+        ).select_related('plan').first()
+ 
+        print("Subscription:", subscription)
+ 
+        if not subscription:
+            return Response({
+                "plan": "No Plan",
+                "total": 0,
+                "used": 0,
+                "remaining": 0,
+                "message": "No active subscription plan"
+            })
+ 
+        total_limit = subscription.plan.highlight_limit
+ 
+        used_highlights = PostAJob.objects.filter(
+            employer=user,
+            is_highlighted=True
+        ).count()
+ 
+        remaining = total_limit - used_highlights
+ 
+        return Response({
+            "plan": subscription.plan.name,
+            "total": total_limit,
+            "used": used_highlights,
+            "remaining": max(0, remaining)
+        })

@@ -347,13 +347,22 @@ export const ActivityMonitor = () => {
                             {s('platform_activity_overview', 'employer_activity', 'job_postings')}
                           </span>
                         </div>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 20px" }}>
+                        {/* <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 20px" }}>
                           <div style={{ display: "flex", gap: "5px", alignItems: "center" }}>
                             <img src={RedProfile} width={20} height={20} alt="" />
                             <p style={{ margin: "0px 5px" }}>Rejected Jobs</p>
                           </div>
                           <span className="admin-stat-number">
                             {s('platform_activity_overview', 'employer_activity', 'rejected_jobs')}
+                          </span>
+                        </div> */}
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 20px" }}>
+                          <div style={{ display: "flex", gap: "5px", alignItems: "center" }}>
+                            <img src={YellowProfile} width={20} height={20} alt="" />
+                            <p style={{ margin: "0px 5px" }}>Highlighted Jobs</p>
+                          </div>
+                          <span className="admin-stat-number">
+                            {s('platform_activity_overview', 'employer_activity', 'highlighted_jobs')}
                           </span>
                         </div>
                       </div>

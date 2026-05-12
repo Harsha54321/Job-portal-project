@@ -137,7 +137,7 @@ export const JobProvider = ({ children }) => {
     const fetchEmployerJobs = useCallback(async () => {
         try {
             const res = await api.get("/jobs/my-jobs/");
-            return res.data;
+            return res.data.jobs || [];   // FIX
         } catch (err) {
             console.error(err);
             return [];
@@ -222,11 +222,19 @@ export const JobProvider = ({ children }) => {
 
             if (response.data.id) {
                 try {
-                    const publishResponse = await api.patch(`/jobs/publish/${response.data.id}/`, {}, {
-                        headers: {
-                            'Authorization': `Bearer ${token}`
-                        }
-                    });
+                    // const publishResponse = await api.patch(`/jobs/publish/${response.data.id}/`, {}, {
+                    //     headers: {
+                    //         'Authorization': `Bearer ${token}`
+                    //     }
+                    // });
+
+                    const publishResponse = await api.patch(`/jobs/publish/${response.data.id}/`,
+                        { is_highlighted: jobData.is_highlighted ?? false },
+                        { headers: { 'Authorization': `Bearer ${token}` } }
+                    );
+
+
+
                     console.log('✅ Job published:', publishResponse.data);
                 } catch (publishError) {
                     console.warn('Job created but publishing failed:', publishError);
@@ -437,7 +445,7 @@ export const JobProvider = ({ children }) => {
 
             setCurrentEmployer(employer);
             setCompanyProfile(companyData);
-            
+
             console.log("✅ Employer data set:", employer.hrName);
             return employer;
         } catch (err) {
@@ -449,13 +457,13 @@ export const JobProvider = ({ children }) => {
     // ================= REFRESH EMPLOYER DATA (ONLY FOR EMPLOYER) =================
     const refreshEmployerData = useCallback(async () => {
         const userType = localStorage.getItem("user_type");
-        
+
         // Only refresh if user is employer
         if (userType !== "employer") {
             console.log("Not employer, skipping refresh");
             return;
         }
-        
+
         try {
             console.log("🔄 Refreshing employer data only...");
             await fetchEmployerData();
@@ -507,7 +515,7 @@ export const JobProvider = ({ children }) => {
             try {
                 console.log("🚀 Initial data load starting...");
                 setLoading(true);
-                
+
                 await fetchAllJobs();
                 await fetchChats();
                 await fetchNotifications();
@@ -522,7 +530,7 @@ export const JobProvider = ({ children }) => {
                     await fetchEmployerData();
                     console.log("✅ Employer data loaded");
                 }
-                
+
                 console.log("✅ Initial data load complete");
             } catch (err) {
                 console.error("Initial load error:", err);

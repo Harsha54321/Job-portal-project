@@ -183,8 +183,8 @@ export const AdminLogin = () => {
     return (
         <div className="login-page">
             <header className="login-header">
-                <Link to="/Job-portal" className="logo">
-                    <span className="logo-text">job portal</span>
+                <Link to="/" className="logo">
+                    <span className="logo-text">Job portal</span>
                     <span className='subtext'> for Administrator</span>
                 </Link>
                 <div className="header-links">

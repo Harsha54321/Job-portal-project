@@ -212,7 +212,7 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
     const urlRegex = /^(https?:\/\/)[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}(\/[a-zA-Z0-9._~:/?#[\]@!$&'()*+,;=%-]*)?$/;
     const fullNameRegex = /^[A-Za-z]+( [A-Za-z]+)+$/;
     const employerIdRegex = /^(?=.*[A-Za-z])[A-Za-z0-9](?:[A-Za-z0-9_-]{0,18}[A-Za-z0-9])?$/;
-    
+
 
     if (!formData.fullName.trim()) {
       newErrors.fullName = "Please enter your full name";
@@ -1192,6 +1192,7 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
                 className={errors.website ? "input-error" : ""}
                 type="text"
                 name="website"
+                maxLength={150}
                 placeholder="e.g., https://www.company.com"
                 value={formData.website}
                 onChange={handleChange}
@@ -1216,17 +1217,28 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
                 />
 
                 {!formData.companyLogo && !existingLogo && (
-                  <label htmlFor="logoUpload" className="aboutcompany-upload-placeholder">
-                    Click to Upload Logo
-                  </label>
+                  <button
+                    type="button"
+                    onClick={() => document.getElementById("logoUpload").click()}
+                    className="change-logo-btn"
+                  >
+                    Change Logo
+                  </button>
                 )}
 
                 {existingLogo && !formData.companyLogo && (
                   <div style={{ padding: "15px", textAlign: "center" }}>
                     <img src={existingLogo} alt="Current Logo" style={{ maxWidth: "100px", maxHeight: "100px" }} />
-                    <label htmlFor="logoUpload" style={{ cursor: "pointer", color: "#007bff", display: "block" }}>
-                      Click to change
-                    </label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setExistingLogo(null);
+                        setFormData(prev => ({ ...prev, companyLogo: null }))
+                      }}
+                      className="remove-logo-btn"
+                    >
+                      Remove
+                    </button>
                   </div>
                 )}
 
