@@ -33,10 +33,10 @@ export const AdminLogin = () => {
 
     // ADDED after handleForm:
     useEffect(() => {
-        const savedRemember = localStorage.getItem("admin_remember_me") === "true";
+        const savedRemember = sessionStorage.getItem("admin_remember_me") === "true";
         if (savedRemember) {
-            const savedAdminID = localStorage.getItem("admin_saved_id") || "";
-            const savedPassword = localStorage.getItem("admin_saved_password") || "";
+            const savedAdminID = sessionStorage.getItem("admin_saved_id") || "";
+            const savedPassword = sessionStorage.getItem("admin_saved_password") || "";
             setFormValues({ adminID: savedAdminID, password: savedPassword });
             setRememberMe(true);
         }
@@ -46,9 +46,9 @@ export const AdminLogin = () => {
         const checked = e.target.checked;
         setRememberMe(checked);
         if (!checked) {
-            localStorage.removeItem("admin_remember_me");
-            localStorage.removeItem("admin_saved_id");
-            localStorage.removeItem("admin_saved_password");
+            sessionStorage.removeItem("admin_remember_me");
+            sessionStorage.removeItem("admin_saved_id");
+            sessionStorage.removeItem("admin_saved_password");
         }
     };
 
@@ -112,13 +112,13 @@ export const AdminLogin = () => {
 
             //  if (response.data.status === "success") {
             //     if (response.data.access) {
-            //         localStorage.setItem("access", response.data.access);
+            //         sessionStorage.setItem("access", response.data.access);
             //     }
             //     if (response.data.refresh) {
-            //         localStorage.setItem("refresh", response.data.refresh);
+            //         sessionStorage.setItem("refresh", response.data.refresh);
             //     }
-            //     localStorage.setItem("user_type", response.data.user_type || "admin");
-            //     localStorage.setItem("admin_id", response.data.admin_id || formValues.adminID);
+            //     sessionStorage.setItem("user_type", response.data.user_type || "admin");
+            //     sessionStorage.setItem("admin_id", response.data.admin_id || formValues.adminID);
 
             //     console.log("Admin Login Data:", formValues);
             //     navigate("/Job-portal/admin/dashboard");
@@ -129,21 +129,21 @@ export const AdminLogin = () => {
 
             // AFTER:
             if (response.data.access) {
-                localStorage.setItem("access", response.data.access);
-                localStorage.setItem("refresh", response.data.refresh);
-                localStorage.setItem("user_type", response.data.user?.user_type || "admin");
-                localStorage.setItem("admin_id", response.data.user?.id || formValues.adminID);
-                localStorage.setItem('token', response.data.access);
-                localStorage.setItem('access_token', response.data.access);
+                sessionStorage.setItem("access", response.data.access);
+                sessionStorage.setItem("refresh", response.data.refresh);
+                sessionStorage.setItem("user_type", response.data.user?.user_type || "admin");
+                sessionStorage.setItem("admin_id", response.data.user?.id || formValues.adminID);
+                sessionStorage.setItem('token', response.data.access);
+                sessionStorage.setItem('access_token', response.data.access);
                 // AFTER:
                 if (rememberMe) {
-                    localStorage.setItem("admin_remember_me", "true");
-                    localStorage.setItem("admin_saved_id", formValues.adminID);
-                    localStorage.setItem("admin_saved_password", formValues.password);
+                    sessionStorage.setItem("admin_remember_me", "true");
+                    sessionStorage.setItem("admin_saved_id", formValues.adminID);
+                    sessionStorage.setItem("admin_saved_password", formValues.password);
                 } else {
-                    localStorage.removeItem("admin_remember_me");
-                    localStorage.removeItem("admin_saved_id");
-                    localStorage.removeItem("admin_saved_password");
+                    sessionStorage.removeItem("admin_remember_me");
+                    sessionStorage.removeItem("admin_saved_id");
+                    sessionStorage.removeItem("admin_saved_password");
                 }
                 navigate("/Job-portal/admin/dashboard");
             } else {
@@ -187,7 +187,7 @@ export const AdminLogin = () => {
             <header className="login-header">
                 <Link to="/" className="logo">
                     <span className="logo-text">Job portal</span>
-                    <span className='subtext'> for Administrator</span>
+                    <span className='subtext'> For Administrator</span>
                 </Link>
                 <div className="header-links">
                     <p className="employer-redirect-link" >Login to manage users and postings</p>
@@ -196,7 +196,14 @@ export const AdminLogin = () => {
 
             <div className="Admin-Login-Module">
                 <form onSubmit={handleSubmit} className="admin-login-form">
-                    <h2>Login as Administrator</h2>
+                    <div className="admin-login-title-row">
+                        <Link to="/Job-portal/role-selection" className="auth-back-btn">
+                            ← Back
+                        </Link>
+
+                        <h2>Login as Administrator</h2>
+                    </div>
+                    
                     <p style={{ color: '#666', textAlign: "center", fontSize: '14px' }}>Login to manage users and postings</p>
                     {serverError && (
                         <div className="server-error" style={{
@@ -233,7 +240,7 @@ export const AdminLogin = () => {
                             className={errors.password ? "input-error" : ""}
                         />
                         <span className="eye-icon" onClick={togglePasswordView}>
-                            <img src={passwordShow ? eye : eyeHide} className='show-icon' alt='toggle' />
+                            <img src={passwordShow ? eyeHide : eye} className='show-icon' alt='toggle' />
                         </span>
                     </div>
                     {errors.password && <span className="error-msg">{errors.password}</span>}

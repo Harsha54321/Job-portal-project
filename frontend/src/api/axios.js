@@ -7,7 +7,7 @@ console.log("API Base URL:", baseURL);
 
 const api = axios.create({
   baseURL: baseURL,
-  timeout: 30000,
+  timeout: 60000,
 });
 
 const publicEndpoints = [
@@ -25,7 +25,7 @@ const publicEndpoints = [
 // REQUEST interceptor
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem("access");
+    const token = sessionStorage.getItem("access");
     const requestUrl = config.url || "";
 
     const isPublicEndpoint = publicEndpoints.some((endpoint) =>
@@ -68,7 +68,7 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => {
     console.log(
-      `✅ ${response.config.method?.toUpperCase()} ${response.config.url} - Status: ${response.status}`
+      `${response.config.method?.toUpperCase()} ${response.config.url} - Status: ${response.status}`
     );
     return response;
   },
@@ -76,7 +76,7 @@ api.interceptors.response.use(
     const originalRequest = error.config;
 
     console.error(
-      `❌ ${error.config?.method?.toUpperCase()} ${error.config?.url} - Error:`,
+      `${error.config?.method?.toUpperCase()} ${error.config?.url} - Error:`,
       error.response?.status
     );
     console.error("Error details:", error.response?.data);
@@ -90,18 +90,18 @@ api.interceptors.response.use(
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
 
-      const refreshToken = localStorage.getItem("refresh");
+      const refreshToken = sessionStorage.getItem("refresh");
       const requestUrl = originalRequest.url || "";
 
       // Do not force reload here
       if (!refreshToken || requestUrl.includes("/token/refresh/")) {
         console.log("No refresh token or refresh request failed");
-        localStorage.removeItem("access");
-        localStorage.removeItem("refresh");
-        localStorage.removeItem("user_type");
-        localStorage.removeItem("user_data");
-        localStorage.removeItem("user_id");
-        localStorage.removeItem("userRole");
+        sessionStorage.removeItem("access");
+        sessionStorage.removeItem("refresh");
+        sessionStorage.removeItem("user_type");
+        sessionStorage.removeItem("user_data");
+        sessionStorage.removeItem("user_id");
+        sessionStorage.removeItem("userRole");
         return Promise.reject(error);
       }
 
@@ -114,22 +114,22 @@ api.interceptors.response.use(
 
         const newAccessToken = response.data.access;
 
-        localStorage.setItem("access", newAccessToken);
-        console.log("✅ Token refreshed successfully");
+        sessionStorage.setItem("access", newAccessToken);
+        console.log("Token refreshed successfully");
 
         originalRequest.headers = originalRequest.headers || {};
         originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
 
         return api(originalRequest);
       } catch (refreshError) {
-        console.error("❌ Token refresh failed:", refreshError);
+        console.error("Token refresh failed:", refreshError);
 
-        localStorage.removeItem("access");
-        localStorage.removeItem("refresh");
-        localStorage.removeItem("user_type");
-        localStorage.removeItem("user_data");
-        localStorage.removeItem("user_id");
-        localStorage.removeItem("userRole");
+        sessionStorage.removeItem("access");
+        sessionStorage.removeItem("refresh");
+        sessionStorage.removeItem("user_type");
+        sessionStorage.removeItem("user_data");
+        sessionStorage.removeItem("user_id");
+        sessionStorage.removeItem("userRole");
 
         return Promise.reject(refreshError);
       }
@@ -152,21 +152,21 @@ api.interceptors.response.use(
 );
 
 export const isAuthenticated = () => {
-  const token = localStorage.getItem("access");
+  const token = sessionStorage.getItem("access");
   return !!token;
 };
 
 export const getUserType = () => {
-  return localStorage.getItem("user_type");
+  return sessionStorage.getItem("user_type");
 };
 
 export const logout = () => {
-  localStorage.removeItem("access");
-  localStorage.removeItem("refresh");
-  localStorage.removeItem("user_type");
-  localStorage.removeItem("user_data");
-  localStorage.removeItem("user_id");
-  localStorage.removeItem("userRole");
+  sessionStorage.removeItem("access");
+  sessionStorage.removeItem("refresh");
+  sessionStorage.removeItem("user_type");
+  sessionStorage.removeItem("user_data");
+  sessionStorage.removeItem("user_id");
+  sessionStorage.removeItem("userRole");
 };
 
 export default api;

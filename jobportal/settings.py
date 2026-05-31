@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     'channels',
 ]
  
+'django_celery_beat',
  
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
@@ -72,6 +73,75 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
    
 ]
+
+from celery.schedules import crontab
+ 
+CELERY_BEAT_SCHEDULE = {
+ 
+    # ─────────────────────────────
+    # WEEKLY EMPLOYER SUMMARY
+    # ─────────────────────────────
+ 
+    'weekly-employer-summary': {
+ 
+        'task': (
+            'jobapp.tasks.'
+            'send_weekly_summary_notifications'
+        ),
+ 
+        'schedule': crontab(
+            hour=9,
+            minute=0,
+            day_of_week='monday'
+        ),
+    },
+ 
+    # ─────────────────────────────
+    # AUTO EXPIRE JOBS
+    # ─────────────────────────────
+ 
+    'expire-jobs-every-hour': {
+ 
+        'task': (
+            'jobapp.tasks.'
+            'expire_jobs'
+        ),
+ 
+        'schedule': crontab(
+            minute=0
+        ),
+    },
+ 
+    # ─────────────────────────────
+    # NOTIFY EXPIRING JOBS
+    # ─────────────────────────────
+ 
+    'notify-expiring-jobs': {
+ 
+        'task': (
+            'jobapp.tasks.'
+            'notify_expiring_jobs'
+        ),
+ 
+        'schedule': crontab(
+            hour=9,
+            minute=0
+        ),
+    },
+}
+CELERY_BROKER_URL = 'redis://localhost:6379/0'
+ 
+CELERY_ACCEPT_CONTENT = ['json']
+ 
+CELERY_TASK_SERIALIZER = 'json'
+ 
+CELERY_RESULT_SERIALIZER = 'json'
+ 
+CELERY_TIMEZONE = 'Asia/Kolkata'
+
+# GeoIP DB path (project currently keeps mmdb under jobapp/geoip)
+GEOIP_PATH = BASE_DIR / "jobapp" / "geoip"
+GEOIP_CITY = "GeoLite2-City.mmdb"
  
 CORS_ALLOW_ALL_ORIGINS = False
  
@@ -119,6 +189,21 @@ DATABASES = {
         'NAME': BASE_DIR / 'db.sqlite3',  
     }
 }
+
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.mysql',
+#         'NAME': 'jobportal_dev',
+#         'USER': 'jobportal_user',
+#         'PASSWORD': 'Jobportal@01',
+#         'HOST': '54.183.89.14',
+#         'PORT': '3306',
+#         'CONN_MAX_AGE':60,
+#         'OPTIONS': {
+#             'charset': 'utf8mb4',
+#         }
+#     }
+# }
  
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
  
@@ -127,7 +212,7 @@ EMAIL_PORT = 587
 EMAIL_USE_TLS = True
  
 EMAIL_HOST_USER = 'jobportal709@gmail.com'
-EMAIL_HOST_PASSWORD = 'ljjl kgtl rdrl kspo'
+EMAIL_HOST_PASSWORD = 'yoka vlvv dnok thor'
  
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
  

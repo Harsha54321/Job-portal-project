@@ -323,7 +323,7 @@ export const Jsignup = () => {
         alert("Signup successful! Please login to continue.");
         console.log("Signed up successfully", formValues);
 
-        localStorage.setItem('temp_user_email', formValues.email);
+        sessionStorage.setItem('temp_user_email', formValues.email);
 
         setFormValues(initialValues);
         setIsEmailVerified(false);
@@ -398,10 +398,10 @@ export const Jsignup = () => {
         }
       )
 
-      localStorage.setItem("access", response.data.access)
-      localStorage.setItem("refresh", response.data.refresh)
-      localStorage.setItem("user", JSON.stringify(response.data.user))
-      localStorage.setItem("user_type", response.data.user.user_type)
+      sessionStorage.setItem("access", response.data.access)
+      sessionStorage.setItem("refresh", response.data.refresh)
+      sessionStorage.setItem("user", JSON.stringify(response.data.user))
+      sessionStorage.setItem("user_type", response.data.user.user_type)
 
       alert("Google Signup Successful")
 
@@ -545,10 +545,12 @@ export const Jsignup = () => {
         <header className="j-sign-up-header">
           <Link to="/" className="logo">
             <span className="logo-text">Job portal</span>
+            <span className="subtext">For Jobseekers</span>
           </Link>
 
           <div className="j-sign-up-header-links">
-            <span className='no-account'>Already have an account?</span>
+            <span className="no-account">Already have an account?</span>
+
             <Link
               to="/Job-portal/jobseeker/login"
               state={{
@@ -562,9 +564,8 @@ export const Jsignup = () => {
             >
               Login
             </Link>
-            <div className="separator"></div>
-            <Link to='/Job-portal/employer/login' className="employer-redirect-link">
-              Employers Login
+            <Link to="/Job-portal/role-selection" className="header-back-btn">
+              ← Back
             </Link>
           </div>
         </header>
@@ -576,7 +577,6 @@ export const Jsignup = () => {
 
           <form onSubmit={handleSubmit} className="j-sign-up-form">
             <h2>Sign up for Jobseeker</h2>
-
             <label>User name</label>
             <input
               type="text"

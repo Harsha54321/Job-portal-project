@@ -39,8 +39,8 @@ export const Jlogin = () => {
   };
 
   useEffect(() => {
-    const savedUsername = localStorage.getItem("rememberedUsername");
-    const savedPassword = localStorage.getItem("rememberedPassword");
+    const savedUsername = sessionStorage.getItem("rememberedUsername");
+    const savedPassword = sessionStorage.getItem("rememberedPassword");
 
     if (savedUsername && savedPassword) {
       setFormValues((prev) => ({
@@ -112,7 +112,7 @@ export const Jlogin = () => {
       const response = await api.post('send-login-otp/', {
         email: formValues.username,
         purpose: 'login',
-
+        user_type: 'jobseeker'
       });
 
       console.log('OTP Response:', response.data);
@@ -225,7 +225,7 @@ export const Jlogin = () => {
       };
     }
 
-    localStorage.removeItem("pendingSearch");
+    sessionStorage.removeItem("pendingSearch");
     sessionStorage.removeItem("savedSearch");
 
     return {
@@ -252,28 +252,28 @@ export const Jlogin = () => {
       const response = await api.post('login/', loginData);
 
       if (response.data.user.user_type !== 'jobseeker') {
-        setErrors({ general: "Please use employer login" });
+        setErrors({ general: "Only jobseeker credentials should be used here" });
         setLoading(false);
         return;
       }
       if (response.data.access && response.data.refresh) {
-        localStorage.setItem('access', response.data.access);
-        localStorage.setItem('refresh', response.data.refresh);
-        localStorage.setItem('user_type', 'jobseeker');
+        sessionStorage.setItem('access', response.data.access);
+        sessionStorage.setItem('refresh', response.data.refresh);
+        sessionStorage.setItem('user_type', 'jobseeker');
 
         if (response.data.user) {
-          localStorage.setItem('user_data', JSON.stringify(response.data.user));
-          localStorage.setItem('user_id', response.data.user.id);
+          sessionStorage.setItem('user_data', JSON.stringify(response.data.user));
+          sessionStorage.setItem('user_id', response.data.user.id);
         }
 
-        localStorage.setItem("userRole", "jobseeker");
+        sessionStorage.setItem("userRole", "jobseeker");
 
         if (rememberMe) {
-          localStorage.setItem("rememberedUsername", formValues.username);
-          localStorage.setItem("rememberedPassword", formValues.password);
+          sessionStorage.setItem("rememberedUsername", formValues.username);
+          sessionStorage.setItem("rememberedPassword", formValues.password);
         } else {
-          localStorage.removeItem("rememberedUsername");
-          localStorage.removeItem("rememberedPassword");
+          sessionStorage.removeItem("rememberedUsername");
+          sessionStorage.removeItem("rememberedPassword");
         }
 
         await fetchAllJobs();
@@ -281,7 +281,7 @@ export const Jlogin = () => {
         const nextStep = getRedirectAfterLogin();
 
         if (nextStep.type === "search") {
-          localStorage.removeItem('pendingSearch');
+          sessionStorage.removeItem('pendingSearch');
           sessionStorage.removeItem('savedSearch');
 
           navigate('/Job-portal/jobseeker/searchresults', {
@@ -293,7 +293,12 @@ export const Jlogin = () => {
             }
           });
         } else {
-          navigate(nextStep.path, { replace: true });
+          navigate(location.state?.intendedPath || nextStep.path, {
+            replace: true,
+            state: {
+              targetTab: location.state?.targetTab || "Profile"
+            }
+          });
         }
       } else {
         throw new Error('Invalid response format from server');
@@ -377,9 +382,10 @@ export const Jlogin = () => {
       <header className="login-header">
         <Link to="/" className="logo">
           <span className="logo-text">Job portal</span>
+          <span className="subtext">For Jobseekers</span>
         </Link>
 
-        <div className="header-links">
+        <div className="login-header-actions">
           <span className="no-account">Don't have an account?</span>
 
           <Link
@@ -396,10 +402,8 @@ export const Jlogin = () => {
             Sign up
           </Link>
 
-          <div className="separator"></div>
-
-          <Link to="/Job-portal/employer/login" className="employer-redirect-link">
-            Employers Login
+          <Link to="/Job-portal/role-selection" className="login-header-back-btn">
+            ← Back
           </Link>
         </div>
       </header>
@@ -594,7 +598,7 @@ export const Jlogin = () => {
                 onClick={() => setView('email-otp')}
                 disabled={loading}
               >
-                <img src={Google} alt="Google" /> Google
+                <img src={Email} alt="Email" /> Email ID
               </button>
             </>
           )}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import api from "../api/axios";
 import manSitting from "../assets/Illustration_1.png";
 import eye from "../assets/show_password.png";
@@ -8,8 +8,9 @@ import "./Elogin.css";
 
 export const Elogin = () => {
   const navigate = useNavigate();
-  const savedEmail = localStorage.getItem("rememberedEmail");
-  const savedPassword = localStorage.getItem("rememberedPassword");
+  const location = useLocation();
+  const savedEmail = sessionStorage.getItem("rememberedEmail");
+  const savedPassword = sessionStorage.getItem("rememberedPassword");
   const [rememberMe, setRememberMe] = useState(false);
 
   const [passwordShow, setPasswordShow] = useState(true);
@@ -22,7 +23,7 @@ export const Elogin = () => {
   });
 
   useEffect(() => {
-    if (localStorage.getItem("rememberedEmail")) {
+    if (sessionStorage.getItem("rememberedEmail")) {
       setRememberMe(true);
     }
   }, []);
@@ -71,31 +72,43 @@ export const Elogin = () => {
           replace: true,
           state: { fromSignup: false, fromLoginRedirect: true }
         });
-      } else if (!has_verification) {
-        navigate('/Job-portal/Employer/about-your-company/company-verification', {
-          replace: true,
-          state: { fromLoginRedirect: true }
-        });
-      } else if (verification_status === 'rejected') {
-        navigate('/Job-portal/Employer/about-your-company/company-verification', {
-          replace: true,
-          state: { fromLoginRedirect: true, rejected: true }
-        });
-      } else {
-        // ✅ Add justLoggedIn: true to trigger auto-refresh in dashboard
-        setTimeout(() => {
-          navigate('/Job-portal/employer/dashboard', { 
-            replace: true,
-            state: { justLoggedIn: true }
-          });
-        }, 100);
+        return;
       }
+
+      if (!has_verification || verification_status === 'rejected') {
+        navigate('/Job-portal/Employer/about-your-company/company-verification', {
+          replace: true,
+          state: { fromLoginRedirect: true, rejected: verification_status === 'rejected' }
+        });
+        return;
+      }
+
+      // If fully onboarded, check if they came from a deep footer link
+      const intendedPath = location.state?.intendedPath || '/Job-portal/employer/dashboard';
+      const targetTab = location.state?.targetTab || 'Dashboard';
+      const fromFooter = location.state?.fromFooter || false;
+
+      setTimeout(() => {
+        navigate(intendedPath, {
+          replace: true,
+          state: {
+            justLoggedIn: true,
+            fromFooter: fromFooter,
+            targetTab: targetTab
+          }
+        });
+      }, 100);
+
     } catch (error) {
-      console.error("Error checking status:", error);
-      // ✅ Add justLoggedIn: true to trigger auto-refresh in dashboard
-      navigate('/Job-portal/employer/dashboard', { 
+      console.error("Error checking status, falling back:", error);
+
+      // Fallback destination mapping if API status check fails
+      const intendedPath = location.state?.intendedPath || '/Job-portal/employer/dashboard';
+      const targetTab = location.state?.targetTab || 'Dashboard';
+
+      navigate(intendedPath, {
         replace: true,
-        state: { justLoggedIn: true }
+        state: { justLoggedIn: true, targetTab: targetTab }
       });
     }
   };
@@ -119,35 +132,35 @@ export const Elogin = () => {
       console.log("Login response:", res.data);
 
       if (res.data.user.user_type !== 'employer') {
-        setErrors({ general: "Please use job seeker login" });
+        setErrors({ general: "Only employer credentials should be used here" });
         setLoading(false);
         return;
       }
 
       if (rememberMe) {
-        localStorage.setItem("rememberedEmail", formValues.username);
-        localStorage.setItem("rememberedPassword", formValues.password);
+        sessionStorage.setItem("rememberedEmail", formValues.username);
+        sessionStorage.setItem("rememberedPassword", formValues.password);
       } else {
-        localStorage.removeItem("rememberedEmail");
-        localStorage.removeItem("rememberedPassword");
+        sessionStorage.removeItem("rememberedEmail");
+        sessionStorage.removeItem("rememberedPassword");
       }
 
-      localStorage.setItem("access", res.data.access);
-      localStorage.setItem("refresh", res.data.refresh);
-      localStorage.setItem("userRole", "Employer");
+      sessionStorage.setItem("access", res.data.access);
+      sessionStorage.setItem("refresh", res.data.refresh);
+      sessionStorage.setItem("userRole", "Employer");
 
       if (res.data.user_id) {
-        localStorage.setItem("user_id", res.data.user_id);
+        sessionStorage.setItem("user_id", res.data.user_id);
       } else if (res.data.user && res.data.user.id) {
-        localStorage.setItem("user_id", res.data.user.id);
+        sessionStorage.setItem("user_id", res.data.user.id);
       } else if (res.data.id) {
-        localStorage.setItem("user_id", res.data.id);
+        sessionStorage.setItem("user_id", res.data.id);
       }
 
-      localStorage.setItem("user_type", res.data.user.user_type);
+      sessionStorage.setItem("user_type", res.data.user.user_type);
 
       if (res.data.profile_id) {
-        localStorage.setItem("profile_id", res.data.profile_id);
+        sessionStorage.setItem("profile_id", res.data.profile_id);
       }
 
       await checkAndRedirect();
@@ -227,17 +240,15 @@ export const Elogin = () => {
           <span className="logo-text">Job portal</span>
           <span className="subtext">For Employers</span>
         </Link>
-        <div className="header-links">
+        <div className="login-header-actions">
           <span className="no-account">Don’t have an account?</span>
+
           <Link to="/Job-portal/employer/signup" className="signup-btn">
             Create
           </Link>
-          <div className="separator"></div>
-          <Link
-            to="/Job-portal/jobseeker/login"
-            className="employer-redirect-link"
-          >
-            Job seekers Login
+
+          <Link to="/Job-portal/role-selection" className="login-header-back-btn">
+            ← Back
           </Link>
         </div>
       </header>
