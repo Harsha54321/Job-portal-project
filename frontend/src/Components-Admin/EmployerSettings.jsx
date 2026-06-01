@@ -423,7 +423,7 @@ export const EmployerSettings = () => {
       type="checkbox"
       checked={settings.preferences[pref.id]}
       onChange={(e) => handleChange('preferences', pref.id, e.target.checked, true)}
-      disabled
+      
     />
     <span>{pref.label}</span>
   </label>

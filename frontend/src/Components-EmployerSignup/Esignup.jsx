@@ -376,7 +376,7 @@ export const Esignup = () => {
   // };  
 
 
-  const handleSubmit = async (e) => {  // ✅ Make it async
+  const handleSubmit = async (e) => {  // Make it async
     e.preventDefault();
 
     const isValid = validateForm();
@@ -393,12 +393,12 @@ export const Esignup = () => {
     //   return;
     // }
 
-    setIsLoading(true); // ✅ Add loading state
+    setIsLoading(true); // Add loading state
 
     setBackendError("");
 
     try {
-      // ✅ Step 1: Register employer
+      // Step 1: Register employer
       const registerResponse = await api.post("register/employer/", {
         username: formValues.username,
         email: formValues.email,
@@ -412,8 +412,8 @@ export const Esignup = () => {
       if (registerResponse.status === 201) {
         console.log("Registration successful!");
 
-        // ✅ Step 2: Auto-login to get tokens
-        const loginResponse = await api.post("login/", {
+        try {
+          const loginResponse = await api.post("login/", {
           email: formValues.email,
           password: formValues.password,
         });
@@ -424,17 +424,26 @@ export const Esignup = () => {
           sessionStorage.setItem("refresh", loginResponse.data.refresh);
           sessionStorage.setItem("userType", "employer");
 
-          console.log("✅ Tokens stored");
+          console.log(" Tokens stored");
 
-          // ✅ Step 3: Navigate to About Your Company
+          // Step 3: Navigate to About Your Company
           navigate("/Job-portal/Employer/about-your-company", {
             state: { fromSignup: true }
           });
         }
+          
+        } catch (error) {
+          const errorMessage=error.response?.data?.error || error.response?.data?.detail ? "you have registered successfully,it is under account approval" : "something went wrong"|| "something went wrong" 
+
+          alert(errorMessage)
+        }
+        // Step 2: Auto-login to get tokens
+        
       }
     } catch (err) {
       console.error("Registration error:", err);
-      alert("Registration failed. Please try again.");
+      const errorMessage=err.response?.data?.error || "something went wrong"
+      alert(errorMessage);
     } finally {
       setIsLoading(false);
     }

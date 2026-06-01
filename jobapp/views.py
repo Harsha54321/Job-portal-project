@@ -224,25 +224,11 @@ class EmployerRegistrationView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
- 
-        # ─────────────────────────────
         # PLAN
-        # ─────────────────────────────
- 
-        plan_id = request.data.get(
-            "plan_id",
-            1
-        )
-        plan = (
-            Plan.objects.filter(
-                id=plan_id
-            ).first()
-        )
- 
-        # ─────────────────────────────
+        plan_id = request.data.get("plan_id", 1)
+        plan = Plan.objects.filter(id=plan_id).first()
+
         # CREATE DEFAULT STARTER PLAN
-        # ─────────────────────────────
- 
         if not plan:
             plan = Plan.objects.create(
                 id=1,
@@ -251,231 +237,157 @@ class EmployerRegistrationView(APIView):
                 duration_days=30,
                 highlight_limit=0
             )
- 
-        # ─────────────────────────────
+
         # DEFAULT FLOW STATUS
-        # ─────────────────────────────
- 
-        default_status = (
-            User.AccountStatus.HOLD
-        )
- 
-        # ─────────────────────────────
+        default_status = User.AccountStatus.HOLD
+
         # PLATFORM SETTINGS
-        # ─────────────────────────────
- 
-        platform = (
-            EmployerPlatformSettings.objects.filter(
-                plan=plan,
-                account_status=default_status
-            ).first()
-        )
- 
-        # ─────────────────────────────
+        platform = EmployerPlatformSettings.objects.filter(
+            plan=plan,
+            account_status=default_status
+        ).first()
+
         # CREATE DEFAULT SETTINGS
-        # ─────────────────────────────
- 
         if not platform:
-            platform = (
-                EmployerPlatformSettings.objects.create(
-                    plan=plan,
-                    account_status=(
-                        User.AccountStatus.HOLD
-                    ),
-                    employer_registration=True,
-                    email_verification=True,
-                    mobile_verification=False,
-                    approval_type="Manual Type",
-                    req_company_cert=False,
-                    req_gst_cert=False,
-                    req_business_email=False,
-                    req_company_website=False,
-                    allow_multiple_company=False,
-                    allow_multiple_users=False,
-                    show_company_reviews=False,
-                    enable_company_branding=False,
-                    featured_employer_option=False,
-                    notif_email=False,
-                    notif_new_signups=False,
-                    notif_alerts=False,
-                    notif_announcements=False,
-                    notif_weekly_summary=False,
-                    job_expire_days=30,
-                    max_job_posts=10,
-                    featured_job_limit=0,
-                    allow_edit_after_approval=False
-                )
+            platform = EmployerPlatformSettings.objects.create(
+                plan=plan,
+                account_status=User.AccountStatus.HOLD,
+                employer_registration=True,
+                email_verification=True,
+                mobile_verification=False,
+                approval_type="Manual Type",
+                req_company_cert=False,
+                req_gst_cert=False,
+                req_business_email=False,
+                req_company_website=False,
+                allow_multiple_company=False,
+                allow_multiple_users=False,
+                show_company_reviews=False,
+                enable_company_branding=False,
+                featured_employer_option=False,
+                notif_email=False,
+                notif_new_signups=False,
+                notif_alerts=False,
+                notif_announcements=False,
+                notif_weekly_summary=False,
+                job_expire_days=30,
+                max_job_posts=10,
+                featured_job_limit=0,
+                allow_edit_after_approval=False
             )
- 
-        # ─────────────────────────────
+
         # EMPLOYER REGISTRATION ENABLED
-        # ─────────────────────────────
- 
         if not platform.employer_registration:
             return Response(
-                {
-                    "error": (
-                        "Employer registration "
-                        "is disabled."
-                    )
-                },
+                {"error": "Employer registration is disabled."},
                 status=status.HTTP_403_FORBIDDEN
             )
- 
-        # ─────────────────────────────
+
         # EMAIL VERIFICATION
-        # ─────────────────────────────
         if platform.email_verification:
-            email = request.data.get(
-                "email"
-            )
-            email_verified = (
-                EmailOTP.objects.filter(
-                    email=email,
-                    purpose="email_verification",
-                    is_verified=True
-                ).exists()
-            )
+            email = request.data.get("email")
+            email_verified = EmailOTP.objects.filter(
+                email=email,
+                purpose="email_verification",
+                is_verified=True
+            ).exists()
             if not email_verified:
                 return Response(
+                    {"error": "Please verify your email first."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+        # COMPANY MULTIPLE USER CHECK
+        company_id = request.data.get("company")
+        if company_id:
+            company = CompanyProfile.objects.filter(id=company_id).first()
+            if company:
+                existing_members = EmployerProfile.objects.filter(company=company).exists()
+                if existing_members and not platform.allow_multiple_users:
+                    return Response(
+                        {"error": "Multiple employers are not allowed for this company."},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+
+        # SERIALIZER VALIDATION WITH FRIENDLY ERRORS
+        serializer = EmployerRegistrationSerializer(data=request.data)
+
+        if not serializer.is_valid():
+            errors = serializer.errors
+
+            if 'username' in errors:
+                return Response(
                     {
-                        "error": (
-                            "Please verify your "
-                            "email first."
-                        )
+                        "error": "Username already exists. Please choose a different username.",
+                        "field": "username",
+                        "details": errors['username']
+                    },
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            elif 'email' in errors:
+                return Response(
+                    {
+                        "error": "Email already registered. Please login instead or use a different email.",
+                        "field": "email",
+                        "details": errors['email']
+                    },
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            else:
+                return Response(
+                    {
+                        "error": "Validation failed",
+                        "details": errors
                     },
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
-        # ─────────────────────────────
-        # COMPANY MULTIPLE USER CHECK
-        # ─────────────────────────────
-        company_id = request.data.get(
-            "company"
-        )
-        if company_id:
-            company = (
-                CompanyProfile.objects.filter(
-                    id=company_id
-                ).first()
-            )
-            if company:
-                existing_members = (
-                    EmployerProfile.objects.filter(
-                        company=company
-                    ).exists()
-                )
-                if (
-                    existing_members
-                    and
-                    not platform.allow_multiple_users
-                ):
-                    return Response(
-                        {
-                            "error": (
-                                "Multiple employers "
-                                "are not allowed "
-                                "for this company."
-                            )
-                        },
-                        status=status.HTTP_400_BAD_REQUEST
-                    )
-        
-        # ─────────────────────────────
-        # SERIALIZER
-        # ─────────────────────────────
- 
-        serializer = (
-            EmployerRegistrationSerializer(
-                data=request.data
-            )
-        )
- 
-        serializer.is_valid(
-            raise_exception=True
-        )
- 
         user = serializer.save()
- 
-        # ─────────────────────────────
+
         # APPROVAL FLOW
-        # ─────────────────────────────
- 
-        if (
-            platform.approval_type
-            ==
-            "Automatic"
-        ):
- 
-            user.status = (
-                User.AccountStatus.ACTIVE
-            )
- 
+        if platform.approval_type == "Automatic":
+            user.status = User.AccountStatus.ACTIVE
             user.is_active = True
- 
         else:
- 
-            user.status = (
-                User.AccountStatus.HOLD
-            )
- 
+            user.status = User.AccountStatus.HOLD
             user.is_active = False
- 
+
         user.save()
 
- 
-        # ─────────────────────────────
         # SUBSCRIPTION
-        # ─────────────────────────────
- 
         Subscription.objects.get_or_create(
             user=user,
             plan=plan,
-            defaults={
-                "status": "active"
-            }
+            defaults={"status": "active"}
         )
-        
-        # ─────────────────────────────
+
         # NOTIFICATION
-        # ─────────────────────────────
- 
+        # NotificationService.create_notification(
+        #     recipient=user,
+        #     title="Employer Account Created",
+        #     message="Your employer account has been created successfully.",
+        #     category="new_signup",
+        #     event_type="employer_signup",
+        #     notification_type="system"
+        # )
         NotificationService.create_notification(
             recipient=user,
             title="Employer Account Created",
-            message=(
-                "Your employer account "
-                "has been created successfully."
-            ),
+            message="Your employer account has been created successfully.",
+
             category="new_signup",
             event_type="employer_signup",
             notification_type="system"
         )
 
-        # ─────────────────────────────
         # RESPONSE
-        # ─────────────────────────────
-
         return Response(
             {
-                "message": (
-                    "Employer registered "
-                    "successfully."
-                ),
- 
-                "account_status": (
-                    user.status
-                ),
- 
-                "is_active": (
-                    user.is_active
-                ),
- 
-                "plan": (
-                    plan.name
-                )
+                "message": "Employer registered successfully.",
+                "account_status": user.status,
+                "is_active": user.is_active,
+                "plan": plan.name
             },
- 
             status=status.HTTP_201_CREATED
         )
  
@@ -4462,9 +4374,11 @@ class GoogleLoginView(APIView):
         
         # Try to get token from different possible field names
         id_token_str = request.data.get('id_token') or request.data.get('access_token') or request.data.get('token')
-        from django.utils import timezone
-        user.login_time = timezone.now()
-        user.save(update_fields=["login_time"])
+        
+        # ❌ REMOVE THESE LINES FROM HERE - they don't belong at the beginning
+        # from django.utils import timezone
+        # user.login_time = timezone.now()
+        # user.save(update_fields=["login_time"])
         
         if not id_token_str:
             return Response(
@@ -4505,14 +4419,16 @@ class GoogleLoginView(APIView):
                     status=status.HTTP_400_BAD_REQUEST
                 )
  
-            # --------------------------------------------------
-            # EXISTING EMAIL VALIDATION
-            # --------------------------------------------------
- 
+            # Check if user already exists
             user = User.objects.filter(email=email).first()
  
             # If email already exists -> block signup
             if user:
+                # ✅ UPDATE LOGIN_TIME FOR EXISTING USER
+                from django.utils import timezone
+                user.login_time = timezone.now()
+                user.save(update_fields=["login_time"])
+                
                 return Response(
                     {
                         "error": "Email already registered. Please login."
@@ -4520,10 +4436,7 @@ class GoogleLoginView(APIView):
                     status=status.HTTP_400_BAD_REQUEST
                 )
  
-            # --------------------------------------------------
-            # CREATE NEW USER
-            # --------------------------------------------------
- 
+            # Create new user
             username = email.split("@")[0]
             base_username = username
             counter = 1
@@ -4540,12 +4453,13 @@ class GoogleLoginView(APIView):
             )
  
             user.set_unusable_password()
-            user.save()
- 
-            # --------------------------------------------------
-            # CREATE JOBSEEKER PROFILE
-            # --------------------------------------------------
- 
+            
+            # SET LOGIN_TIME FOR NEW USER
+            from django.utils import timezone
+            user.login_time = timezone.now()
+            user.save()  # Save both the unusable password and login_time
+            
+            # Create job seeker profile
             try:
                 JobSeekerProfile.objects.create(
                     user=user,
@@ -4554,15 +4468,8 @@ class GoogleLoginView(APIView):
             except Exception as e:
                 print("Profile creation error:", e)
  
-            # --------------------------------------------------
-            # JWT TOKENS
-            # --------------------------------------------------
- 
+            # Generate JWT tokens
             refresh = RefreshToken.for_user(user)
-
-            from django.utils import timezone
-            user.login_time = timezone.now()
-            user.save(update_fields=["login_time"])
  
             return Response(
                 {
@@ -6432,12 +6339,12 @@ class AdminQuietHoursView(APIView):
  
 class AdminQuietHoursView(APIView):
  
-    #permission_classes = [IsAdminUserType]
+    permission_classes = [IsAdminUserType] 
  
     def get(self, request):
         # Temporary hardcoded admin user
             # Remove in production
-        user = User.objects.get(id=1) # remove in production
+        user = User.objects.get(id=request.user.id) # remove in production
         quiet_hours, created = AdminQuietHours.objects.get_or_create(
             admin=user, # remove this line and add below line
             #admin=request.user,
@@ -6468,7 +6375,7 @@ class AdminQuietHoursView(APIView):
  
 class AdminQuietHoursUpdateView(APIView):
  
-    # permission_classes = [IsAdminUserType]
+    permission_classes = [IsAdminUserType]
  
     VALID_DAYS = [
         "Mon",
@@ -6500,7 +6407,7 @@ class AdminQuietHoursUpdateView(APIView):
  
             # Temporary hardcoded admin user
             # Remove in production
-            user = User.objects.get(id=1)
+            user = User.objects.get(id=request.user.id)
  
             quiet_hours, created = AdminQuietHours.objects.get_or_create(
                 admin=user
