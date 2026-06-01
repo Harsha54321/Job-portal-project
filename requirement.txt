@@ -73,3 +73,4 @@ razorpay
 google
 google_auth
 celery
+PyPDF2=3.0.1

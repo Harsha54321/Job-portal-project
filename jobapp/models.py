@@ -32,7 +32,7 @@ class User(AbstractUser):
     REQUIRED_FIELDS = ['username', 'user_type']
 
     is_online = models.BooleanField(default=False)
-    last_seen = models.DateTimeField(auto_now=True)
+    last_seen = models.DateTimeField(null=True, blank=True)
     login_time = models.DateTimeField(null=True, blank=True)
 
     class Meta:
@@ -251,7 +251,11 @@ class AdminProfile(models.Model):
     department = models.CharField(max_length=100, blank=True)
     bio = models.TextField(blank=True)
     access_level = models.CharField(max_length=50, default='Full')
-
+    profile_photo = models.ImageField(
+        upload_to='admin_profile_photos/',
+        null=True,
+        blank=True
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     two_factor_enabled = models.BooleanField(default=False)   

@@ -7,6 +7,7 @@ from .views import (
     # AdminDashboardOverviewView,
     AdminDashboardStats,
     AdminLoginView,
+    AdminProfilePhotoView,
     AdminUpdateComplaintView,
     CompanyProfileCreateView,
     DashboardView,
@@ -26,6 +27,8 @@ from .views import (
     NewsletterSubscribeAPIView,
     SubmitComplaintView,
     UpdateCompanyStatusView,
+    UserDeleteView,
+    UserDetailView,
     UserListView,
     UserSettingsView,
     SaveJobView,
@@ -261,7 +264,8 @@ urlpatterns = [
     path('company/send-email-otp/', SendCompanyEmailOTPView.as_view(), name='send-company-email-otp'),
     path('company/verify-email-otp/', VerifyCompanyEmailOTPView.as_view(), name='verify-company-email-otp'),
     path('employer/onboarding-status/', EmployerOnboardingStatusView.as_view(), name='employer-onboarding-status'),
-
+     #AdminHeader
+    path('admin/profile/photo/', AdminProfilePhotoView.as_view(), name='admin-profile-photo'),
     # Google Login
     path("google-login/", GoogleLoginView.as_view()),
     # admin login
@@ -275,7 +279,8 @@ urlpatterns = [
     path('users/', UserListView.as_view(), name='user-list'),
     path('users/<int:pk>/status/', UserStatusUpdateView.as_view(), name='user-status-update'),
     path('users/stats/', UserStatsView.as_view(), name='user-stats'),
-
+    path('users/<int:pk>/', UserDetailView.as_view(), name='user-detail'),
+    path('users/<int:pk>/delete/', UserDeleteView.as_view(), name='user-delete'),
      #admin JobMonitoring
     path('admin/jobs/', AdminJobListView.as_view(), name='admin-job-list'),
     path('admin/jobs/<int:pk>/approve/', AdminJobApproveView.as_view(), name='admin-job-approve'),

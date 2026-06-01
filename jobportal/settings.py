@@ -151,6 +151,7 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
     "http://localhost:5173",
+    "http://localhost:5174",
     "https://112m0g3c-5173.inc1.devtunnels.ms",
     "http://54.183.89.14"
    

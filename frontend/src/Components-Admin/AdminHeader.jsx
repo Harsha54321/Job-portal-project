@@ -5,20 +5,56 @@ import ProfileIcon from "../assets/icon_profile.png"
 import Arrow from "../assets/AdminAssets/DownArrow.png"
 import UploadIcon from "../assets/AdminAssets/UserManage.png" 
 import AdminLogout from '../assets/AdminAssets/Logout.png'
+import DeleteIcon from "../assets/DeleteIcon.png"
+import api from '../api/axios'
 
 export const AdminHeader = ({ onLogoutClick }) => {
     const [showDropdown, setShowDropdown] = useState(false)
     const [showUploadModal, setShowUploadModal] = useState(false)
     const [selectedImage, setSelectedImage] = useState(null)
     const [previewUrl, setPreviewUrl] = useState(() => {
-        // Keeps the uploaded picture visible even on page refreshes
         return sessionStorage.getItem('admin_avatar') || null
     })
     const [fileError, setFileError] = useState('')
+    const [isUploading, setIsUploading] = useState(false)
     
     const dropdownRef = useRef(null)
     const fileInputRef = useRef(null)
     const navigate = useNavigate()
+
+    // Get auth token from storage
+    const getAuthToken = () => {
+        return localStorage.getItem('access_token') || sessionStorage.getItem('access_token')
+    }
+
+    // Fetch profile photo from API on component mount
+    useEffect(() => {
+        fetchProfilePhoto()
+    }, [])
+
+    const fetchProfilePhoto = async () => {
+        try {
+            const token = getAuthToken()
+            if (!token) return
+
+            const response = await api.get('/admin/profile/photo/', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            })
+            
+            if (response.data.photo_url) {
+                setPreviewUrl(response.data.photo_url)
+                sessionStorage.setItem('admin_avatar', response.data.photo_url)
+            }
+        } catch (error) {
+            console.error('Error fetching profile photo:', error)
+            const cachedAvatar = sessionStorage.getItem('admin_avatar')
+            if (cachedAvatar) {
+                setPreviewUrl(cachedAvatar)
+            }
+        }
+    }
     
     const today = new Date()
     const day = today.toLocaleDateString('en-US', { weekday: 'long' })
@@ -53,12 +89,13 @@ export const AdminHeader = ({ onLogoutClick }) => {
         if (!file) return
 
         // Validate File Type
-        if (!file.type.startsWith('image/')) {
-            setFileError('Invalid file format. Please upload an image file (PNG, JPG, JPEG).')
+        const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp']
+        if (!allowedTypes.includes(file.type)) {
+            setFileError('Invalid file format. Please upload JPG, JPEG, PNG, or WEBP.')
             return
         }
 
-        // Validate File Size (5MB = 5 * 1024 * 1024 Bytes)
+        // Validate File Size (5MB)
         const maxFileSize = 5 * 1024 * 1024
         if (file.size > maxFileSize) {
             setFileError('File is too large. Maximum allowed size is 5MB.')
@@ -67,7 +104,7 @@ export const AdminHeader = ({ onLogoutClick }) => {
 
         setSelectedImage(file)
         
-        // Use FileReader to create a persistent base64 string
+        // Create preview
         const reader = new FileReader()
         reader.onloadend = () => {
             setPreviewUrl(reader.result)
@@ -81,39 +118,123 @@ export const AdminHeader = ({ onLogoutClick }) => {
         }
     }
 
-    const handleUploadSubmit = (e) => {
+    // Delete photo from server when delete icon is clicked
+    const handleDeletePhoto = async (e) => {
+        e.stopPropagation()
+        
+        if (!window.confirm('Are you sure you want to remove your profile photo?')) {
+            return
+        }
+
+        setIsUploading(true)
+        
+        try {
+            const token = getAuthToken()
+            if (!token) {
+                throw new Error('No authentication token found')
+            }
+
+            await api.delete('/admin/profile/photo/', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            })
+
+            // Reset to default icon
+            setPreviewUrl(null)
+            setSelectedImage(null)
+            sessionStorage.removeItem('admin_avatar')
+            window.dispatchEvent(new Event('avatarChanged'))
+            setShowUploadModal(false)
+            setFileError('')
+            
+            if (fileInputRef.current) {
+                fileInputRef.current.value = ""
+            }
+        } catch (error) {
+            console.error('Error deleting photo:', error)
+            if (error.response) {
+                setFileError(error.response.data.error || 'Failed to remove photo. Please try again.')
+            } else {
+                setFileError('An error occurred. Please try again.')
+            }
+        } finally {
+            setIsUploading(false)
+        }
+    }
+
+    // Upload to server
+    const handleUploadSubmit = async (e) => {
         e.preventDefault()
-        if (!previewUrl) {
+        
+        if (!selectedImage) {
             setFileError('Please select an image file first.')
             return
         }
         
-        // Save base64 image data to state storage
-        sessionStorage.setItem('admin_avatar', previewUrl)
-        
-        // Fallback placeholder dispatch event to alert other listening elements if needed
-        window.dispatchEvent(new Event('avatarChanged'))
-        
-        setShowUploadModal(false)
-        setSelectedImage(null)
+        setIsUploading(true)
+        setFileError('')
+
+        try {
+            const token = getAuthToken()
+            if (!token) {
+                throw new Error('No authentication token found')
+            }
+
+            const formData = new FormData()
+            formData.append('photo', selectedImage)
+
+            const response = await api.post('/admin/profile/photo/', formData, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'multipart/form-data'
+                }
+            })
+
+            if (response.data.photo_url) {
+                setPreviewUrl(response.data.photo_url)
+                sessionStorage.setItem('admin_avatar', response.data.photo_url)
+                window.dispatchEvent(new Event('avatarChanged'))
+                setShowUploadModal(false)
+                setSelectedImage(null)
+            }
+        } catch (error) {
+            console.error('Error uploading photo:', error)
+            if (error.response) {
+                setFileError(error.response.data.error || 'Failed to upload photo. Please try again.')
+            } else if (error.request) {
+                setFileError('Network error. Please check your connection.')
+            } else {
+                setFileError('An error occurred. Please try again.')
+            }
+        } finally {
+            setIsUploading(false)
+        }
     }
 
     const closeUploadModal = () => {
         setShowUploadModal(false)
         setSelectedImage(null)
-        // If they cancel, restore the previously saved image or default
-        setPreviewUrl(sessionStorage.getItem('admin_avatar') || null)
         setFileError('')
+        // Restore the saved image or fetch from API
+        const cachedAvatar = sessionStorage.getItem('admin_avatar')
+        if (cachedAvatar) {
+            setPreviewUrl(cachedAvatar)
+        } else {
+            fetchProfilePhoto()
+        }
+        if (fileInputRef.current) {
+            fileInputRef.current.value = ""
+        }
     }
 
-    // Secure logout routing fallback connection handler
     const handleLogoutAction = () => {
         setShowDropdown(false)
         if (typeof onLogoutClick === 'function') {
             onLogoutClick()
         } else {
-            // Default structural fallback if prop context injection breaks
             sessionStorage.clear()
+            localStorage.removeItem('access_token')
             navigate("/")
         }
     }
@@ -176,18 +297,34 @@ export const AdminHeader = ({ onLogoutClick }) => {
                                         type="file" 
                                         ref={fileInputRef} 
                                         onChange={handleFileChange} 
-                                        accept="image/*" 
+                                        accept="image/jpeg,image/png,image/jpg,image/webp" 
                                         style={{ display: 'none' }} 
                                     />
                                     {previewUrl && !fileError ? (
-                                        <div className="admin-image-preview-container">
-                                            <img src={previewUrl} alt="Preview" className="admin-uploaded-image-preview" />
+                                        <div className="admin-image-preview-container" onClick={(e) => e.stopPropagation()}>
+                                            <img 
+                                                src={previewUrl} 
+                                                alt="Preview" 
+                                                className="admin-uploaded-image-preview" 
+                                                onClick={triggerFileInput} 
+                                                title="Click to change image"
+                                            />
+                                            {/* Delete Icon - Calls API directly */}
+                                            <button 
+                                                type="button" 
+                                                className="admin-delete-image-btn" 
+                                                onClick={handleDeletePhoto} 
+                                                title="Remove image"
+                                                disabled={isUploading}
+                                            >
+                                                <img src={DeleteIcon} alt="Delete" />
+                                            </button>
                                         </div>
                                     ) : (
                                         <div className="admin-upload-placeholder">
                                             <img src={UploadIcon} alt="Placeholder" className="admin-placeholder-svg" />
                                             <p>Click to browse images</p>
-                                            <span>Supports JPG, JPEG, PNG (Max 5MB)</span>
+                                            <span>Supports JPG, JPEG, PNG, WEBP (Max 5MB)</span>
                                         </div>
                                     )}
                                 </div>
@@ -195,11 +332,20 @@ export const AdminHeader = ({ onLogoutClick }) => {
                                 {fileError && <div className="admin-upload-error-msg">{fileError}</div>}
                             </div>
                             <div className="admin-modal-footer">
-                                <button type="button" className="admin-modal-btn cancel-btn" onClick={closeUploadModal}>
+                                <button 
+                                    type="button" 
+                                    className="admin-modal-btn cancel-btn" 
+                                    onClick={closeUploadModal}
+                                    disabled={isUploading}
+                                >
                                     Cancel
                                 </button>
-                                <button type="submit" className="admin-modal-btn save-btn" disabled={!!fileError || (!selectedImage && !previewUrl)}>
-                                    Save Changes
+                                <button 
+                                    type="submit" 
+                                    className="admin-modal-btn save-btn" 
+                                    disabled={!!fileError || !selectedImage || isUploading}
+                                >
+                                    {isUploading ? 'Uploading...' : 'Save Changes'}
                                 </button>
                             </div>
                         </form>

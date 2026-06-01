@@ -530,7 +530,7 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
       }
 
       if (err.response?.status === 400) {
-        const errorData = err.response.data;
+        const errorData = err.response?.data;
         const errorMsg = errorData?.error || "";
 
         if (errorMsg.includes("already exists")) {
@@ -545,6 +545,10 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
           };
         }
 
+        if(errorMsg === "You are already linked to a company")
+        {
+          navigate("/Job-portal/employer/login");
+        }
         const fieldMapping = {
           company_name: "companyName",
           company_moto: "companyMoto",
@@ -572,11 +576,11 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
         if (Object.keys(newErrors).length > 0) {
           setErrors(prev => ({ ...prev, ...newErrors }));
           window.scrollTo({ top: 100, behavior: "smooth" });
-          return { success: false, error: "validation" };
+          return { success: false, error: "oops! something went wrong" };
         }
 
         setBackendError(errorMsg || "Invalid data provided.");
-        return { success: false, error: "validation" };
+        return { success: false, error: "oops! something went wrong" };
       }
 
       setBackendError(
@@ -903,15 +907,7 @@ export const AboutYourCompany = ({ hideNavigation = false, setActiveTab }) => {
         companyLogo: result.data.company_logo
       });
 
-      navigate("/Job-portal/Employer/about-your-company/company-verification", {
-        state: {
-          fromSignup: fromSignup,
-          profileId: result.data.company_id,
-          isExistingCompany: true,
-          companyName: pendingCompanyName,
-          fromCompanyProfile: true
-        }
-      });
+      navigate("/Job-portal/employer/about-your-company/company-verification");
     } else if (result.error !== "Validation failed") {
       setBackendError(result.error || "Failed to link to company");
     }

@@ -217,11 +217,11 @@ export const EmployerSettings = () => {
           companyWebsite: settings.requiredDocs.companyWebsite,
         },
         preferences: {
-          multipleCompany: settings.preferences.multipleCompany,
-          multipleUsers: settings.preferences.multipleUsers,
-          companyReviews: settings.preferences.companyReviews,
-          companyBranding: settings.preferences.companyBranding,
-          featuredEmployer: settings.preferences.featuredEmployer,
+          multipleCompany: false,
+          multipleUsers: false,
+          companyReviews: false,
+          companyBranding: false,
+          featuredEmployer: true,
         },
         notifications: {
           email: settings.notifications.email,
@@ -368,21 +368,21 @@ export const EmployerSettings = () => {
             ))} */}
 
             {[
-  { label: 'Company registration certificate', id: 'companyCert' },
-  { label: 'GST certificate', id: 'gstCert' },
-  { label: 'Business email', id: 'businessEmail' },
-  { label: 'Company website', id: 'companyWebsite' },
-].map(doc => (
-  <label className="Jobseeker-Set-checkbox-item Jobseeker-Set-disabled-item" key={doc.id}>
-    <input
-      type="checkbox"
-      checked={settings.requiredDocs[doc.id]}
-      onChange={(e) => handleChange('requiredDocs', doc.id, e.target.checked, true)}
-      disabled
-    />
-    <span>{doc.label}</span>
-  </label>
-))}
+              { label: 'Company registration certificate', id: 'companyCert' },
+              { label: 'GST certificate', id: 'gstCert' },
+              { label: 'Business email', id: 'businessEmail' },
+              { label: 'Company website', id: 'companyWebsite' },
+            ].map(doc => (
+              <label className="Jobseeker-Set-checkbox-item Jobseeker-Set-disabled-item" key={doc.id}>
+                <input
+                  type="checkbox"
+                  checked={settings.requiredDocs[doc.id]}
+                  onChange={(e) => handleChange('requiredDocs', doc.id, e.target.checked, true)}
+                  disabled
+                />
+                <span>{doc.label}</span>
+              </label>
+            ))}
           </div>
         </div>
       </div>
@@ -412,22 +412,22 @@ export const EmployerSettings = () => {
             </label>
           ))} */}
           {[
-  { label: 'Allow Multiple Company', id: 'multipleCompany' },
-  { label: 'Allow Multiple Users', id: 'multipleUsers' },
-  { label: 'Show Company Reviews', id: 'companyReviews' },
-  { label: 'Enable Company Branding', id: 'companyBranding' },
-  { label: 'Feature Employer Option', id: 'featuredEmployer' },
-].map(pref => (
-  <label className="Jobseeker-Set-checkbox-item Jobseeker-Set-disabled-item" key={pref.id}>
-    <input
-      type="checkbox"
-      checked={settings.preferences[pref.id]}
-      onChange={(e) => handleChange('preferences', pref.id, e.target.checked, true)}
-      
-    />
-    <span>{pref.label}</span>
-  </label>
-))}
+            { label: 'Allow Multiple Company', id: 'multipleCompany' },
+            { label: 'Allow Multiple Users', id: 'multipleUsers' },
+            { label: 'Show Company Reviews', id: 'companyReviews' },
+            { label: 'Enable Company Branding', id: 'companyBranding' },
+            { label: 'Feature Employer Option', id: 'featuredEmployer' },
+          ].map(pref => (
+            <label className="Jobseeker-Set-checkbox-item Jobseeker-Set-disabled-item" key={pref.id}>
+              <input
+                type="checkbox"
+                checked={settings.preferences[pref.id]}
+                onChange={(e) => handleChange('preferences', pref.id, e.target.checked, true)}
+
+              />
+              <span>{pref.label}</span>
+            </label>
+          ))}
         </div>
 
         {/* Notification Settings */}

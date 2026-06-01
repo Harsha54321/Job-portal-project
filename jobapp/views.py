@@ -399,19 +399,64 @@ class LoginView(TokenObtainPairView):
  
 
 class LogoutView(APIView):
+
     permission_classes = [IsAuthenticated]
  
     def post(self, request):
+
         try:
-            refresh_token = request.data.get("refresh")
-            if not refresh_token:
-                raise ValidationError("Refresh token is required.")
-            token = RefreshToken(refresh_token)
-            token.blacklist()
-            return Response({"message": "Logged out successfully"}, status=status.HTTP_200_OK)
-        except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+            user = request.user
  
+            user.is_online = False
+
+            user.last_seen = timezone.now()
+ 
+            user.save(
+
+                update_fields=[
+
+                    "is_online",
+
+                    "last_seen"
+
+                ]
+
+            )
+ 
+            refresh_token = request.data.get("refresh")
+ 
+            if refresh_token:
+
+                token = RefreshToken(refresh_token)
+
+                token.blacklist()
+ 
+            return Response(
+
+                {
+
+                    "message": "Logged out successfully"
+
+                },
+
+                status=status.HTTP_200_OK
+
+            )
+ 
+        except Exception as e:
+
+            return Response(
+
+                {
+
+                    "error": str(e)
+
+                },
+
+                status=status.HTTP_400_BAD_REQUEST
+
+            )
 
 # ============ PROFILE VIEWS ============
 
@@ -8656,5 +8701,114 @@ class AdminDashboardOverviewNewView(APIView):
  
         return Response(
             payload,
+            status=status.HTTP_200_OK
+        )
+    
+class AdminProfilePhotoView(APIView):
+    """
+    GET    /admin/profile/photo/  — returns the current admin's photo URL
+    POST   /admin/profile/photo/  — uploads a new photo (multipart/form-data, field: photo)
+    DELETE /admin/profile/photo/  — removes the current photo
+    """
+    permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def _get_profile(self, user):
+        profile, _ = AdminProfile.objects.get_or_create(user=user)
+        return profile
+
+    def get(self, request):
+        profile = self._get_profile(request.user)
+        serializer = AdminProfilePhotoSerializer(
+            profile,
+            context={'request': request}
+        )
+        return Response(serializer.data)
+
+    def post(self, request):
+        photo = request.FILES.get('photo')
+        if not photo:
+            return Response(
+                {"error": "No photo file provided. Use field name 'photo'."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Validate file type
+        allowed_types = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp']
+        if photo.content_type not in allowed_types:
+            return Response(
+                {"error": "Invalid file type. Allowed: JPG, JPEG, PNG, WEBP."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Validate file size (5MB max)
+        if photo.size > 5 * 1024 * 1024:
+            return Response(
+                {"error": "File too large. Maximum size is 5MB."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        profile = self._get_profile(request.user)
+
+        # Delete old photo from storage before saving new one
+        if profile.profile_photo:
+            profile.profile_photo.delete(save=False)
+
+        profile.profile_photo = photo
+        profile.save()
+
+        serializer = AdminProfilePhotoSerializer(
+            profile,
+            context={'request': request}
+        )
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def delete(self, request):
+        profile = self._get_profile(request.user)
+
+        if not profile.profile_photo:
+            return Response(
+                {"error": "No photo to remove."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        profile.profile_photo.delete(save=False)
+        profile.profile_photo = None
+        profile.save()
+
+        return Response(
+            {"message": "Profile photo removed successfully."},
+            status=status.HTTP_200_OK
+        )
+    
+class UserDetailView(APIView):
+    """GET /users/<pk>/ — returns full user details for the View Details panel"""
+    #permission_classes = [IsAuthenticated, IsAdminUserType]
+
+    def get(self, request, pk):
+        user = get_object_or_404(
+            User.objects.select_related(
+                'jobseeker_profile',
+                'employer_profile',
+                'employer_profile__company',
+            ).prefetch_related(
+                'jobseeker_profile__skills',
+                'jobseeker_profile__educations',
+            ),
+            pk=pk
+        )
+        serializer = UserDetailSerializer(user)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class UserDeleteView(APIView):
+    """DELETE /users/<pk>/delete/ — hard-deletes a user"""
+    #permission_classes = [IsAuthenticated, IsAdminUserType]
+
+    def delete(self, request, pk):
+        user = get_object_or_404(User, pk=pk)
+        user.delete()
+        return Response(
+            {"message": "User deleted successfully.", "id": pk},
             status=status.HTTP_200_OK
         )
