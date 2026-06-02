@@ -50,10 +50,30 @@ api.interceptors.request.use(
       console.log(`⚠️ Request to ${requestUrl}: No token available`);
     }
 
-    console.log(`📤 ${config.method?.toUpperCase()} ${requestUrl}`);
+//     console.log(`📤 ${config.method?.toUpperCase()} ${requestUrl}`);
 
-    if (config.data && !(config.data instanceof FormData)) {
+//     if (config.data && !(config.data instanceof FormData)) {
+//       console.log("Request data:", config.data);
+//     }
+
+//     return config;
+//   },
+//   (error) => {
+//     console.error("Request interceptor error:", error);
+//     return Promise.reject(error);
+//   }
+// );
+  console.log(`📤 ${config.method?.toUpperCase()} ${requestUrl}`);
+ 
+    const isSensitiveEndpoint = ["login", "register", "signup"].some((endpoint) =>
+      requestUrl.toLowerCase().includes(endpoint)
+    );
+ 
+    if (config.data && !(config.data instanceof FormData) && !isSensitiveEndpoint) {
       console.log("Request data:", config.data);
+    } else if (config.data && isSensitiveEndpoint) {
+ 
+      console.log("Request data: [PROTECTED  - SENSITIVE DATA HIDDEN]");
     }
 
     return config;

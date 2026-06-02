@@ -15,9 +15,21 @@ import Msgsent from '../assets/AdminAssets/Msgsent.png'
 import EmailsSent from '../assets/AdminAssets/EmailsSent.png'
 import api from '../api/axios'
 
-export const ActivityMonitor = () => {
-  const [activeTab, setActiveTab] = useState("AdminMonitor");
+export const ActivityMonitor = ({ currentTab, onTabChange }) => {
+  // Local state fallback only used if component is rendered without props
+  const [localActiveTab, setLocalActiveTab] = useState("AdminMonitor");
   const [openDropdownId, setOpenDropdownId] = useState(null);
+
+  // Derive active view tab seamlessly from parent or fallback local state
+  const activeSubTab = currentTab || localActiveTab;
+
+  const handleSubTabClick = (tabName) => {
+    if (onTabChange) {
+      onTabChange(tabName);
+    } else {
+      setLocalActiveTab(tabName); 
+    }
+  };
 
   // Dashboard stats from /dashboard/
   const [stats, setStats] = useState(null);
@@ -161,20 +173,20 @@ export const ActivityMonitor = () => {
         <div>
           <div className="toggle-ActivityMonitor-main">
             <button
-              className={`AdminActivity-select ${activeTab === "AdminMonitor" ? "active" : ""}`}
-              onClick={() => setActiveTab("AdminMonitor")}
+              className={`AdminActivity-select ${activeSubTab === "AdminMonitor" ? "active" : ""}`}
+              onClick={() => handleSubTabClick("AdminMonitor")}
             >
               Admin Monitoring
             </button>
             <button
-              className={`AdminActivity-select ${activeTab === "CompanyApproval" ? "active" : ""}`}
-              onClick={() => setActiveTab("CompanyApproval")}
+              className={`AdminActivity-select ${activeSubTab === "CompanyApproval" ? "active" : ""}`}
+              onClick={() => handleSubTabClick("CompanyApproval")}
             >
               Company Approval
             </button>
           </div>
 
-          {activeTab === "AdminMonitor" && (
+          {activeSubTab === "AdminMonitor" && (
             <>
               {statsLoading && <p style={{ color: 'var(--color-text-secondary)' }}>Loading stats...</p>}
               {statsError && <p style={{ color: 'red' }}>{statsError}</p>}
@@ -357,18 +369,12 @@ export const ActivityMonitor = () => {
                     {/* Application Status */}
                     <div style={{ boxShadow: "0 4px 8px rgba(0,0,0,0.08)", borderRadius: "10px", flex: "1.5" }}>
                       <h4 style={{ textAlign: "center", background: "#ADCEED", padding: "15px", marginTop: "0px", borderTopLeftRadius: "10px", borderTopRightRadius: "10px" }}>Application Status</h4>
-
-                      {/* Standardized inner container padding to match adjacent cards ("0px 12px") */}
                       <div style={{ padding: "0px 12px", marginBottom: "15px" }}>
-
-                        {/* Clean left-aligned baseline matching row height structure */}
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 20px", borderBottom: "1px solid #f3f4f6" }}>
                           <p style={{ margin: "0px", fontWeight: "600", fontSize: "14px", color: "#032240" }}>
                             Total Application : {s('platform_activity_overview', 'application_status', 'total_application')}
                           </p>
                         </div>
-
-                        {/* All rows standardized to padding: "12px 20px" */}
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 20px" }}>
                           <div style={{ display: "flex", gap: "5px", alignItems: "center" }}>
                             <img src={BlueProfile} width={20} height={20} alt="" />
@@ -421,15 +427,6 @@ export const ActivityMonitor = () => {
                             {s('platform_activity_overview', 'employer_activity', 'job_postings')}
                           </span>
                         </div>
-                        {/* <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 20px" }}>
-                          <div style={{ display: "flex", gap: "5px", alignItems: "center" }}>
-                            <img src={RedProfile} width={20} height={20} alt="" />
-                            <p style={{ margin: "0px 5px" }}>Rejected Jobs</p>
-                          </div>
-                          <span className="admin-stat-number">
-                            {s('platform_activity_overview', 'employer_activity', 'rejected_jobs')}
-                          </span>
-                        </div> */}
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 20px" }}>
                           <div style={{ display: "flex", gap: "5px", alignItems: "center" }}>
                             <img src={YellowProfile} width={20} height={20} alt="" />
@@ -540,7 +537,7 @@ export const ActivityMonitor = () => {
             </>
           )}
 
-          {activeTab === "CompanyApproval" && (
+          {activeSubTab === "CompanyApproval" && (
             <div className="C-Approval-container">
               <h2 className="C-Approval-title">Company Approval</h2>
 
@@ -665,10 +662,6 @@ export const ActivityMonitor = () => {
               </p>
             )}
 
-            {/* {detailsError && (
-              <p className="company-details-error">{detailsError}</p>
-            )} */}
-
             {!detailsLoading && (
               <>
                 <h4 className="company-details-section-title">
@@ -718,6 +711,7 @@ export const ActivityMonitor = () => {
                     <p>
                       {selectedCompany.company_profile?.company_email ||
                         selectedCompany.company_email ||
+                        selectedCompany.name ||
                         "Not provided"}
                     </p>
                   </div>

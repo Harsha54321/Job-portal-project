@@ -239,10 +239,16 @@ export const AdminHeader = ({ onLogoutClick }) => {
         }
     }
 
+    const handleLogoClick = () => {
+        sessionStorage.setItem('adminActiveTab', 'Dashboard');
+        navigate('/Job-portal/admin/Dashboard');
+        window.location.reload(); 
+    }
+
     return (
         <div className="Admin-header">
             <div className="Admin-header-left">
-                <div className="logo" onClick={() => navigate('/Job-portal/admin/Dashboard')} style={{ cursor: 'pointer' }}>
+                <div className="logo" onClick={handleLogoClick} style={{ cursor: 'pointer' }}>
                     Job Portal
                 </div>
             </div>

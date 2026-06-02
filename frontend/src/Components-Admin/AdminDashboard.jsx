@@ -51,8 +51,13 @@ import { AdminHeader } from './AdminHeader'
 
 export const AdminDashboard = () => {
     const { jobs, Alluser, currentEmployer } = useJobs();
-    const [activetab, setActiveTab] = useState('Dashboard');
-    const [subTab, setSubTab] = useState('AdminMonitor')
+    const [activetab, setActiveTab] = useState(() => {
+        return sessionStorage.getItem('adminActiveTab') || 'Dashboard';
+    });
+    const [subTab, setSubTab] = useState(() => {
+        return sessionStorage.getItem('adminSubTab') || 'AdminMonitor';
+    });
+    const [showLogoutModal, setShowLogoutModal] = useState(false);
     const navigate = useNavigate();
 
     // State for API data
@@ -69,6 +74,20 @@ export const AdminDashboard = () => {
         total_overview: {}
     });
 
+    // Handle updates into persistent system session registers dynamically
+    useEffect(() => {
+        if (activetab) {
+            sessionStorage.setItem('adminActiveTab', activetab);
+        }
+    }, [activetab]);
+
+    // Handle sub tab register persistence dynamically
+    useEffect(() => {
+        if (subTab) {
+            sessionStorage.setItem('adminSubTab', subTab);
+        }
+    }, [subTab]);
+
     // Fetch dashboard data from API
     useEffect(() => {
         const fetchDashboardData = async () => {
@@ -77,7 +96,7 @@ export const AdminDashboard = () => {
 
             try {
                 console.log("Fetching admin dashboard data...");
-                const response = await api.get('admin/dashboard/'); // Using your configured api instance
+                const response = await api.get('admin/dashboard/');
 
                 if (response.status === 200) {
                     console.log("Dashboard data received:", response.data);
@@ -93,6 +112,34 @@ export const AdminDashboard = () => {
 
         fetchDashboardData();
     }, []);
+
+    // Logout implementation mirroring the confirmation criteria[cite: 1]
+    const handleLogoutConfirm = async () => {
+        setShowLogoutModal(false);
+
+        try {
+            const refresh = sessionStorage.getItem("refresh");
+
+            if (refresh) {
+                await api.post("logout/", { refresh });
+            }
+        } catch (err) {
+            console.error("Logout failed:", err);
+        } finally {
+            sessionStorage.removeItem("token");
+            sessionStorage.removeItem("access_token");
+            sessionStorage.removeItem("access");
+            sessionStorage.removeItem("refresh");
+            sessionStorage.removeItem("user");
+            sessionStorage.removeItem("userData");
+            sessionStorage.removeItem("user_type");
+            sessionStorage.removeItem("admin_id");
+
+            sessionStorage.clear();
+
+            navigate("/");
+        }
+    };
 
     // Use API data or fallback to local data
     const overviewStats = dashboardData.overview_stats.length > 0 ?
@@ -214,7 +261,7 @@ export const AdminDashboard = () => {
                                     <div className='Enav-item'>Activity Monitoring</div>
                                 </div>
                             </div>
-                            <div onClick={() => { setActiveTab('User Management'), navigate('/Job-portal/admin/Dashboard') }} className={activetab === "User Management" ? "Admin-Active" : 'Admin-Navbar'}>
+                            <div onClick={() => { setActiveTab('User Management'); navigate('/Job-portal/admin/Dashboard') }} className={activetab === "User Management" ? "Admin-Active" : 'Admin-Navbar'}>
                                 <div className='Admin-Navbox'>
                                     {activetab === "User Management" ? <img src={UserManagementACT} width={15} height={15} alt="dashboard" />
                                         : <img src={UserManagements} width={15} height={15} alt="User Management" />}
@@ -302,9 +349,8 @@ export const AdminDashboard = () => {
 
     return (
         <>
-            <AdminHeader />
+            <AdminHeader onLogoutClick={() => setShowLogoutModal(true)} />
             <div className='AdminContainer'>
-                <AdminHeader onLogoutClick={() => setShowLogoutModal(true)} />
                 <div className='Admin-Sidebar'>
                     <h2 style={{ textAlign: "center", marginTop: "35px" }}>Administrator</h2>
                     <div className='Admin-Sidebar-list'>
@@ -355,6 +401,13 @@ export const AdminDashboard = () => {
                                 {activetab === "settings" ? <img src={SettingsAct} width={15} height={15} alt="dashboard" />
                                     : <img src={Settings} width={15} height={15} alt="settings" />}
                                 <div className='Enav-item'>Settings</div>
+                            </div>
+                        </div>
+                        {/* Interactive Sidebar Logout Button targeting the criteria component definition */}
+                        <div onClick={() => setShowLogoutModal(true)} className="Admin-Navbar" style={{ cursor: 'pointer' }}>
+                            <div className="Admin-Navbox">
+                                <img src={Logout} width={15} height={15} alt="Logout" />
+                                <div className="Enav-item">Logout</div>
                             </div>
                         </div>
                     </div>
@@ -536,17 +589,25 @@ export const AdminDashboard = () => {
                     )}
 
                     {activetab === 'Job Monitoring' && <JobMonitoring />}
-                    {activetab === 'Activity Monitoring' && (<ActivityMonitor initialTab={subTab} />)}
+                    {activetab === 'Activity Monitoring' && (
+                        <ActivityMonitor currentTab={subTab} onTabChange={setSubTab} />
+                    )}
                     {activetab === 'User Management' && (<UserManagement />)}
                     {activetab === 'Membership' && (<PublishedPlans />)}
                     {activetab === 'SupportHub' && (<SupportHub />)}
                     {activetab === 'settings' && (<AdminSettings />)}
-                    {/* {activetab === 'Highlighted Jobs' && (<HighligtedJobs />)} */}
                     {activetab === 'Highlighted Jobs' && (
                         <HighligtedJobs highlightedJobsData={dashboardData.highlighted_jobs} />
                     )}
                 </div>
             </div>
+
+            {/* Context-aware instance hook injection matching specifications */}
+            <LogoutModal
+                show={showLogoutModal}
+                onClose={() => setShowLogoutModal(false)}
+                onConfirm={handleLogoutConfirm}
+            />
         </>
     )
 }

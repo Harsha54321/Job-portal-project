@@ -14,12 +14,36 @@ export const UserManagement = () => {
   const [activeMenuId, setActiveMenuId] = useState(null);
   const recordsPerPage = 5;
   const location = useLocation();
-  const [isDetailView, setIsDetailView] = useState(false);
-  const [selectedUser, setSelectedUser] = useState(null);
+  const [isDetailView, setIsDetailView] = useState(() => {
+    return sessionStorage.getItem('umIsDetailView') === 'true';
+  });
+  const [selectedUser, setSelectedUser] = useState(() => {
+    const savedUser = sessionStorage.getItem('umSelectedUser');
+    return savedUser ? JSON.parse(savedUser) : null;
+  });
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [usersList, setUsersList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+
+  useEffect(() => {
+    sessionStorage.setItem('umIsDetailView', isDetailView);
+    if (selectedUser) {
+      sessionStorage.setItem('umSelectedUser', JSON.stringify(selectedUser));
+    } else {
+      sessionStorage.removeItem('umSelectedUser');
+    }
+  }, [isDetailView, selectedUser]);
+
+
+  useEffect(() => {
+    if (location.state?.filterRole) {
+      setSearch(location.state.filterRole);
+      setCurrentPage(1);
+      setIsDetailView(false);
+    }
+  }, [location.state]);
 
   // Fetch all users from API
   useEffect(() => {
@@ -251,7 +275,7 @@ export const UserManagement = () => {
         </div>
  
         <div className="detail-top-actions">
-          <button onClick={() => setIsModalOpen(!isModalOpen)} className="detail-btn-action">
+          <button onClick={() => setIsModalOpen(!isModalOpen)} className="detail-btn-action-edit">
             Edit Status
           </button>
           <button onClick={() => handleDeleteReport(selectedUser.id)} className="detail-btn-action detail-btn-delete">
