@@ -13,6 +13,7 @@ export const PlansBilling = () => {
     const [view, setView] = useState('overview');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [planStatus, setPlanStatus] = useState('ACTIVE');
+    const [isExpired, setIsExpired] = useState(false);
     const [paymentTab, setPaymentTab] = useState('card');
     const [isCardOnly, setIsCardOnly] = useState(false);
     const [cardToDelete, setCardToDelete] = useState(null);
@@ -221,7 +222,6 @@ export const PlansBilling = () => {
                 }));
                 setBillingHistory(formatted);
 
-                // ✅ Latest paid invoice నుండి price తీసుకోండి
                 const paidInvoices = formatted.filter(inv => inv.status === 'PAID');
                 if (paidInvoices.length > 0) {
                     paidInvoices.sort((a, b) => b.db_id - a.db_id);
@@ -234,13 +234,12 @@ export const PlansBilling = () => {
                 const currentPlan = subRes.data.plan;
                 const normalizedPlanName = normalizePlanName(currentPlan.name);
 
-                // ✅ Invoice price వాడండి — backend monthly_price కాదు
                 const displayPrice = latestPaidPrice || 0;
 
                 setActivePlan({
                     id: currentPlan.id,
                     name: normalizedPlanName,
-                    price: displayPrice,  // ✅ ₹1180 వస్తుంది
+                    price: displayPrice,
                     status: subRes.data.status.toUpperCase(),
                     nextInvoice: new Date(subRes.data.end_date).toLocaleDateString('en-US', {
                         month: 'long', day: 'numeric', year: 'numeric'
@@ -249,8 +248,8 @@ export const PlansBilling = () => {
                         subRes.data.duration === 'yearly' ? 'Yearly' : 'Monthly'
                 });
                 setPlanStatus(subRes.data.status.toUpperCase());
+                setIsExpired(subRes.data.is_expired || false);
 
-                // ✅ Next invoice set చేయండి
                 if (displayPrice > 0 && subRes.data.status === 'active') {
                     setPendingInvoices([{
                         id: `INV-NEXT-${Date.now()}`,
@@ -632,11 +631,28 @@ export const PlansBilling = () => {
     //     setView('upgrade');
     // };
     const handleReactivate = async () => {
+
+        if (isExpired) {
+            setView('upgrade');
+            return;
+        }
+
         try {
             await api.patch('/cancel/');
             await fetchRealData();
             alert('Plan reactivated successfully!');
         } catch (error) {
+
+            if (
+                error?.response?.data?.is_expired
+            ) {
+                alert(
+                    'Subscription expired. Please upgrade again.'
+                );
+                setView('upgrade');
+                return;
+            }
+
             alert('Failed to reactivate');
         }
     };
@@ -746,23 +762,80 @@ export const PlansBilling = () => {
                     <p className="PlansBilling-label">Current Plan</p>
                     <div className="PlansBilling-title-row">
                         <h2 className="PlansBilling-plan-name">{activePlan?.name || 'No Active Plan'}</h2>
-                        <span className={`PlansBilling-status-badge ${planStatus === 'ACTIVE' ? 'PlansBilling-status-active' : 'PlansBilling-status-cancelled'}`}>
-                            {planStatus}
+                        <span className={`PlansBilling-status-badge ${planStatus === 'ACTIVE'
+                            ? 'PlansBilling-status-active'
+                            : isExpired
+                                ? 'PlansBilling-status-expired'
+                                : 'PlansBilling-status-cancelled'
+                            }`}>
+                            {isExpired ? 'EXPIRED' : planStatus}
                         </span>
                     </div>
                     <p className="PlansBilling-plan-desc">Providing the core tools and services you need at an affordable price</p>
                 </div>
                 <div className="PlansBilling-plan-actions">
                     <span className="PlansBilling-main-price">
-                        ₹ {activePlan?.price || '0'} <small>/{activePlan?.planType === 'Monthly' ? 'month' : activePlan?.planType === '6 Months' ? '6 months' : 'year'}</small>
+                        {/* Check if it's Starter plan - show "Free" instead of price */}
+                        {activePlan?.name === 'STARTER PLAN' ?
+                            'Free Plan' :
+                            `₹ ${activePlan?.price || '0'}`
+                        }
+                        {activePlan?.name !== 'STARTER PLAN' && (
+                            <small>/{activePlan?.planType === 'Monthly' ? 'month' : activePlan?.planType === '6 Months' ? '6 months' : 'year'}</small>
+                        )}
                     </span>
                     <div className="PlansBilling-button-group">
+
                         {planStatus === 'ACTIVE' ? (
-                            <button className="PlansBilling-btn PlansBilling-btn-outline" onClick={handleToggleModal}>Cancel Plan</button>
+
+                            <>
+                                {/* Only show Cancel Plan button if NOT Starter plan */}
+                                {activePlan?.name !== 'STARTER PLAN' && (
+                                    <button
+                                        className="PlansBilling-btn PlansBilling-btn-outline"
+                                        onClick={handleToggleModal}
+                                    >
+                                        Cancel Plan
+                                    </button>
+                                )}
+
+                                <button
+                                    className="PlansBilling-btn PlansBilling-btn-upgrade"
+                                    onClick={() => setView('upgrade')}
+                                >
+                                    Upgrade Plan
+                                </button>
+                            </>
+
+                        ) : !isExpired ? (
+
+                            <>
+                                <button
+                                    className="PlansBilling-btn PlansBilling-btn-primary"
+                                    onClick={handleReactivate}
+                                >
+                                    Reactivate Plan
+                                </button>
+
+                                <button
+                                    className="PlansBilling-btn PlansBilling-btn-upgrade"
+                                    onClick={() => setView('upgrade')}
+                                >
+                                    Upgrade Plan
+                                </button>
+                            </>
+
                         ) : (
-                            <button className="PlansBilling-btn PlansBilling-btn-primary" onClick={handleReactivate}>Reactivate Plan</button>
+
+                            <button
+                                className="PlansBilling-btn PlansBilling-btn-upgrade"
+                                onClick={() => setView('upgrade')}
+                            >
+                                Upgrade Plan
+                            </button>
+
                         )}
-                        <button className="PlansBilling-btn PlansBilling-btn-upgrade" onClick={() => setView('upgrade')}>Upgrade Plan</button>
+
                     </div>
                 </div>
             </div>

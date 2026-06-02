@@ -3675,35 +3675,40 @@ class CreateOrderView(APIView):
             'total': float(round(total, 2)),
         }
  
+from django.utils import timezone
+ 
 class CurrentSubscriptionView(APIView):
     permission_classes = [IsAuthenticated]
-
+ 
     def get(self, request):
-
-        # first sees active after sees cancelled
-
+ 
         sub = Subscription.objects.filter(
-
             user=request.user,
-
             status='active'
-
         ).order_by('-start_date').first()
-
-        # shows active or cancelled
-
+ 
         if not sub:
-
             sub = Subscription.objects.filter(
-
                 user=request.user,
-
                 status='cancelled'
-
             ).order_by('-start_date').first()
+ 
+        if not sub:
+            return Response({})
+ 
+        data = SubscriptionSerializer(sub).data
+ 
+        data["is_expired"] = (
+            sub.status == "cancelled"
+            and sub.end_date
+            and sub.end_date < timezone.now()
+        )
+ 
+        return Response(data)
+    
+    
 
-        return Response(SubscriptionSerializer(sub).data if sub else {})
-
+from django.utils import timezone
 
 class CancelSubscriptionView(APIView):
     permission_classes = [IsAuthenticated]
@@ -3723,186 +3728,50 @@ class CancelSubscriptionView(APIView):
                 .order_by('-start_date')
                 .first()
             )
+    
             if not sub:
                 return Response(
-                    {
-                        "error": (
-                            "No active subscription found."
-                        )
-                    },
+                    {"error": "No active subscription found."},
                     status=status.HTTP_404_NOT_FOUND
                 )
- 
-            # ─────────────────────────────
-            # CANCEL CURRENT SUBSCRIPTION
-            # ─────────────────────────────
- 
+    
+            # Cancel current plan only
             sub.status = "cancelled"
             sub.save()
- 
-            # ─────────────────────────────
-            # GET FREE PLAN
-            # ─────────────────────────────
- 
-            try:
-                free_plan = Plan.objects.get(id=1)
-            except Plan.DoesNotExist:
-                return Response(
-                    {
-                        "error": (
-                            "Free plan not found."
-                        )
-                    },
-                    status=status.HTTP_404_NOT_FOUND
-                )
-
-            # ─────────────────────────────
-            # CREATE FREE SUBSCRIPTION
-            # ─────────────────────────────
- 
-            subscription = (
-                Subscription.objects.create(
-                    user=request.user,
-                    plan=free_plan,
-                    status='active',
-                    duration='monthly'
-                )
-            )
- 
-            # ─────────────────────────────
-            # UPDATE JOB EXPIRY
-            # AFTER PLAN DOWNGRADE
-            # ─────────────────────────────
- 
-            try:
-                platform = (
-                    EmployerPlatformSettings.objects.filter(
-                        plan=subscription.plan,
-                        account_status=request.user.status
-                    ).first()
-                )
-                if not platform:
-                    print(
-                        "No EmployerPlatformSettings found"
-                    )
-                else:
-                    new_expiry_days = (
-                        platform.job_expire_days
-                    )
-                    employer_jobs = (
-                        PostAJob.objects.filter(
-                            employer=request.user
-                        )
-                    )
-                    for job in employer_jobs:
-                        try:
-                            # ─────────────────────
-                            # UPDATE EXPIRY DAYS
-                            # ─────────────────────
-                            job.expiry_days = (
-                                new_expiry_days
-                            )
-                            # ─────────────────────
-                            # SKIP IF NOT APPROVED
-                            # ─────────────────────
-                            if not job.approved_at:
-                                job.expiry_date = None
-                                job.is_published = False
-                                job.save()
-                                continue
-                            # ─────────────────────
-                            # RECALCULATE EXPIRY
-                            # ─────────────────────
-                            if new_expiry_days:
-                                job.expiry_date = (
-                                    job.approved_at
-                                    +
-                                    timedelta(
-                                        days=new_expiry_days
-                                    )
-                                )
-                            else:
-                                job.expiry_date = None
-                            # ─────────────────────
-                            # EXPIRE OR RESTORE
-                            # ─────────────────────
-                            if (
-                                job.expiry_date
-                                and
-                                job.expiry_date
-                                >
-                                timezone.now()
-                            ):
-                                job.is_expired = False
-                                if (
-                                    job.approval_status
-                                    ==
-                                    PostAJob.ApprovalStatus.APPROVED
-                                ):
-                                    job.is_published = True
-                            else:
-                                job.is_expired = True
-                                job.is_published = False
-                            job.save()
-                            print(
-                                f"Updated job: {job.id}"
-                            )
-                        except Exception as job_error:
-                            print(
-                                f"Job update failed "
-                                f"for Job ID {job.id}: "
-                                f"{str(job_error)}"
-                            )
-            except Exception as e:
-                print(
-                    f"Subscription downgrade "
-                    f"job expiry update failed: "
-                    f"{str(e)}"
-                )
-
-            # ─────────────────────────────
-            # NOTIFICATION
-            # ─────────────────────────────
-
+    
             NotificationService.create_notification(
                 recipient=request.user,
                 title="Subscription Cancelled",
                 message=(
                     f"Your subscription for "
-                    f"'{sub.plan.name}' "
-                    f"has been cancelled. "
-                    f"You are now using "
-                    f"the '{free_plan.name}' plan."
+                    f"'{sub.plan.name}' has been cancelled."
                 ),
                 category="billing",
                 event_type="subscription_cancelled",
                 notification_type="system",
                 related_object_id=sub.id
             )
+    
             return Response(
                 {
-                    "message": (
-                        "Subscription cancelled "
-                        "and downgraded "
-                        "to free plan."
-                    ),
-                    "free_plan": free_plan.name
+                    "message": "Subscription cancelled successfully",
+                    "plan": sub.plan.name,
+                    "status": sub.status
                 }
             )
+    
         except Exception as e:
             return Response(
-                {
-                    "error": str(e)
-                },
+                {"error": str(e)},
                 status=status.HTTP_400_BAD_REQUEST
             )
- 
     # ─────────────────────────────────────
     # REACTIVATE CANCELLED SUBSCRIPTION
     # ─────────────────────────────────────
  
     def patch(self, request):
         try:
+    
             sub = (
                 Subscription.objects.filter(
                     user=request.user,
@@ -3911,22 +3780,41 @@ class CancelSubscriptionView(APIView):
                 .order_by('-start_date')
                 .first()
             )
+    
             if not sub:
                 return Response(
                     {
-                        "error": (
-                            "No cancelled subscription found."
-                        )
+                        "error":
+                        "No cancelled subscription found."
                     },
                     status=status.HTTP_404_NOT_FOUND
                 )
-            sub.status = 'active'
+    
+            # Plan period already ended
+            if (
+                sub.end_date
+                and
+                sub.end_date < timezone.now()
+            ):
+                return Response(
+                    {
+                        "error":
+                        "Subscription expired. Please upgrade again.",
+                        "is_expired": True
+                    },
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+    
+            sub.status = "active"
             sub.save()
+    
             return Response(
                 {
-                    "message": "Reactivated"
+                    "message": "Reactivated",
+                    "is_expired": False
                 }
             )
+    
         except Exception as e:
             return Response(
                 {
@@ -3934,8 +3822,8 @@ class CancelSubscriptionView(APIView):
                 },
                 status=status.HTTP_400_BAD_REQUEST
             )
- 
- 
+
+
 class InvoiceListView(APIView):
     permission_classes = [IsAuthenticated]
 

@@ -200,6 +200,20 @@ input[type="password"]::-webkit-reveal {
     pointer-events: none !important;
 }
 
+/* Ensure OTP modal displays properly */
+.otp-modal-overlay * {
+    box-sizing: border-box;
+}
+
+.otp-modal-overlay .otp-input-group {
+    overflow: visible !important;
+}
+
+.otp-modal-overlay .otp-input-group input {
+    min-width: 40px !important;
+    max-width: 55px !important;
+}
+
 @media screen and (max-width: 768px) {
 
   .j-sign-up-header {
