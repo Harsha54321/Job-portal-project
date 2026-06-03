@@ -561,9 +561,41 @@ class JobSeekerProfileView(generics.RetrieveUpdateAPIView):
         return super().update(request, *args, **kwargs)
 
 class JobSeekerListView(generics.ListAPIView):
-    queryset = JobSeekerProfile.objects.all()
     serializer_class = JobSeekerProfileReadSerializer
     permission_classes = [IsAdminOrEmployer]
+ 
+    def get_queryset(self):
+        qs = JobSeekerProfile.objects.select_related(
+            'user',
+        ).prefetch_related(
+            'skills',
+            'educations',
+            'experiences',
+            'certifications',
+        )
+ 
+        # Search filter
+        search = self.request.query_params.get('search', '').strip()
+        if search:
+            qs = qs.filter(
+                Q(user__first_name__icontains=search) |
+                Q(user__last_name__icontains=search) |
+                Q(user__email__icontains=search) |
+                Q(current_job_title__icontains=search) |
+                Q(skills__name__icontains=search)
+            ).distinct()
+ 
+        # Location filter
+        location = self.request.query_params.get('location', '').strip()
+        if location:
+            qs = qs.filter(location__icontains=location)
+ 
+        # Experience filter
+        experience = self.request.query_params.get('experience', '').strip()
+        if experience:
+            qs = qs.filter(total_experience_years__gte=experience)
+ 
+        return qs
    
 
 class EmployerProfileView(generics.RetrieveUpdateAPIView):
