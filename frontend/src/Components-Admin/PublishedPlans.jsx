@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import SixDots from '../assets/AdminAssets/SixDots.png';
 import Save from '../assets/AdminAssets/SaveDraft.png';
-import Tick from '../assets/AdminAssets/Greentick.png';
+import Tick from '../assets/AdminAssets/GreenTick.png';
 import RedCross from '../assets/AdminAssets/RedCross.png';
 import './PublishedPlan.css';
 import { useJobs } from '../JobContext';

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import "./Adminsecurity.css";
+import "./AdminSecurity.css";
 import Tablet from '../assets/AdminAssets/Tablet.png';
 import Mobile from '../assets/AdminAssets/Mobile.png';
 import PC from '../assets/AdminAssets/PC.png';
