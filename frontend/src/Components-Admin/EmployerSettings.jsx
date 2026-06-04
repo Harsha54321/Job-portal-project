@@ -209,7 +209,6 @@ export const EmployerSettings = () => {
         max_job_posts: Number(settings.maxJobPosts),
         featured_job_limit: Number(settings.featuredJobLimit),
         allow_edit_after_approval: settings.allowEditAfterApproval,
-        // ✅ REPLACE WITH NESTED OBJECTS:
         requiredDocs: {
           companyCert: settings.requiredDocs.companyCert,
           gstCert: settings.requiredDocs.gstCert,

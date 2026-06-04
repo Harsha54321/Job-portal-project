@@ -161,29 +161,71 @@ export const ReportAJob = () => {
         if (errors[name]) setErrors({ ...errors, [name]: "" });
     };
 
+    // const handleSubmit = async (e) => {
+    //     e.preventDefault();
+    //     if (validate()) {
+    //         try {
+    //             console.log(formValues)
+    //             const responseData = await api.post('complaints/submit/', formValues)
+    //             console.log(responseData)
+    //             alert("Report submitted successfully!");
+    //             navigate("/Job-portal/jobseeker");
+    //             setFormValues(initialValues);
+    //         } catch (error) {
+    //             const errData = error.response?.data;
+
+    //             console.log(errData);
+
+    //             if (errData?.non_field_errors) {
+    //                 if (errData.non_field_errors[0]) {
+    //                     alert(errData.non_field_errors[0]);
+    //                 }
+    //             }
+
+    //             if (errData?.job_id && errData.job_id[0]) {
+    //                 alert(errData.job_id[0])
+    //             }
+    //         }
+    //     }
+    // }; 
+
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (validate()) {
             try {
-                console.log(formValues)
-                const responseData = await api.post('complaints/submit/', formValues)
-                console.log(responseData)
+                console.log("Submitting complaint for job:", formValues.job_id);
+                
+               
+                const responseData = await api.post(`complaints/submit/${formValues.job_id}/`, {
+                    firstName: formValues.firstName,
+                    lastName: formValues.lastName,
+                    mobile: formValues.mobile,
+                    email: formValues.email,
+                    reason: formValues.reason,
+                    explanation: formValues.explanation
+                });
+                
+                console.log("Response:", responseData);
                 alert("Report submitted successfully!");
                 navigate("/Job-portal/jobseeker");
                 setFormValues(initialValues);
             } catch (error) {
                 const errData = error.response?.data;
-
-                console.log(errData);
+                console.log("Error:", errData);
 
                 if (errData?.non_field_errors) {
                     if (errData.non_field_errors[0]) {
                         alert(errData.non_field_errors[0]);
                     }
-                }
-
-                if (errData?.job_id && errData.job_id[0]) {
-                    alert(errData.job_id[0])
+                } else if (errData?.job_id && errData.job_id[0]) {
+                    alert(errData.job_id[0]);
+                } else if (errData?.detail) {
+                    alert(errData.detail);
+                } else if (errData?.error) {
+                    alert(errData.error);
+                } else {
+                    alert("Failed to submit report. Please try again.");
                 }
             }
         }

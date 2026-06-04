@@ -585,15 +585,120 @@ export const JobProvider = ({ children }) => {
 
     useEffect(() => {
         const token = sessionStorage.getItem("access");
- 
+
         if (!token) return;
- 
+
         const interval = setInterval(() => {
             fetchChats();
         }, 3000);
- 
+
         return () => clearInterval(interval);
     }, [fetchChats]);
+
+    // =============================Admin support hub==========================
+    // ================Admin tickets=================
+    const [raisedTickets, setRaisedTickets] = useState([]);
+    const [ticketsLoading, setTicketsLoading] = useState(false);
+
+    const fetchTickets = useCallback(async () => {
+        try {
+            setTicketsLoading(true);
+            const response = await api.get('/admin/tickets/');
+            console.log("Tickets API Response:", response.data);
+
+            if (response.data.status == true) {
+                setRaisedTickets(response.data.data);
+                console.log(`Loaded ${response.data.data.length} tickets`);
+                return response.data.data;
+            } else {
+                setRaisedTickets([]);
+                return [];
+            }
+        } catch (error) {
+            console.error(" Error fetching tickets:", error);
+            alert(error)
+            setRaisedTickets([])
+            return [];
+        } finally {
+            setTicketsLoading(false)
+        }
+    }, [])
+
+
+    // ================Admin Enquiries=================
+    const [enquiries, setEnquiries] = useState([]);
+    const [enquiriesLoading, setEnquiriesLoading] = useState(false);
+
+    const fetchEnquiries = useCallback(async () => {
+        try {
+            setEnquiriesLoading(true);
+            console.log("📡 Fetching enquiries from backend...");
+
+            const response = await api.get('/contact/list/');
+            console.log("Enquiries API Response:", response.data);
+
+            // Check if response has data (adjust based on your API response structure)
+            if (response.data && Array.isArray(response.data)) {
+                setEnquiries(response.data);
+                console.log(`✅ Loaded ${response.data.length} enquiries`);
+                return response.data;
+            } else if (response.data && response.data.status === true) {
+                setEnquiries(response.data.data || []);
+                console.log(`✅ Loaded ${response.data.data?.length || 0} enquiries`);
+                return response.data.data || [];
+            } else {
+                setEnquiries([]);
+                return [];
+            }
+        } catch (error) {
+            console.error("❌ Error fetching enquiries:", error);
+            setEnquiries([]);
+            return [];
+        } finally {
+            setEnquiriesLoading(false);
+        }
+    }, []);
+
+
+
+
+    // ================Admin Reports/Escalation=================
+    const [reports, setReports] = useState([]);
+    const [reportsLoading, setReportsLoading] = useState(false);
+
+    const fetchReports = useCallback(async () => {
+        try {
+            setReportsLoading(true);
+            console.log("📡 Fetching reports/complaints from backend...");
+
+            const response = await api.get('/admin/complaints/');
+            console.log("Reports API Response:", response.data);
+
+            // Check response structure - your API returns array directly
+            if (Array.isArray(response.data)) {
+                setReports(response.data);
+                console.log(`✅ Loaded ${response.data.length} reports`);
+                return response.data;
+            } else if (response.data && response.data.status === true) {
+                setReports(response.data.data || []);
+                console.log(`✅ Loaded ${response.data.data?.length || 0} reports`);
+                return response.data.data || [];
+            } else if (response.data && response.data.results) {
+                setReports(response.data.results);
+                console.log(`✅ Loaded ${response.data.results.length} reports`);
+                return response.data.results;
+            } else {
+                setReports([]);
+                return [];
+            }
+        } catch (error) {
+            console.error("❌ Error fetching reports:", error);
+            setReports([]);
+            return [];
+        } finally {
+            setReportsLoading(false);
+        }
+    }, []);
 
     // ================= PROVIDER =================
     return (
@@ -653,7 +758,26 @@ export const JobProvider = ({ children }) => {
 
             // Utils
             fetchAllJobs,
-            getFormattedDate
+            getFormattedDate,
+            //admin tickets
+            raisedTickets,
+            setRaisedTickets,
+            ticketsLoading,
+            fetchTickets,
+
+            // contact us
+            enquiries,
+            setEnquiries,
+            enquiriesLoading,
+            fetchEnquiries,
+
+            // Admin reports (Escalation)
+            reports,
+            setReports,
+            reportsLoading,
+            fetchReports,
+
+
         }}>
             {children}
         </JobContext.Provider>

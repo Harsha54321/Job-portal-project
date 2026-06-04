@@ -2454,6 +2454,13 @@ def help_topics(request):
  
 
 class RaiseTicketCreateView(APIView):
+ 
+    parser_classes = [
+        MultiPartParser,
+        FormParser,
+        JSONParser
+    ]
+ 
     def get(self, request):
         return Response({
             "status": True,
@@ -2504,7 +2511,10 @@ class RaiseTicketCreateView(APIView):
                     "message": (
                         "Ticket submitted successfully"
                     ),
-                    "data": serializer.data
+                    "data": AdminTicketSerializer(
+                        ticket,
+                        context={'request': request}
+                    ).data
                 },
                 status=status.HTTP_201_CREATED
             )
@@ -2516,6 +2526,242 @@ class RaiseTicketCreateView(APIView):
             },
             status=status.HTTP_400_BAD_REQUEST
         )
+ 
+ 
+# ADMIN LIST TICKETS
+class AdminTicketListView(APIView):
+ 
+    permission_classes = [
+        IsAuthenticated,
+        IsAdminUser
+    ]
+ 
+    def get(self, request):
+ 
+        tickets = RaiseTicket.objects.all().order_by(
+            '-created_at'
+        )
+ 
+        serializer = AdminTicketSerializer(
+            tickets,
+            many=True,
+            context={'request': request}
+        )
+ 
+        return Response({
+            "status": True,
+            "count": tickets.count(),
+            "data": serializer.data
+        })
+   
+class AdminTicketUpdateView(APIView):
+ 
+    permission_classes = [
+        IsAuthenticated,
+        IsAdminUser
+    ]
+ 
+    VALID_STATUSES = [
+        "Pending",
+        "In Progress",
+        "Hold",
+        "Resolved"
+    ]
+ 
+    def patch(self, request, pk):
+ 
+        try:
+ 
+            ticket = RaiseTicket.objects.get(
+                id=pk
+            )
+ 
+        except RaiseTicket.DoesNotExist:
+ 
+            return Response(
+                {
+                    "status": False,
+                    "message": "Ticket not found"
+                },
+ 
+                status=status.HTTP_404_NOT_FOUND
+            )
+ 
+        old_status = ticket.status
+ 
+        new_status = request.data.get(
+            "status"
+        )
+ 
+        if not new_status:
+ 
+            return Response(
+                {
+                    "status": False,
+                    "message": "status field is required"
+                },
+ 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+ 
+        if new_status not in self.VALID_STATUSES:
+ 
+            return Response(
+                {
+                    "status": False,
+                    "message": "Invalid status"
+                },
+ 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+ 
+        ticket.status = new_status
+ 
+        # AUTO RESOLVED DATE
+        if new_status == "Resolved":
+ 
+            ticket.resolved_on = timezone.now().date()
+ 
+        else:
+ 
+            ticket.resolved_on = None
+ 
+        ticket.save()
+ 
+        # NOTIFY TICKET OWNER
+        user = User.objects.filter(
+            email=ticket.email
+        ).first()
+ 
+        if user:
+ 
+            NotificationService.create_notification(
+ 
+                recipient=user,
+ 
+                title="Ticket Status Updated",
+ 
+                message=(
+                    f"Your support ticket "
+                    f"status changed from "
+                    f"{old_status} to "
+                    f"{new_status}."
+                ),
+ 
+                category="system",
+ 
+                event_type="ticket_status_updated",
+ 
+                notification_type="system",
+ 
+                related_object_id=ticket.id
+            )
+ 
+        return Response({
+            "status": True,
+ 
+            "message": (
+                "Ticket status updated successfully"
+            ),
+ 
+            "data": AdminTicketSerializer(
+                ticket,
+                context={'request': request}
+            ).data
+        })
+ 
+class AdminTicketDeleteView(APIView):
+ 
+    permission_classes = [
+        IsAuthenticated,
+    ]
+ 
+    def delete(self, request, pk):
+ 
+        try:
+ 
+            ticket = RaiseTicket.objects.get(
+                id=pk
+            )
+ 
+        except RaiseTicket.DoesNotExist:
+ 
+            return Response(
+                {
+                    "status": False,
+                    "message": "Ticket not found"
+                },
+ 
+                status=status.HTTP_404_NOT_FOUND
+            )
+ 
+        # CHECK PERMISSION
+        is_admin = (
+            hasattr(request.user, "user_type") and
+            request.user.user_type == "admin"
+        )
+ 
+        is_ticket_owner = (
+            request.user.email == ticket.email
+        )
+ 
+        if not is_admin and not is_ticket_owner:
+ 
+            return Response(
+                {
+                    "status": False,
+                    "message": (
+                        "You do not have permission "
+                        "to delete this ticket"
+                    )
+                },
+ 
+                status=status.HTTP_403_FORBIDDEN
+            )
+ 
+        # SEND NOTIFICATION
+        user = User.objects.filter(
+            email=ticket.email
+        ).first()
+ 
+        if user:
+ 
+            NotificationService.create_notification(
+ 
+                recipient=user,
+ 
+                title="Support Ticket Removed",
+ 
+                message=(
+                    f"Your support ticket "
+                    f"'{ticket.subject}' "
+                    f"is no longer available."
+                ),
+ 
+                category="alert",
+ 
+                event_type="ticket_deleted",
+ 
+                notification_type="system",
+ 
+                related_object_id=ticket.id
+            )
+ 
+        # DELETE ATTACHMENT
+        if ticket.attachment:
+ 
+            ticket.attachment.delete(
+                save=False
+            )
+ 
+        # DELETE TICKET
+        ticket.delete()
+ 
+        return Response({
+            "status": True,
+            "message": "Ticket deleted successfully"
+        })
+ 
 # ============ PASSWORD MANAGEMENT ============
 
 class ForgotPasswordView(APIView):
@@ -2732,15 +2978,158 @@ class AdminCreatePasswordTokenView(APIView):
 # ============ CONTACT US ============
 
 class ContactMessageCreateAPIView(APIView):
+ 
+    permission_classes = [AllowAny]
+ 
     def post(self, request):
-        serializer = ContactMessageSerializer(data=request.data)
+ 
+        data = request.data.copy()
+ 
+        user = None
+ 
+        # Logged-in user
+        if request.user.is_authenticated:
+ 
+            user = request.user
+ 
+            data["name"] = (
+                request.user.get_full_name()
+                or request.user.username
+            )
+ 
+            data["email"] = request.user.email
+ 
+        serializer = ContactMessageSerializer(data=data)
+ 
         if serializer.is_valid():
-            serializer.save()
+ 
+            serializer.save(user=user)
+ 
             return Response(
-                {"message": "Message sent successfully"},
+                {
+                    "status": True,
+                    "message": "Message sent successfully",
+                    "data": serializer.data
+                },
                 status=status.HTTP_201_CREATED
             )
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+ 
+        return Response(
+            {
+                "status": False,
+                "errors": serializer.errors
+            },
+            status=status.HTTP_400_BAD_REQUEST
+
+        )
+    
+class ContactMessageListAPIView(APIView):
+ 
+    #permission_classes = [IsAuthenticated, IsAdminUserType]
+ 
+    def get(self, request):
+ 
+        messages = ContactMessage.objects.all().order_by("-created_at")
+ 
+        serializer = ContactMessageSerializer(
+            messages,
+            many=True
+        )
+ 
+        return Response(
+            {
+                "status": True,
+                "count": messages.count(),
+                "data": serializer.data
+            },
+            status=status.HTTP_200_OK
+        )
+
+    
+#for admin update status only
+class ContactMessageStatusUpdateAPIView(APIView):
+ 
+    #permission_classes = [IsAuthenticated,IsAdminUserType]
+ 
+    def patch(self, request, pk):
+ 
+        try:
+ 
+            message = ContactMessage.objects.get(id=pk)
+ 
+        except ContactMessage.DoesNotExist:
+ 
+            return Response(
+                {
+                    "status": False,
+                    "message": "Contact message not found"
+                },
+                status=status.HTTP_404_NOT_FOUND
+            )
+ 
+        status_value = request.data.get("status")
+ 
+        valid_status = [
+            choice[0]
+            for choice in ContactMessage.Status.choices
+        ]
+ 
+        if status_value not in valid_status:
+ 
+            return Response(
+                {
+                    "status": False,
+                    "message": f"Invalid status. Allowed values: {valid_status}"
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+ 
+        message.status = status_value
+        message.save()
+ 
+        serializer = ContactMessageSerializer(message)
+ 
+        return Response(
+            {
+                "status": True,
+                "message": "Status updated successfully",
+                "data": serializer.data
+            },
+            status=status.HTTP_200_OK
+        )
+
+
+class ContactMessageDeleteAPIView(APIView):
+
+    # permission_classes = [
+    #     IsAuthenticated,
+    #     IsAdminUserType
+    # ]
+
+    def delete(self, request, pk):
+
+        try:
+            message = ContactMessage.objects.get(id=pk)
+
+        except ContactMessage.DoesNotExist:
+
+            return Response(
+                {
+                    "status": False,
+                    "message": "Contact message not found"
+                },
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        message.delete()
+
+        return Response(
+            {
+                "status": True,
+                "message": "Contact message deleted successfully"
+            },
+            status=status.HTTP_200_OK
+        )
                
 
 # ============ NEWSLETTER ============
@@ -5466,6 +5855,218 @@ class AdminJobFlagView(APIView):
             "job_id": job.id,
             "flagged": job.flagged
         }, status=status.HTTP_200_OK)
+
+class AdminComplaintListView(APIView):
+    #permission_classes = [IsAuthenticated, IsAdminUserType]
+ 
+    def get(self, request):
+        complaints = Complaint.objects.all().order_by('-created_at')
+ 
+        status_filter = request.GET.get("status")
+        if status_filter:
+            complaints = complaints.filter(status=status_filter)
+ 
+        serializer = ComplaintSerializer(complaints, many=True)
+        return Response(serializer.data)
+ 
+class AdminUpdateComplaintView(APIView):
+ 
+    #permission_classes = [IsAuthenticated,IsAdminUserType]
+ 
+    def patch(self, request, pk):
+ 
+        try:
+ 
+            complaint = Complaint.objects.get(
+                id=pk
+            )
+ 
+        except Complaint.DoesNotExist:
+ 
+            return Response(
+                {"error": "Complaint not found"},
+                status=404
+            )
+ 
+        frontend_status = request.data.get(
+            "status"
+        )
+ 
+        # Only allowed frontend statuses
+        status_mapping = {
+            "Pending": "pending",
+            "In Progress": "investigating",
+            "Resolved": "resolved",
+        }
+ 
+        # Invalid status
+        if frontend_status not in status_mapping:
+ 
+            return Response(
+                {
+                    "error":
+                    "Invalid status selected"
+                },
+                status=400
+            )
+ 
+        db_status = status_mapping[
+            frontend_status
+        ]
+ 
+        # Already same status
+        if complaint.status == db_status:
+ 
+            return Response(
+                {
+                    "error":
+                    f"Complaint is already "
+                    f"{frontend_status}"
+                },
+                status=400
+            )
+ 
+        # Update status
+        complaint.status = db_status
+        complaint.save()
+ 
+# ---------------------------------------------------------------------------------------------------------------------
+ 
+        NotificationService.create_notification(
+ 
+            recipient=complaint.user,
+ 
+            title="Complaint Status Updated",
+ 
+            message=(
+                f"Your complaint status "
+                f"has been updated to "
+                f"'{frontend_status}'."
+            ),
+ 
+            category="alert",
+ 
+            event_type="complaint_status_updated",
+ 
+            notification_type="complaint",
+ 
+            related_object_id=complaint.id
+        )
+ 
+# ---------------------------------------------------------------------------------------------------------------------
+ 
+        return Response({
+ 
+            "message": "Status updated",
+ 
+            "data": {
+                "id": complaint.id,
+                "status": frontend_status
+            }
+ 
+        }, status=200)
+
+    def delete(self, request, pk):
+        try:
+            complaint = Complaint.objects.get(id=pk)
+        except Complaint.DoesNotExist:
+            return Response(
+                {"error": "Complaint not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        complaint.delete()
+
+        return Response(
+            {"message": "Report deleted successfully."},
+            status=status.HTTP_200_OK
+        )
+
+
+class AdminComplaintDetailView(APIView):
+    """
+    GET /admin/complaints/<pk>/
+    Returns full complaint details for the View Details modal.
+    """
+    # permission_classes = [IsAuthenticated, IsAdminUserType]
+
+    def get(self, request, pk):
+        try:
+            complaint = Complaint.objects.select_related(
+                'reported_job',
+                'user',
+            ).get(id=pk)
+        except Complaint.DoesNotExist:
+            return Response(
+                {"error": "Complaint not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        serializer = ComplaintSerializer(complaint, context={'request': request})
+        return Response(serializer.data)
+
+class AdminJobDetailView(APIView):
+    permission_classes = [
+        IsAuthenticated,
+        IsAdminUserType
+    ]
+    def get(self, request, pk):
+        try:
+            job = (
+                PostAJob.objects
+                .select_related(
+                    "employer",
+                    "employer__employer_profile",
+                    "employer__employer_profile__company"
+                )
+                .get(id=pk)
+            )
+        except PostAJob.DoesNotExist:
+            return Response(
+                {"error": "Job not found"},
+                status=404
+            )
+        serializer = JobDetailSerializer(job)
+        return Response(serializer.data)
+
+class AdminUpdateJobStatusView(APIView):
+    permission_classes = [
+        IsAuthenticated,
+        IsAdminUserType
+    ]
+    def patch(self, request, pk):
+        try:
+            job = PostAJob.objects.get(id=pk)
+        except PostAJob.DoesNotExist:
+            return Response(
+                {"error": "Job not found"},
+                status=404
+            )
+        action = request.data.get("action")
+        if action == "approve":
+            job.approval_status = "approved"
+            job.flagged = False
+            job.is_published = True
+        elif action == "hold":
+            job.approval_status = "pending"
+            job.is_published = False
+        elif action == "flag":
+            job.flagged = True
+        elif action == "delete":
+            job.delete()
+            return Response({
+                "message": "Job deleted successfully"
+            })
+        else:
+            return Response(
+                {"error": "Invalid action"},
+                status=400
+            )
+        job.save()
+        return Response({
+            "message": "Job updated successfully",
+            "approval_status": job.approval_status,
+            "flagged": job.flagged
+        })
  
  
 class AdminJobDeleteView(APIView):

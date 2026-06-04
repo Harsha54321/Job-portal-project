@@ -2080,8 +2080,76 @@ class HelpTopicSerializer(serializers.ModelSerializer):
 class RaiseTicketSerializer(serializers.ModelSerializer):
     class Meta:
         model = RaiseTicket
-        fields = '__all__'
+        fields = [
+            'id',
+            'category',
+            'subject',
+            'name',
+            'email',
+            'phone',
+            'message',
+            'attachment',
+            'priority',
+        ]
  
+        read_only_fields = ['id']
+ 
+ 
+class AdminTicketSerializer(serializers.ModelSerializer):
+ 
+    mobile = serializers.CharField(
+        source='phone',
+        read_only=True
+    )
+ 
+    date = serializers.SerializerMethodField()
+ 
+    resolvedon = serializers.SerializerMethodField()
+ 
+    attachment = serializers.SerializerMethodField()
+ 
+    class Meta:
+        model = RaiseTicket
+ 
+        fields = [
+            'id',
+            'subject',
+            'name',
+            'category',
+            'priority',
+            'status',
+            'date',
+            'resolvedon',
+            'mobile',
+            'email',
+            'message',
+            'attachment',
+        ]
+ 
+    def get_date(self, obj):
+ 
+        if obj.created_at:
+            return obj.created_at.strftime('%d/%m/%Y')
+ 
+        return None
+ 
+    def get_resolvedon(self, obj):
+ 
+        if obj.resolved_on:
+            return obj.resolved_on.strftime('%d/%m/%Y')
+ 
+        return None
+ 
+    def get_attachment(self, obj):
+ 
+        request = self.context.get("request")
+ 
+        if obj.attachment and request:
+            return request.build_absolute_uri(
+                obj.attachment.url
+            )
+ 
+        return None
  
 # Password Serializers
 class ForgotPasswordSerializer(serializers.Serializer):
@@ -2124,7 +2192,38 @@ class CreatePasswordSerializer(serializers.Serializer):
 class ContactMessageSerializer(serializers.ModelSerializer):
     class Meta:
         model = ContactMessage
-        fields = '__all__'    
+ 
+        fields = [
+            'id',
+            'user',
+            'name',
+            'email',
+            'contact',
+            'message',
+            'status',
+            'created_at'
+        ]
+ 
+        read_only_fields = [
+            'id',
+            'user',
+            'status',
+            'created_at'
+        ]
+ 
+    def validate_contact(self, value):
+ 
+        if not value.isdigit():
+            raise serializers.ValidationError(
+                "Contact number must contain digits only"
+            )
+ 
+        if len(value) != 10:
+            raise serializers.ValidationError(
+                "Contact number must be 10 digits"
+            )
+ 
+        return value
  
 
 # CompanyVerify Serializer
@@ -2303,18 +2402,45 @@ class VerifyEmailOTPSerializer(serializers.Serializer):
     email = serializers.EmailField()
     otp = serializers.CharField(max_length=6)
  
-# REMOVED: Duplicate CompanyProfileSerializer (now defined above)
+
+from .utils import get_priority_from_reason
+
+class ComplaintSerializer(
+    serializers.ModelSerializer
+):
  
+    firstName = serializers.CharField(
+        source='first_name'
+    )
  
-# Report a Job Serializer
-class ComplaintSerializer(serializers.ModelSerializer):
-    firstName = serializers.CharField(source='first_name')
-    lastName = serializers.CharField(source='last_name')
+    lastName = serializers.CharField(
+        source='last_name'
+    )
+    jobId = serializers.IntegerField(
+    source='reported_job.id',
+    read_only=True
+)
+    JobId = serializers.IntegerField(
+    source='reported_job.id',
+    read_only=True
+)
+    date = serializers.SerializerMethodField()
+ 
+    status = serializers.SerializerMethodField()
+ 
+    priority = serializers.SerializerMethodField()
+
+    RepId = serializers.SerializerMethodField()
+
+    resolvedon = serializers.SerializerMethodField()
  
     class Meta:
         model = Complaint
         fields = [
             'id',
+            'RepId',
+            'jobId',
+            'JobId',
             'firstName',
             'lastName',
             'mobile',
@@ -2322,22 +2448,144 @@ class ComplaintSerializer(serializers.ModelSerializer):
             'reason',
             'explanation',
             'status',
-            'created_at'
+            'priority',
+            'date',
+            'resolvedon',
         ]
-        read_only_fields = ['status', 'created_at']
+ 
+        read_only_fields = [
+            'status',
+            'priority',
+            'date',
+            'RepId',
+            'resolvedon',
+        ]
+
+    def get_RepId(self, obj):
+        # Formats as REP-0001, REP-0002, etc.
+        return f"REP-{obj.id:04d}"
+
+    def get_resolvedon(self, obj):
+        if obj.resolved_at:
+            local_dt = timezone.localtime(obj.resolved_at)
+            return local_dt.strftime("%b %d, %Y, %I:%M %p")
+        return None
+ 
+    def get_date(self, obj):
+ 
+        if obj.created_at:
+ 
+            local_dt = timezone.localtime(
+                obj.created_at
+            )
+ 
+            return local_dt.strftime(
+                "%b %d, %Y, %I:%M %p"
+            )
+ 
+        return None
+ 
+    def get_status(self, obj):
+ 
+        mapping = {
+            Complaint.Status.PENDING: "Pending",
+            Complaint.Status.INVESTIGATING: "In Progress",
+            Complaint.Status.RESOLVED: "Resolved",
+            Complaint.Status.REJECTED: "Rejected"
+        }
+ 
+        return mapping.get(
+            obj.status,
+            obj.status
+        )
+ 
+    def get_priority(self, obj):
+ 
+        return get_priority_from_reason(
+            obj.reason
+        )
  
     def validate_mobile(self, value):
+ 
         if not value.isdigit() or len(value) != 10:
-            raise serializers.ValidationError("Enter valid 10-digit mobile number")
+ 
+            raise serializers.ValidationError(
+                "Enter valid 10-digit mobile number"
+            )
+ 
         return value
  
     def validate(self, data):
-        user = self.context['request'].user
  
-        if Complaint.objects.filter(user=user, reason=data.get('reason')).exists():
-            raise serializers.ValidationError("You already submitted this complaint")
+        request = self.context.get('request')
+ 
+        if not request:
+            return data
+ 
+        user = request.user
+ 
+        reported_job = data.get(
+            'reported_job'
+        )
+ 
+        if (
+            reported_job and
+            Complaint.objects.filter(
+                user=user,
+                reported_job=reported_job
+            ).exists()
+        ):
+ 
+            raise serializers.ValidationError(
+                "You already submitted "
+                "complaint for this job"
+            )
  
         return data
+
+
+class JobDetailSerializer(serializers.ModelSerializer):
+ 
+    company_name = serializers.SerializerMethodField()
+ 
+    class Meta:
+        model = PostAJob
+        fields = [
+            "id",
+            "job_title",
+            "company_name",
+            "salary",
+            "experience",
+            "location",
+            "work_type",
+            "shift",
+            "job_description",
+            "responsibilities",
+            "job_highlights",
+            "industry_type",
+            "department",
+            "key_skills",
+            "approval_status",
+            "flagged",
+            "created_at"
+        ]
+ 
+    def get_company_name(self, obj):
+ 
+        if (
+            obj.employer and
+            hasattr(obj.employer, "employer_profile") and
+            obj.employer.employer_profile.company
+        ):
+            return (
+                obj.employer
+                .employer_profile
+                .company
+                .company_name
+            )
+ 
+        return "N/A"
+
     
 # Billing Serializer
 

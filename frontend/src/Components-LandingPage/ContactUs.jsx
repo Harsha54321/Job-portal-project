@@ -18,37 +18,37 @@ export const ContactUs = () => {
   }
   const validateForm = () => {
     const newErrors = {}
- 
+
     const nameRegex = /^[A-Za-z\s]+$/
     const emailRegex = /^[a-zA-Z][a-zA-Z0-9]*@(gmail|yahoo|outlook|hotmail)\.[a-zA-Z]{2,}$/
     const phoneRegex = /^[6-9]\d{9}$/
- 
+
     // Name
     if (!formValues.name.trim()) {
       newErrors.name = "Name is required"
     } else if (!nameRegex.test(formValues.name)) {
       newErrors.name = "Name should contain only letters"
     }
- 
+
     // Email
     if (!formValues.email.trim()) {
       newErrors.email = "Email is required"
     } else if (!emailRegex.test(formValues.email)) {
       newErrors.email = "Enter valid email (gmail, yahoo, outlook, hotmail)"
     }
- 
+
     // Phone
     if (!formValues.contact.trim()) {
       newErrors.contact = "Contact number is required"
     } else if (!phoneRegex.test(formValues.contact)) {
       newErrors.contact = "Phone must be 10 digits & start with 6-9"
     }
- 
+
     // Message
     if (!formValues.message.trim()) {
       newErrors.message = "Message cannot be empty"
     }
- 
+
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
@@ -59,7 +59,7 @@ export const ContactUs = () => {
       setLoading(true)
       setServerMessage("")
       const response = await api.post(
-        "contact/",
+        "contact/create/",
         formValues,
         {
           headers: {

@@ -4,12 +4,19 @@ from .views import (
     AJobListView,
     AdminCompanyListView,
     AdminCompanyDetailView,
+    AdminComplaintDetailView,
     # AdminDashboardOverviewView,
     AdminDashboardStats,
+    AdminJobDetailView,
     AdminLoginView,
     AdminProfilePhotoView,
+    AdminTicketDeleteView,
+    AdminTicketListView,
+    AdminTicketUpdateView,
     AdminUpdateComplaintView,
     CompanyProfileCreateView,
+    ContactMessageDeleteAPIView,
+    ContactMessageStatusUpdateAPIView,
     DashboardView,
     DisableAdmin2FAView,
     EmployerPlatformSettingsView,
@@ -111,7 +118,9 @@ from .views import (
     AdminQuietHoursUpdateView,
     NotificationChannelSettingsView,
     NotificationChannelSettingsUpdateView,
-    NotificationPreferenceListView
+    NotificationPreferenceListView,
+    ContactMessageListAPIView,
+    AdminUpdateJobStatusView
     
     
 
@@ -200,10 +209,27 @@ urlpatterns = [
     path('admin/create-password-token/', AdminCreatePasswordTokenView.as_view(), name='admin-create-password-token'),
     
     # raise ticket
-    path('raise-ticket/', RaiseTicketCreateView.as_view(), name='raise-ticket'),
+     # CREATE TICKET
+    path('raise-ticket/',RaiseTicketCreateView.as_view(), name='raise-ticket'),
+ 
+    # ADMIN LIST ALL TICKETS
+    path('admin/tickets/',AdminTicketListView.as_view(),name='admin-ticket-list'),
+ 
+    # ADMIN UPDATE TICKET STATUS
+    path('admin/tickets/<int:pk>/update/',AdminTicketUpdateView.as_view(), name='admin-ticket-update'),
+ 
+    # ADMIN / USER DELETE TICKET
+    path('admin/tickets/<int:pk>/delete/',AdminTicketDeleteView.as_view(),name='admin-ticket-delete'),
     
-    # contact 
-    path('contact/', ContactMessageCreateAPIView.as_view(), name='contact-message'),
+    # contact  create/Enquiries
+    path( "contact/create/", ContactMessageCreateAPIView.as_view(), name="contact-create" ),
+        #contact list
+    path("contact/list/",ContactMessageListAPIView.as_view(),name="contact-list" ),
+     #contact update
+    path("contact/update/<int:pk>/",ContactMessageStatusUpdateAPIView.as_view(),name="contact-update"),
+
+    path("contact-messages/<int:pk>/delete/",ContactMessageDeleteAPIView.as_view(), name="contact-message-delete",),
+    
     
     # newsletter subscribe
     path("subscribe/", NewsletterSubscribeAPIView.as_view(), name="subscribe-newsletter"),
@@ -244,10 +270,15 @@ urlpatterns = [
     path('companies/', CompanyProfileListView.as_view(), name='company-profile-list'),
     path('companies/<int:company_id>/', CompanyProfileByIdView.as_view(), name='company-profile-by-id'),
     
-    # Report A Job
-    path('complaints/submit/', SubmitComplaintView.as_view(), name='submit-complaint'),
+
+     # Report A Job/Escalation
+    # path('complaints/submit/', SubmitComplaintView.as_view(), name='submit-complaint'),
+    path('complaints/submit/<int:job_id>/', SubmitComplaintView.as_view(), name='submit-complaint'),
     path('admin/complaints/', AdminComplaintListView.as_view(), name='admin-complaint-list'),
     path('admin/complaints/<int:pk>/', AdminUpdateComplaintView.as_view(), name='admin-complaint-update'),
+    path('admin/complaints/<int:pk>/detail/', AdminComplaintDetailView.as_view(), name='admin-complaint-detail'),
+    path('admin/jobs/<int:pk>/detail/', AdminJobDetailView.as_view(), name='admin-job-detail'),
+    path( "admin/jobs/<int:pk>/status/", AdminUpdateJobStatusView.as_view()),
 
     # Billing
     path("plans/", PlanListView.as_view(), name='plan-list'),

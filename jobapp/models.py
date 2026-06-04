@@ -3,6 +3,7 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.utils import timezone
 import uuid
+from django.core.validators import RegexValidator
 
 
 class User(AbstractUser):
@@ -994,20 +995,78 @@ class RaiseTicket(models.Model):
         ("Duplicate Job Listings (Spam)", "Duplicate Job Listings (Spam)"),
         ("Others", "Others"),
     )
-
-    category = models.CharField(max_length=50, choices=CATEGORY_CHOICES)
-    subject = models.CharField(max_length=255, choices=SUBJECT_CHOICES)
-    name = models.CharField(max_length=150)
+ 
+    PRIORITY_CHOICES = (
+        ('Low', 'Low'),
+        ('Medium', 'Medium'),
+        ('High', 'High'),
+    )
+ 
+    STATUS_CHOICES = (
+        ('Pending', 'Pending'),
+        ('In Progress', 'In Progress'),
+        ('Hold', 'Hold'),
+        ('Resolved', 'Resolved'),
+    )
+ 
+    category = models.CharField(
+        max_length=50,
+        choices=CATEGORY_CHOICES
+    )
+ 
+    subject = models.CharField(
+        max_length=255,
+        choices=SUBJECT_CHOICES
+    )
+ 
+    name = models.CharField(
+        max_length=150
+    )
+ 
     email = models.EmailField()
-    phone = models.CharField(max_length=20)
-    message = models.TextField(blank=True, null=True)
-    attachment = models.FileField(upload_to='tickets/', blank=True, null=True)
-
-    created_at = models.DateTimeField(auto_now_add=True)
+ 
+    phone = models.CharField(
+        max_length=20
+    )
+ 
+    message = models.TextField(
+        blank=True,
+        null=True
+    )
+ 
+    attachment = models.FileField(
+        upload_to='tickets/',
+        blank=True,
+        null=True
+    )
+ 
+    # NEW FIELD
+    priority = models.CharField(
+        max_length=20,
+        choices=PRIORITY_CHOICES,
+        default='Medium'
+    )
+ 
+    # NEW FIELD
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='Pending'
+    )
+ 
+    # NEW FIELD
+    resolved_on = models.DateField(
+        blank=True,
+        null=True
+    )
+ 
+    created_at = models.DateTimeField(
+        auto_now_add=True
+    )
 
     class Meta:
-        db_table = 'RaiseTicket'
-
+        db_table='RaiseTicket'
+ 
     def __str__(self):
         return f"{self.name} - {self.subject}"
 
@@ -1037,11 +1096,26 @@ class PasswordResetToken(models.Model):
 
 
 class ContactMessage(models.Model):
+    class Status(models.TextChoices):
+        PENDING = "Pending", "Pending"
+        CONTACTED = "Contacted","Contacted"
+    user = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="contact_messages"
+    )
     name = models.CharField(max_length=150)
     email = models.EmailField()
     contact = models.CharField(max_length=15)
     message = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.PENDING
+    )
 
     class Meta:
         db_table = 'ContactMessage'
@@ -1384,7 +1458,15 @@ class Complaint(models.Model):
     # Reporter details
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
-    mobile = models.CharField(max_length=10)
+    mobile = models.CharField(
+    max_length=10,
+    validators=[
+        RegexValidator(
+            regex=r'^\d{10}$',
+            message='Enter valid 10-digit mobile number'
+        )
+    ]
+)
     email = models.EmailField()
    
     # Complaint details
@@ -1435,6 +1517,10 @@ class Complaint(models.Model):
                 if self.reported_job.employer.employer_profile.company:
                     self.reported_employer_name = self.reported_job.employer.employer_profile.company.company_name
                     self.reported_company_name = self.reported_job.employer.employer_profile.company.company_name
+
+        if self.status == self.Status.RESOLVED:
+            if not self.resolved_at:
+                self.resolved_at = timezone.now()
        
         super().save(*args, **kwargs)
 
