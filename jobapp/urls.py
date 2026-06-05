@@ -120,8 +120,8 @@ from .views import (
     NotificationChannelSettingsUpdateView,
     NotificationPreferenceListView,
     ContactMessageListAPIView,
-    AdminUpdateJobStatusView
-    
+    AdminUpdateJobStatusView,
+    CurrentUserView
     
 
     # REMOVED: Company-related view imports (CompanyListView, CompanyDetailView, etc.)
@@ -306,6 +306,8 @@ urlpatterns = [
     path('company/', AdminCompanyListView.as_view(), name='dashboardlist'),
     path('company/<int:pk>/', AdminCompanyDetailView.as_view(), name='admin-company-detail'),
     path('company/<int:pk>/status/', UpdateCompanyStatusView.as_view(), name='update-company-status'),
+    # ============ CURRENT LOGGED-IN USER ============
+    path('users/me/', views.CurrentUserView.as_view(), name='current-user'),
     #UserManagement
     path('users/', UserListView.as_view(), name='user-list'),
     path('users/<int:pk>/status/', UserStatusUpdateView.as_view(), name='user-status-update'),

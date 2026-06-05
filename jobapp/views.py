@@ -2978,33 +2978,19 @@ class AdminCreatePasswordTokenView(APIView):
 # ============ CONTACT US ============
 
 class ContactMessageCreateAPIView(APIView):
- 
     permission_classes = [AllowAny]
- 
+
     def post(self, request):
- 
         data = request.data.copy()
- 
-        user = None
- 
-        # Logged-in user
-        if request.user.is_authenticated:
- 
-            user = request.user
- 
-            data["name"] = (
-                request.user.get_full_name()
-                or request.user.username
-            )
- 
-            data["email"] = request.user.email
- 
+        user = request.user if request.user.is_authenticated else None
+        
+        # Don't override anything - trust frontend values
+        # Just save as-is
+
         serializer = ContactMessageSerializer(data=data)
- 
+
         if serializer.is_valid():
- 
             serializer.save(user=user)
- 
             return Response(
                 {
                     "status": True,
@@ -3013,14 +2999,13 @@ class ContactMessageCreateAPIView(APIView):
                 },
                 status=status.HTTP_201_CREATED
             )
- 
+
         return Response(
             {
                 "status": False,
                 "errors": serializer.errors
             },
             status=status.HTTP_400_BAD_REQUEST
-
         )
     
 class ContactMessageListAPIView(APIView):
@@ -9333,3 +9318,47 @@ class UserDeleteView(APIView):
             {"message": "User deleted successfully.", "id": pk},
             status=status.HTTP_200_OK
         )
+
+class CurrentUserView(APIView):
+    """
+    GET /api/users/me/
+    Returns current logged-in user's details including name from profile.
+    Works for Jobseeker, Employer, and Admin.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        data = {
+            'id': user.id,
+            'username': user.username,
+            'email': user.email,
+            'phone': user.phone or '',
+            'user_type': user.user_type,
+            'name': '',
+        }
+        
+        # Get name from respective profile
+        if user.user_type == 'jobseeker':
+            profile = getattr(user, 'jobseeker_profile', None)
+            if profile:
+                data['name'] = profile.full_name or user.username
+                # Also fetch alternate phone if main phone is empty
+                if not data['phone'] and profile.alternate_phone:
+                    data['phone'] = profile.alternate_phone
+                    
+        elif user.user_type == 'employer':
+            profile = getattr(user, 'employer_profile', None)
+            if profile:
+                data['name'] = profile.full_name or user.username
+                
+        elif user.user_type == 'admin':
+            profile = getattr(user, 'admin_profile', None)
+            if profile:
+                data['name'] = user.get_full_name() or user.username
+            else:
+                data['name'] = user.username
+        else:
+            data['name'] = user.username
+            
+        return Response(data, status=status.HTTP_200_OK)
