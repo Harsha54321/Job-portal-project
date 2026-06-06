@@ -241,6 +241,8 @@ export const PlansBilling = () => {
                     name: normalizedPlanName,
                     price: displayPrice,
                     status: subRes.data.status.toUpperCase(),
+                    features: currentPlan.features || [], 
+                    price: parseFloat(currentPlan.monthly_price) || 0,
                     nextInvoice: new Date(subRes.data.end_date).toLocaleDateString('en-US', {
                         month: 'long', day: 'numeric', year: 'numeric'
                     }),
@@ -757,7 +759,7 @@ export const PlansBilling = () => {
                 <p className="PlansBilling-sub-title">Manage your details and personal preferences here</p>
             </div>
 
-            <div className="PlansBilling-card PlansBilling-current-plan">
+            {/* <div className="PlansBilling-card PlansBilling-current-plan">
                 <div className="PlansBilling-plan-info">
                     <p className="PlansBilling-label">Current Plan</p>
                     <div className="PlansBilling-title-row">
@@ -775,29 +777,19 @@ export const PlansBilling = () => {
                 </div>
                 <div className="PlansBilling-plan-actions">
                     <span className="PlansBilling-main-price">
-                        {/* Check if it's Starter plan - show "Free" instead of price */}
-                        {activePlan?.name === 'STARTER PLAN' ?
-                            'Free Plan' :
-                            `₹ ${activePlan?.price || '0'}`
-                        }
-                        {activePlan?.name !== 'STARTER PLAN' && (
-                            <small>/{activePlan?.planType === 'Monthly' ? 'month' : activePlan?.planType === '6 Months' ? '6 months' : 'year'}</small>
-                        )}
+                        ₹ {activePlan?.price || '0'} <small>/{activePlan?.planType === 'Monthly' ? 'month' : activePlan?.planType === '6 Months' ? '6 months' : 'year'}</small>
                     </span>
                     <div className="PlansBilling-button-group">
 
                         {planStatus === 'ACTIVE' ? (
 
                             <>
-                                {/* Only show Cancel Plan button if NOT Starter plan */}
-                                {activePlan?.name !== 'STARTER PLAN' && (
-                                    <button
-                                        className="PlansBilling-btn PlansBilling-btn-outline"
-                                        onClick={handleToggleModal}
-                                    >
-                                        Cancel Plan
-                                    </button>
-                                )}
+                                <button
+                                    className="PlansBilling-btn PlansBilling-btn-outline"
+                                    onClick={handleToggleModal}
+                                >
+                                    Cancel Plan
+                                </button>
 
                                 <button
                                     className="PlansBilling-btn PlansBilling-btn-upgrade"
@@ -838,7 +830,90 @@ export const PlansBilling = () => {
 
                     </div>
                 </div>
-            </div>
+            </div> */}
+
+            <div className="PlansBilling-card PlansBilling-current-plan">
+    <div className="PlansBilling-plan-info">
+        <p className="PlansBilling-label">Current Plan</p>
+        <div className="PlansBilling-title-row">
+            <h2 className="PlansBilling-plan-name">{activePlan?.name || 'No Active Plan'}</h2>
+            <span className={`PlansBilling-status-badge ${planStatus === 'ACTIVE'
+                ? 'PlansBilling-status-active'
+                : isExpired
+                    ? 'PlansBilling-status-expired'
+                    : 'PlansBilling-status-cancelled'
+                }`}>
+                {isExpired ? 'EXPIRED' : planStatus}
+            </span>
+        </div>
+        <p className="PlansBilling-plan-desc">Providing the core tools and services you need at an affordable price</p>
+    </div>
+    <div className="PlansBilling-plan-actions">
+        <span className="PlansBilling-main-price">
+            {/* Check if it's Starter plan - show "Free" instead of price */}
+            {activePlan?.name === 'STARTER PLAN' ? 
+                'Free Plan' : 
+                `₹ ${activePlan?.price || '0'}`
+            } 
+            {activePlan?.name !== 'STARTER PLAN' && (
+                <small>/{activePlan?.planType === 'Monthly' ? 'month' : activePlan?.planType === '6 Months' ? '6 months' : 'year'}</small>
+            )}
+        </span>
+        <div className="PlansBilling-button-group">
+
+            {planStatus === 'ACTIVE' ? (
+
+                <>
+                    {/* Only show Cancel Plan button if NOT Starter plan */}
+                    {activePlan?.name !== 'STARTER PLAN' && (
+                        <button
+                            className="PlansBilling-btn PlansBilling-btn-outline"
+                            onClick={handleToggleModal}
+                        >
+                            Cancel Plan
+                        </button>
+                    )}
+
+                    <button
+                        className="PlansBilling-btn PlansBilling-btn-upgrade"
+                        onClick={() => setView('upgrade')}
+                    >
+                        Upgrade Plan
+                    </button>
+                </>
+
+            ) : !isExpired ? (
+
+                <>
+                    <button
+                        className="PlansBilling-btn PlansBilling-btn-primary"
+                        onClick={handleReactivate}
+                    >
+                        Reactivate Plan
+                    </button>
+
+                    <button
+                        className="PlansBilling-btn PlansBilling-btn-upgrade"
+                        onClick={() => setView('upgrade')}
+                    >
+                        Upgrade Plan
+                    </button>
+                </>
+
+            ) : (
+
+                <button
+                    className="PlansBilling-btn PlansBilling-btn-upgrade"
+                    onClick={() => setView('upgrade')}
+                >
+                    Upgrade Plan
+                </button>
+
+            )}
+
+        </div>
+    </div>
+</div>
 
             <div className="PlansBilling-grid-row">
                 <div className="PlansBilling-card PlansBilling-invoice-box">

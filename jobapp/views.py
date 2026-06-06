@@ -3879,7 +3879,8 @@ class PlanListView(APIView):
                 'name': plan.name,
                 'monthly_price': float(plan.monthly_price),
                 'duration_days': plan.duration_days,
-                'pricing': pricing
+                'pricing': pricing,
+                'color' : plan.color
             }
             data.append(plan_data)
        
@@ -9362,3 +9363,140 @@ class CurrentUserView(APIView):
             data['name'] = user.username
             
         return Response(data, status=status.HTTP_200_OK)
+    
+class PlanListCreateView(APIView):
+    """
+    GET  /api/plans/       — list all plans
+    POST /api/plans/       — admin creates a new plan
+    """
+
+    def get_permissions(self):
+        if self.request.method == 'POST':
+            return [IsAdminUser()]
+        return [IsAuthenticated()]
+
+    def get(self, request):
+        plans = Plan.objects.prefetch_related('features').all()
+        serializer = PlanSerializer(plans, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def post(self, request):
+        serializer = PlanSerializer(data=request.data)
+        if serializer.is_valid():
+            plan = serializer.save()
+            return Response(
+                {
+                    "message": "Plan created successfully.",
+                    "data": PlanSerializer(plan).data,
+                },
+                status=status.HTTP_201_CREATED,
+            )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class PlanDetailView(APIView):
+    """
+    GET    /api/plans/<pk>/   — retrieve a single plan
+    PUT    /api/plans/<pk>/   — admin full update
+    PATCH  /api/plans/<pk>/   — admin partial update
+    DELETE /api/plans/<pk>/   — admin delete
+    """
+
+    def get_permissions(self):
+        if self.request.method == 'GET':
+            return [IsAuthenticated()]
+        return [IsAdminUser()]
+
+    def _get_plan(self, pk):
+        try:
+            return Plan.objects.get(pk=pk)
+        except Plan.DoesNotExist:
+            return None
+
+    def get(self, request, pk):
+        plan = self._get_plan(pk)
+        if plan is None:
+            return Response(
+                {"error": "Plan not found."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        return Response(PlanSerializer(plan).data, status=status.HTTP_200_OK)
+
+    def put(self, request, pk):
+        plan = self._get_plan(pk)
+        if plan is None:
+            return Response(
+                {"error": "Plan not found."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        serializer = PlanSerializer(plan, data=request.data)
+        if serializer.is_valid():
+            updated_plan = serializer.save()
+            return Response(
+                {
+                    "message": "Plan updated successfully.",
+                    "data": PlanSerializer(updated_plan).data,
+                },
+                status=status.HTTP_200_OK,
+            )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def patch(self, request, pk):
+        plan = self._get_plan(pk)
+        if plan is None:
+            return Response(
+                {"error": "Plan not found."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        serializer = PlanSerializer(plan, data=request.data, partial=True)
+        if serializer.is_valid():
+            updated_plan = serializer.save()
+            return Response(
+                {
+                    "message": "Plan updated successfully.",
+                    "data": PlanSerializer(updated_plan).data,
+                },
+                status=status.HTTP_200_OK,
+            )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, pk):
+        plan = self._get_plan(pk)
+        if plan is None:
+            return Response(
+                {"error": "Plan not found."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        plan_name = plan.name
+        plan.delete()
+        return Response(
+            {"message": f"Plan '{plan_name}' deleted successfully."},
+            status=status.HTTP_200_OK,
+        )
+
+
+class PlanPublishToggleView(APIView):
+    """
+    PATCH /api/plans/<pk>/toggle-publish/
+    Flips is_published flag. Admin only.
+    """
+    permission_classes = [IsAdminUser]
+
+    def patch(self, request, pk):
+        try:
+            plan = Plan.objects.get(pk=pk)
+        except Plan.DoesNotExist:
+            return Response(
+                {"error": "Plan not found."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        plan.is_published = not plan.is_published
+        plan.save(update_fields=['is_published', 'updated_at'])
+        state = "published" if plan.is_published else "unpublished"
+        return Response(
+            {
+                "message": f"Plan '{plan.name}' is now {state}.",
+                "is_published": plan.is_published,
+            },
+            status=status.HTTP_200_OK,
+        )

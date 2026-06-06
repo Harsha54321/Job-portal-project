@@ -4,13 +4,14 @@ from drf_writable_nested.serializers import WritableNestedModelSerializer
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from .models import (
-      User, JobSeekerProfile, EmployerProfile, AdminProfile,
+    PlanFeature, User, JobSeekerProfile, EmployerProfile, AdminProfile,
     EducationEntry, WorkExperienceEntry, Skill, LanguageKnown, Certification,
     PostAJob, JobApplication, SavedJob,
     NewsletterSubscriber, Notification, Conversation, Message, ContactMessage, 
     CompanyVerification, Complaint, CompanyProfile, UserSettings, 
     HelpTopic, RaiseTicket, PasswordResetToken, EmailOTP, ChatMessage, Plan, Subscription,
     Invoice, PaymentMethod,AdminAccessLog, AdminTrustedDevice, CompanyReview, UserDevice,
+    EmployerPlatformSettings,
 )
 from .services import Admin2FAService , AdminSecurityService
  
@@ -2542,8 +2543,7 @@ class ComplaintSerializer(
             )
  
         return data
-
-
+    
 class JobDetailSerializer(serializers.ModelSerializer):
  
     company_name = serializers.SerializerMethodField()
@@ -2588,24 +2588,334 @@ class JobDetailSerializer(serializers.ModelSerializer):
 
     
 # Billing Serializer
+class PlanFeatureSerializer(serializers.ModelSerializer):
+    class Meta:
+        model  = PlanFeature
+        fields = ['id', 'text', 'value', 'order']
+
+
 
 class PlanSerializer(serializers.ModelSerializer):
     pricing = serializers.SerializerMethodField()
-   
+    features = serializers.SerializerMethodField()  
+    
+    features_input = serializers.ListField(
+    child=serializers.DictField(), write_only=True, required=False, source='features'
+)
     class Meta:
         model = Plan
-        fields = "__all__"
-    def get_pricing(self, obj):
-        # Get duration from request if provided
-        request = self.context.get('request')
-        duration = request.query_params.get('duration', None) if request else None
+        fields = [
+ 
+            'id',
+ 
+            'name',
+ 
+            'summary',
+ 
+            'color',
+ 
+            'is_published',
+ 
+            'monthly_price',
+ 
+            'tax',
+ 
+            'discount_halfyear',
+ 
+            'discount_annual',
+ 
+            'duration_days',
+ 
+            'is_trial_enabled',
+ 
+            'trial_duration',
+ 
+            'is_auto_renewal',
+ 
+            'grace_time',
+ 
+            'features',
+ 
+            'total_payable',
+ 
+            'pricing',
+ 
+            'created_at',
+ 
+            'updated_at',
+            'features_input',
+        ]
+ 
+        read_only_fields = [
+ 
+            'created_at',
+ 
+            'updated_at'
+        ]
+    def to_internal_value(self, data):
+    # Pull features out before super() discards it (SerializerMethodField is read-only)
+        features_input = data.get('features', None)
+        ret = super().to_internal_value(data)
+        if features_input is not None:
+            ret['features_input'] = features_input
+        return ret
+ 
+    # FEATURES
+   
+ 
+    def get_features(self, obj):
+        active_setting = EmployerPlatformSettings.objects.filter(
+            plan=obj,
+            account_status=User.AccountStatus.ACTIVE
+        ).first()
         
-        if duration and duration in ['monthly', '6_months', 'yearly']:
-            return obj.get_price_for_duration(duration)
-        else:
-            return obj.get_all_pricing()
+        return [
+            {
+                "text": "Jobs Posting",
+                "value": str(active_setting.max_job_posts) if active_setting else "0",
+                "order": 0
+            },
+            {
+                "text": "Analytics",
+                "value": "true" if obj.Analytics else "false",
+                "order": 1
+            },
+            {
+                "text": "Candidate Search",
+                "value": "true" if obj.Candidate_Search else "false",
+                "order": 2
+            },
+            {
+                "text": "Highlight Your Job Listing",
+                "value": str(active_setting.featured_job_limit) if (active_setting and active_setting.featured_employer_option) else "0",
+                "order": 3
+            },
+            {
+                "text": "Premium Support",
+                "value": "true" if obj.Premium_Support else "false",
+                "order": 4
+            },
+            {
+                "text": "Account Manager",
+                "value": "true" if obj.Account_Manager else "false",
+                "order": 5
+            },
+        ]
 
-
+ 
+    def get_pricing(self, obj):
+ 
+        monthly_price = float(
+            obj.monthly_price
+        )
+ 
+        tax_rate = (
+            float(obj.tax)
+            if obj.tax
+            else 18
+        )
+ 
+        cgst = round(
+ 
+            monthly_price *
+ 
+            (tax_rate / 2) / 100,
+ 
+            2
+        )
+ 
+        sgst = round(
+ 
+            monthly_price *
+ 
+            (tax_rate / 2) / 100,
+ 
+            2
+        )
+ 
+        total = round(
+ 
+            monthly_price +
+ 
+            cgst +
+ 
+            sgst,
+ 
+            2
+        )
+ 
+        discounted_price_6month = (
+ 
+            monthly_price *
+ 
+            (
+                1 -
+ 
+                float(
+                    obj.discount_halfyear
+                ) / 100
+            )
+ 
+            if obj.discount_halfyear
+ 
+            else monthly_price
+        )
+ 
+        discounted_price_annual = (
+ 
+            monthly_price *
+ 
+            (
+                1 -
+ 
+                float(
+                    obj.discount_annual
+                ) / 100
+            )
+ 
+            if obj.discount_annual
+ 
+            else monthly_price
+        )
+ 
+        return {
+ 
+            "duration": "Monthly",
+ 
+            "duration_days":
+                obj.duration_days,
+ 
+            "monthly_price":
+                monthly_price,
+ 
+            "original_price":
+                monthly_price,
+ 
+            "discount_percent":
+                0,
+ 
+            "discount_amount":
+                0.0,
+ 
+            "subtotal":
+                monthly_price,
+ 
+            "cgst":
+                cgst,
+ 
+            "sgst":
+                sgst,
+ 
+            "total":
+                total,
+ 
+            "savings":
+                None,
+ 
+            "discounted_prices": {
+ 
+                "half_yearly":
+                    discounted_price_6month,
+ 
+                "annual":
+                    discounted_price_annual
+            }
+        }
+ 
+ 
+    # CREATE
+   
+ 
+    def create(
+        self,
+        validated_data
+    ):
+ 
+        return Plan.objects.create(
+            **validated_data
+        )
+ 
+    # UPDATE
+   
+ 
+    def update(self, instance, validated_data):
+        features_data = validated_data.pop('features_input', None)
+        validated_data.pop('features', None)
+        
+        # Update scalar fields (name, monthly_price, tax, etc.)
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        
+        # FEATURES UPDATE
+        if features_data:
+            # Get active EmployerPlatformSettings for this plan
+            active_setting = EmployerPlatformSettings.objects.filter(
+                plan=instance,
+                account_status=User.AccountStatus.ACTIVE
+            ).first()
+            
+            for feature in features_data:
+                text = feature.get("text")
+                value = feature.get("value")
+                
+                # =============================================
+                # JOBS POSTING - Update max_job_posts
+                # =============================================
+                if active_setting and text == "Jobs Posting":
+                    try:
+                        active_setting.max_job_posts = int(value)
+                    except (ValueError, TypeError):
+                        active_setting.max_job_posts = 0
+                
+                # =============================================
+                # HIGHLIGHT YOUR JOB LISTING - Update featured_job_limit
+                # =============================================
+                elif active_setting and text == "Highlight Your Job Listing":
+                    try:
+                        numeric_value = int(value)
+                        if numeric_value > 0:
+                            active_setting.featured_employer_option = True
+                            active_setting.featured_job_limit = numeric_value
+                        else:
+                            active_setting.featured_employer_option = False
+                            active_setting.featured_job_limit = 0
+                    except (ValueError, TypeError):
+                        active_setting.featured_employer_option = False
+                        active_setting.featured_job_limit = 0
+                
+                # =============================================
+                # ANALYTICS - Update boolean field
+                # =============================================
+                elif text == "Analytics":
+                    instance.Analytics = (str(value).lower() == "true")
+                
+                # =============================================
+                # CANDIDATE SEARCH - Update boolean field
+                # =============================================
+                elif text == "Candidate Search":
+                    instance.Candidate_Search = (str(value).lower() == "true")
+                
+                # =============================================
+                # PREMIUM SUPPORT - Update boolean field
+                # =============================================
+                elif text == "Premium Support":
+                    instance.Premium_Support = (str(value).lower() == "true")
+                
+                # =============================================
+                # ACCOUNT MANAGER - Update boolean field
+                # =============================================
+                elif text == "Account Manager":
+                    instance.Account_Manager = (str(value).lower() == "true")
+            
+            # Save the updated EmployerPlatformSettings
+            if active_setting:
+                active_setting.save()
+        
+        # Save the Plan instance
+        instance.save()
+        
+        return instance
+    
 class SubscriptionSerializer(serializers.ModelSerializer):
     plan = PlanSerializer()
     class Meta:

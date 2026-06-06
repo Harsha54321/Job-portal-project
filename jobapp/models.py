@@ -1531,27 +1531,67 @@ from django.contrib.auth import get_user_model
 User = get_user_model()
 from django.utils.timezone import now
 
+class PlanFeature(models.Model):
+    plan  = models.ForeignKey(
+        'Plan',
+        on_delete=models.CASCADE,
+        related_name='features'
+    )
+    text  = models.CharField(max_length=200)
+    value = models.CharField(max_length=100)
+    order = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        ordering = ['order']
+
+    def __str__(self):
+        return f"{self.plan.name} → {self.text}: {self.value}"
+
 class Plan(models.Model):
-    name = models.CharField(max_length=50)
-    monthly_price = models.DecimalField(max_digits=10, decimal_places=2, default=0)  # Add default=0
+    # Basic
+    name       = models.CharField(max_length=100, unique=True)
+    summary    = models.CharField(max_length=255, blank=True)
+    color      = models.CharField(max_length=30, default='#1E88E5')
+    is_published = models.BooleanField(default=True)
+    Analytics = models.BooleanField(default=False)
+    Candidate_Search = models.BooleanField(default=False)
+    Premium_Support = models.BooleanField(default=False)
+    Account_Manager = models.BooleanField(default=False)
+    # Pricing
+    monthly_price             = models.DecimalField(max_digits=10, decimal_places=2)
+    tax               = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    discount_halfyear = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    discount_annual   = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+
+    # Duration (your existing field — kept as is)
     duration_days = models.IntegerField(default=30)
     highlight_limit = models.PositiveIntegerField(default=0)
-   
-    def __str__(self):
-        return self.name
-   
+
+    # Trial
+    is_trial_enabled = models.BooleanField(default=False)
+    trial_duration   = models.PositiveIntegerField(default=0)
+
+    # Advanced
+    is_auto_renewal = models.BooleanField(default=False)
+    grace_time      = models.PositiveIntegerField(default=0)
+
+    # Audit
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
     class Meta:
+        ordering = ['id']
         db_table = 'Plan'
 
-    def get_all_pricing(self):
-        """Simple implementation to avoid error"""
-        return {
-            'monthly': {'total': float(self.monthly_price)},
-            '6_months': {'total': float(self.monthly_price) * 6 * 0.9},
-            'yearly': {'total': float(self.monthly_price) * 12 * 0.85}
-        }
- 
- 
+    @property
+    def total_payable(self):
+        base = float(self.price)
+        tax  = float(self.tax)
+        return round(base + base * (tax / 100), 2)
+
+    def __str__(self):
+        return self.name
+    
 class Subscription(models.Model):
     STATUS = [
         ('active', 'Active'),
@@ -2109,10 +2149,6 @@ class EmployerPlatformSettings(models.Model):
         default=User.AccountStatus.HOLD
     )
  
-    # ─────────────────────────────
-    # REGISTRATION SETTINGS
-    # ─────────────────────────────
- 
     employer_registration = models.BooleanField(
         default=True
     )
@@ -2485,3 +2521,26 @@ class JobseekerPlatformSettings(models.Model):
         )
 
         return obj
+        
+# from django.db.models.signals import post_save
+# from django.dispatch import receiver
+
+# DEFAULT_FEATURES = [
+#     { "text": "Jobs Posting",               "value": "1",     "order": 0 },
+#     { "text": "Analytics",                  "value": "false", "order": 1 },
+#     { "text": "Candidate Search",           "value": "false", "order": 2 },
+#     { "text": "Highlight Your Job Listing", "value": "false", "order": 3 },
+#     { "text": "Premium Support",            "value": "false", "order": 4 },
+#     { "text": "Account Manager",            "value": "false", "order": 5 },
+# ]
+
+# @receiver(post_save, sender=Plan)
+# def create_default_features(sender, instance, created, **kwargs):
+#     if created:  # only runs when a NEW plan is created
+#         for feature in DEFAULT_FEATURES:
+#             PlanFeature.objects.create(
+#                 plan=instance,
+#                 text=feature['text'],
+#                 value=feature['value'],
+#                 order=feature['order']
+#             )

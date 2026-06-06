@@ -32,6 +32,9 @@ from .views import (
     DeleteNotificationView,
     ClearAllNotificationsView,
     NewsletterSubscribeAPIView,
+    PlanDetailView,
+    PlanListCreateView,
+    PlanPublishToggleView,
     SubmitComplaintView,
     UpdateCompanyStatusView,
     UserDeleteView,
@@ -281,7 +284,7 @@ urlpatterns = [
     path( "admin/jobs/<int:pk>/status/", AdminUpdateJobStatusView.as_view()),
 
     # Billing
-    path("plans/", PlanListView.as_view(), name='plan-list'),
+    # path("plans/", PlanListView.as_view(), name='plan-list'),
     path("create-order/", CreateOrderView.as_view(), name='create-order'),
     path("subscription/", CurrentSubscriptionView.as_view(), name='current-subscription'),
     path("cancel/", CancelSubscriptionView.as_view(), name='cancel-subscription'),
@@ -367,13 +370,11 @@ urlpatterns = [
  
     path("admin/2fa/status/", Admin2FAStatusView.as_view(), name="admin-2fa-status"),
     path("admin-2fa/login/verify-otp/",VerifyAdminLoginOTPView.as_view(),name="admin-login-verify-otp"),
- 
-    path("admin/2fa/send-otp/",SendAdmin2FAOTPView.as_view(),name="admin-2fa-send-otp"),
- 
-    path("admin/2fa/verify-otp/",VerifyAdmin2FAOTPView.as_view(),name="admin-2fa-verify-otp"),
- 
-    path("admin/2fa/disable/", DisableAdmin2FAView.as_view(),name="admin-2fa-disable"),
 
+    path("admin/2fa/send-otp/",SendAdmin2FAOTPView.as_view(),name="admin-2fa-send-otp"),
+
+    path("admin/2fa/verify-otp/",VerifyAdmin2FAOTPView.as_view(),name="admin-2fa-verify-otp"),
+    path("admin/2fa/disable/", DisableAdmin2FAView.as_view(),name="admin-2fa-disable"),
 
     #for employer setting 
 
@@ -381,7 +382,11 @@ urlpatterns = [
     path('employer/weekly-summary/',EmployerWeeklySummaryView.as_view(),name='employer-weekly-summary'),
 
     # jobseekersetting
-
     path('jobseeker/settings/',JobseekerPlatformSettingsView.as_view(),name='jobseeker-platform-settings'),
+
+    # PLANS
+    path('plans/', PlanListCreateView.as_view(), name='plan-list-create'),
+    path('plans/<int:pk>/', PlanDetailView.as_view(), name='plan-detail'),
+    path('plans/<int:pk>/toggle-publish/', PlanPublishToggleView.as_view(), name='plan-toggle-publish'),
 
 ]
