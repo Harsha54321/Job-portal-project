@@ -2596,325 +2596,121 @@ class PlanFeatureSerializer(serializers.ModelSerializer):
 
 
 class PlanSerializer(serializers.ModelSerializer):
+    features = serializers.SerializerMethodField()
     pricing = serializers.SerializerMethodField()
-    features = serializers.SerializerMethodField()  
     
-    features_input = serializers.ListField(
-    child=serializers.DictField(), write_only=True, required=False, source='features'
-)
     class Meta:
         model = Plan
         fields = [
- 
-            'id',
- 
-            'name',
- 
-            'summary',
- 
-            'color',
- 
-            'is_published',
- 
-            'monthly_price',
- 
-            'tax',
- 
-            'discount_halfyear',
- 
-            'discount_annual',
- 
-            'duration_days',
- 
-            'is_trial_enabled',
- 
-            'trial_duration',
- 
-            'is_auto_renewal',
- 
-            'grace_time',
- 
-            'features',
- 
-            'total_payable',
- 
-            'pricing',
- 
-            'created_at',
- 
-            'updated_at',
-            'features_input',
+            'id', 'name', 'summary', 'color', 'is_published',
+            'monthly_price', 'tax', 'discount_halfyear', 'discount_annual',
+            'duration_days', 'is_trial_enabled', 'trial_duration',
+            'is_auto_renewal', 'grace_time', 'features', 'pricing'
         ]
- 
-        read_only_fields = [
- 
-            'created_at',
- 
-            'updated_at'
-        ]
-    def to_internal_value(self, data):
-    # Pull features out before super() discards it (SerializerMethodField is read-only)
-        features_input = data.get('features', None)
-        ret = super().to_internal_value(data)
-        if features_input is not None:
-            ret['features_input'] = features_input
-        return ret
- 
-    # FEATURES
-   
- 
+    
     def get_features(self, obj):
-        active_setting = EmployerPlatformSettings.objects.filter(
-            plan=obj,
-            account_status=User.AccountStatus.ACTIVE
-        ).first()
-        
-        return [
-            {
-                "text": "Jobs Posting",
-                "value": str(active_setting.max_job_posts) if active_setting else "0",
-                "order": 0
-            },
-            {
-                "text": "Analytics",
-                "value": "true" if obj.Analytics else "false",
-                "order": 1
-            },
-            {
-                "text": "Candidate Search",
-                "value": "true" if obj.Candidate_Search else "false",
-                "order": 2
-            },
-            {
-                "text": "Highlight Your Job Listing",
-                "value": str(active_setting.featured_job_limit) if (active_setting and active_setting.featured_employer_option) else "0",
-                "order": 3
-            },
-            {
-                "text": "Premium Support",
-                "value": "true" if obj.Premium_Support else "false",
-                "order": 4
-            },
-            {
-                "text": "Account Manager",
-                "value": "true" if obj.Account_Manager else "false",
-                "order": 5
-            },
-        ]
-
- 
+        """Fetch features from EmployerPlatformSettings for ACTIVE status"""
+        try:
+            settings = EmployerPlatformSettings.objects.get(
+                plan=obj,
+                account_status=User.AccountStatus.ACTIVE
+            )
+            
+            return [
+                {
+                    "text": "Jobs Posting",
+                    "value": str(settings.max_job_posts),
+                    "included": True,
+                    "order": 0
+                },
+                {
+                    "text": "Analytics",
+                    "value": "true" if obj.Analytics else "false",
+                    "included": obj.Analytics,
+                    "order": 1
+                },
+                {
+                    "text": "Candidate Search",
+                    "value": "true" if obj.Candidate_Search else "false",
+                    "included": obj.Candidate_Search,
+                    "order": 2
+                },
+                {
+                    "text": "Highlight Your Job Listing",
+                    "value": str(settings.featured_job_limit) if settings.featured_employer_option else "0",
+                    "included": settings.featured_employer_option,
+                    "order": 3
+                },
+                {
+                    "text": "Premium Support",
+                    "value": "true" if obj.Premium_Support else "false",
+                    "included": obj.Premium_Support,
+                    "order": 4
+                },
+                {
+                    "text": "Account Manager",
+                    "value": "true" if obj.Account_Manager else "false",
+                    "included": obj.Account_Manager,
+                    "order": 5
+                }
+            ]
+        except EmployerPlatformSettings.DoesNotExist:
+            return []
+    
     def get_pricing(self, obj):
- 
-        monthly_price = float(
-            obj.monthly_price
-        )
- 
-        tax_rate = (
-            float(obj.tax)
-            if obj.tax
-            else 18
-        )
- 
-        cgst = round(
- 
-            monthly_price *
- 
-            (tax_rate / 2) / 100,
- 
-            2
-        )
- 
-        sgst = round(
- 
-            monthly_price *
- 
-            (tax_rate / 2) / 100,
- 
-            2
-        )
- 
-        total = round(
- 
-            monthly_price +
- 
-            cgst +
- 
-            sgst,
- 
-            2
-        )
- 
-        discounted_price_6month = (
- 
-            monthly_price *
- 
-            (
-                1 -
- 
-                float(
-                    obj.discount_halfyear
-                ) / 100
-            )
- 
-            if obj.discount_halfyear
- 
-            else monthly_price
-        )
- 
-        discounted_price_annual = (
- 
-            monthly_price *
- 
-            (
-                1 -
- 
-                float(
-                    obj.discount_annual
-                ) / 100
-            )
- 
-            if obj.discount_annual
- 
-            else monthly_price
-        )
- 
+        """Calculate pricing for all durations"""
+        monthly_price = float(obj.monthly_price)
+        tax_rate = float(obj.tax) if obj.tax else 18
+        
+        # Monthly calculation
+        monthly_cgst = round(monthly_price * (tax_rate / 2) / 100, 2)
+        monthly_sgst = round(monthly_price * (tax_rate / 2) / 100, 2)
+        monthly_total = round(monthly_price + monthly_cgst + monthly_sgst, 2)
+        
+        # 6 Months calculation
+        six_month_base = monthly_price * 6
+        six_month_discount = six_month_base * (float(obj.discount_halfyear) / 100)
+        six_month_after_discount = six_month_base - six_month_discount
+        six_month_cgst = round(six_month_after_discount * (tax_rate / 2) / 100, 2)
+        six_month_sgst = round(six_month_after_discount * (tax_rate / 2) / 100, 2)
+        six_month_total = round(six_month_after_discount + six_month_cgst + six_month_sgst, 2)
+        
+        # Yearly calculation
+        yearly_base = monthly_price * 12
+        yearly_discount = yearly_base * (float(obj.discount_annual) / 100)
+        yearly_after_discount = yearly_base - yearly_discount
+        yearly_cgst = round(yearly_after_discount * (tax_rate / 2) / 100, 2)
+        yearly_sgst = round(yearly_after_discount * (tax_rate / 2) / 100, 2)
+        yearly_total = round(yearly_after_discount + yearly_cgst + yearly_sgst, 2)
+        
         return {
- 
-            "duration": "Monthly",
- 
-            "duration_days":
-                obj.duration_days,
- 
-            "monthly_price":
-                monthly_price,
- 
-            "original_price":
-                monthly_price,
- 
-            "discount_percent":
-                0,
- 
-            "discount_amount":
-                0.0,
- 
-            "subtotal":
-                monthly_price,
- 
-            "cgst":
-                cgst,
- 
-            "sgst":
-                sgst,
- 
-            "total":
-                total,
- 
-            "savings":
-                None,
- 
-            "discounted_prices": {
- 
-                "half_yearly":
-                    discounted_price_6month,
- 
-                "annual":
-                    discounted_price_annual
+            "monthly": {
+                "base_price": monthly_price,
+                "cgst": monthly_cgst,
+                "sgst": monthly_sgst,
+                "total": monthly_total
+            },
+            "six_months": {
+                "base_price": six_month_base,
+                "discount_percent": float(obj.discount_halfyear),
+                "discount_amount": round(six_month_discount, 2),
+                "price_after_discount": round(six_month_after_discount, 2),
+                "cgst": six_month_cgst,
+                "sgst": six_month_sgst,
+                "total": six_month_total,
+                "savings": round(six_month_base - six_month_after_discount, 2)
+            },
+            "yearly": {
+                "base_price": yearly_base,
+                "discount_percent": float(obj.discount_annual),
+                "discount_amount": round(yearly_discount, 2),
+                "price_after_discount": round(yearly_after_discount, 2),
+                "cgst": yearly_cgst,
+                "sgst": yearly_sgst,
+                "total": yearly_total,
+                "savings": round(yearly_base - yearly_after_discount, 2)
             }
         }
- 
- 
-    # CREATE
-   
- 
-    def create(
-        self,
-        validated_data
-    ):
- 
-        return Plan.objects.create(
-            **validated_data
-        )
- 
-    # UPDATE
-   
- 
-    def update(self, instance, validated_data):
-        features_data = validated_data.pop('features_input', None)
-        validated_data.pop('features', None)
-        
-        # Update scalar fields (name, monthly_price, tax, etc.)
-        for attr, value in validated_data.items():
-            setattr(instance, attr, value)
-        
-        # FEATURES UPDATE
-        if features_data:
-            # Get active EmployerPlatformSettings for this plan
-            active_setting = EmployerPlatformSettings.objects.filter(
-                plan=instance,
-                account_status=User.AccountStatus.ACTIVE
-            ).first()
-            
-            for feature in features_data:
-                text = feature.get("text")
-                value = feature.get("value")
-                
-                # =============================================
-                # JOBS POSTING - Update max_job_posts
-                # =============================================
-                if active_setting and text == "Jobs Posting":
-                    try:
-                        active_setting.max_job_posts = int(value)
-                    except (ValueError, TypeError):
-                        active_setting.max_job_posts = 0
-                
-                # =============================================
-                # HIGHLIGHT YOUR JOB LISTING - Update featured_job_limit
-                # =============================================
-                elif active_setting and text == "Highlight Your Job Listing":
-                    try:
-                        numeric_value = int(value)
-                        if numeric_value > 0:
-                            active_setting.featured_employer_option = True
-                            active_setting.featured_job_limit = numeric_value
-                        else:
-                            active_setting.featured_employer_option = False
-                            active_setting.featured_job_limit = 0
-                    except (ValueError, TypeError):
-                        active_setting.featured_employer_option = False
-                        active_setting.featured_job_limit = 0
-                
-                # =============================================
-                # ANALYTICS - Update boolean field
-                # =============================================
-                elif text == "Analytics":
-                    instance.Analytics = (str(value).lower() == "true")
-                
-                # =============================================
-                # CANDIDATE SEARCH - Update boolean field
-                # =============================================
-                elif text == "Candidate Search":
-                    instance.Candidate_Search = (str(value).lower() == "true")
-                
-                # =============================================
-                # PREMIUM SUPPORT - Update boolean field
-                # =============================================
-                elif text == "Premium Support":
-                    instance.Premium_Support = (str(value).lower() == "true")
-                
-                # =============================================
-                # ACCOUNT MANAGER - Update boolean field
-                # =============================================
-                elif text == "Account Manager":
-                    instance.Account_Manager = (str(value).lower() == "true")
-            
-            # Save the updated EmployerPlatformSettings
-            if active_setting:
-                active_setting.save()
-        
-        # Save the Plan instance
-        instance.save()
-        
-        return instance
     
 class SubscriptionSerializer(serializers.ModelSerializer):
     plan = PlanSerializer()

@@ -241,7 +241,7 @@ export const PlansBilling = () => {
                     name: normalizedPlanName,
                     price: displayPrice,
                     status: subRes.data.status.toUpperCase(),
-                    features: currentPlan.features || [], 
+                    features: currentPlan.features || [],
                     price: parseFloat(currentPlan.monthly_price) || 0,
                     nextInvoice: new Date(subRes.data.end_date).toLocaleDateString('en-US', {
                         month: 'long', day: 'numeric', year: 'numeric'
@@ -425,79 +425,38 @@ export const PlansBilling = () => {
     };
 
     const handleUpgrade = async (newPlan, billingCycle) => {
-
         console.log('billingCycle received:', billingCycle);
-        const normalizedName = normalizePlanName(newPlan.name);
-        // const isStarterPlan = normalizedName === 'STARTER PLAN' || newPlan.price === 0;
 
-        // if (isStarterPlan) {
-        //     setIsProcessing(true);
+        // Normalize duration for backend
+        let durationParam = 'monthly';
+        let planType = 'Monthly';
 
-        //     const activePlanData = {
-        //         id: newPlan.id,
-        //         name: 'STARTER PLAN',
-        //         price: 0,
-        //         status: 'ACTIVE',
-        //         planType: billingCycle === 'monthly' ? 'Monthly' :
-        //             billingCycle === '6 Months' ? '6 Months' : 'Yearly',
-        //         nextInvoice: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', {
-        //             month: 'long', day: 'numeric', year: 'numeric'
-        //         })
-        //     };
+        if (billingCycle === '6 Months') {
+            durationParam = '6_months';
+            planType = '6 Months';
+        } else if (billingCycle === 'yearly') {
+            durationParam = 'yearly';
+            planType = 'Yearly';
+        }
 
-        //     setActivePlan(activePlanData);
-        //     setPlanStatus('ACTIVE');
-        //     setPendingInvoices([]);
-
-        //     alert('STARTER PLAN activated successfully!');
-        //     setView('overview');
-        //     setIsProcessing(false);
-        //     await fetchRealData();
-        //     return;
-        // }
-
-        // const calculateNextInvoice = (cycle) => {
-        //     const date = new Date();
-        //     if (cycle === 'Yearly') date.setFullYear(date.getFullYear() + 1);
-        //     else if (cycle === '6 Months') date.setMonth(date.getMonth() + 6);
-        //     else date.setMonth(date.getMonth() + 1);
-        //     return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-        // };
-        const calculateNextInvoice = (cycle) => {
-            const date = new Date();
-            if (cycle === 'Yearly' || cycle === 'yearly') {
-                date.setFullYear(date.getFullYear() + 1);
-            } else if (cycle === '6 Months' || cycle === '6_months') {
-                date.setMonth(date.getMonth() + 6);
-            } else {
-                date.setMonth(date.getMonth() + 1);
-            }
-            return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-        };
-
-
+        // Store plan details for payment
         setAdditionalPlan({
             id: newPlan.id,
-            name: normalizedName,
+            name: newPlan.name,
             price: newPlan.price,
-            subtotal: newPlan.subtotal,
-            cgst: newPlan.cgst,
-            sgst: newPlan.sgst,
-            planType: billingCycle,
-            nextInvoice: calculateNextInvoice(billingCycle)
+            color: newPlan.color,
+            summary: newPlan.summary,
+            planType: planType,
+            duration: durationParam,
+            price_breakdown: newPlan.price_breakdown
         });
 
         setView('payment');
-        setIsCardOnly(false);
-        setPaymentTab('card');
     };
 
     const processPaymentWithRazorpay = async (paymentMethodType) => {
         setIsProcessing(true);
         try {
-            // const plan = availablePlans.find(p =>
-            //     normalizePlanName(p.name) === normalizePlanName(additionalPlan.name)
-            // );
             const plan = availablePlans.find(p => p.id === additionalPlan.id);
 
             if (!plan) {
@@ -506,24 +465,12 @@ export const PlansBilling = () => {
                 return;
             }
 
-            // let durationParam = 'monthly';
-            // if (additionalPlan.planType === '6 Months') {
-            //     durationParam = '6_months';
-            // } else if (additionalPlan.planType === 'Yearly') {
-            //     durationParam = 'yearly';
-            // }
-            let durationParam = 'monthly';
-            if (additionalPlan.planType === '6 Months' || additionalPlan.planType === '6_months') {
-                durationParam = '6_months';
-            } else if (additionalPlan.planType === 'Yearly' || additionalPlan.planType === 'yearly') {
-                durationParam = 'yearly';
-            }
-
+            // Send correct duration parameter
             const orderRes = await api.post('/create-order/', {
                 plan_id: plan.id,
-                duration: durationParam
+                duration: additionalPlan.duration  // 'monthly', '6_months', or 'yearly'
             });
-            const { order_id, amount, currency, razorpay_key } = orderRes.data;
+            const { order_id, amount, currency, razorpay_key, price_breakdown } = orderRes.data;
 
             const options = {
                 key: razorpay_key,
@@ -538,7 +485,7 @@ export const PlansBilling = () => {
                             razorpay_order_id: response.razorpay_order_id,
                             razorpay_payment_id: response.razorpay_payment_id,
                             razorpay_signature: response.razorpay_signature,
-                            duration: durationParam,
+                            duration: additionalPlan.duration,
                             payment_method: paymentMethodType
                         });
 
@@ -833,87 +780,87 @@ export const PlansBilling = () => {
             </div> */}
 
             <div className="PlansBilling-card PlansBilling-current-plan">
-    <div className="PlansBilling-plan-info">
-        <p className="PlansBilling-label">Current Plan</p>
-        <div className="PlansBilling-title-row">
-            <h2 className="PlansBilling-plan-name">{activePlan?.name || 'No Active Plan'}</h2>
-            <span className={`PlansBilling-status-badge ${planStatus === 'ACTIVE'
-                ? 'PlansBilling-status-active'
-                : isExpired
-                    ? 'PlansBilling-status-expired'
-                    : 'PlansBilling-status-cancelled'
-                }`}>
-                {isExpired ? 'EXPIRED' : planStatus}
-            </span>
-        </div>
-        <p className="PlansBilling-plan-desc">Providing the core tools and services you need at an affordable price</p>
-    </div>
-    <div className="PlansBilling-plan-actions">
-        <span className="PlansBilling-main-price">
-            {/* Check if it's Starter plan - show "Free" instead of price */}
-            {activePlan?.name === 'STARTER PLAN' ? 
-                'Free Plan' : 
-                `₹ ${activePlan?.price || '0'}`
-            } 
-            {activePlan?.name !== 'STARTER PLAN' && (
-                <small>/{activePlan?.planType === 'Monthly' ? 'month' : activePlan?.planType === '6 Months' ? '6 months' : 'year'}</small>
-            )}
-        </span>
-        <div className="PlansBilling-button-group">
+                <div className="PlansBilling-plan-info">
+                    <p className="PlansBilling-label">Current Plan</p>
+                    <div className="PlansBilling-title-row">
+                        <h2 className="PlansBilling-plan-name">{activePlan?.name || 'No Active Plan'}</h2>
+                        <span className={`PlansBilling-status-badge ${planStatus === 'ACTIVE'
+                            ? 'PlansBilling-status-active'
+                            : isExpired
+                                ? 'PlansBilling-status-expired'
+                                : 'PlansBilling-status-cancelled'
+                            }`}>
+                            {isExpired ? 'EXPIRED' : planStatus}
+                        </span>
+                    </div>
+                    <p className="PlansBilling-plan-desc">Providing the core tools and services you need at an affordable price</p>
+                </div>
+                <div className="PlansBilling-plan-actions">
+                    <span className="PlansBilling-main-price">
+                        {/* Check if it's Starter plan - show "Free" instead of price */}
+                        {activePlan?.name === 'STARTER PLAN' ?
+                            'Free Plan' :
+                            `₹ ${activePlan?.price || '0'}`
+                        }
+                        {activePlan?.name !== 'STARTER PLAN' && (
+                            <small>/{activePlan?.planType === 'Monthly' ? 'month' : activePlan?.planType === '6 Months' ? '6 months' : 'year'}</small>
+                        )}
+                    </span>
+                    <div className="PlansBilling-button-group">
 
-            {planStatus === 'ACTIVE' ? (
+                        {planStatus === 'ACTIVE' ? (
 
-                <>
-                    {/* Only show Cancel Plan button if NOT Starter plan */}
-                    {activePlan?.name !== 'STARTER PLAN' && (
-                        <button
-                            className="PlansBilling-btn PlansBilling-btn-outline"
-                            onClick={handleToggleModal}
-                        >
-                            Cancel Plan
-                        </button>
-                    )}
+                            <>
+                                {/* Only show Cancel Plan button if NOT Starter plan */}
+                                {activePlan?.name !== 'STARTER PLAN' && (
+                                    <button
+                                        className="PlansBilling-btn PlansBilling-btn-outline"
+                                        onClick={handleToggleModal}
+                                    >
+                                        Cancel Plan
+                                    </button>
+                                )}
 
-                    <button
-                        className="PlansBilling-btn PlansBilling-btn-upgrade"
-                        onClick={() => setView('upgrade')}
-                    >
-                        Upgrade Plan
-                    </button>
-                </>
+                                <button
+                                    className="PlansBilling-btn PlansBilling-btn-upgrade"
+                                    onClick={() => setView('upgrade')}
+                                >
+                                    Upgrade Plan
+                                </button>
+                            </>
 
-            ) : !isExpired ? (
+                        ) : !isExpired ? (
 
-                <>
-                    <button
-                        className="PlansBilling-btn PlansBilling-btn-primary"
-                        onClick={handleReactivate}
-                    >
-                        Reactivate Plan
-                    </button>
+                            <>
+                                <button
+                                    className="PlansBilling-btn PlansBilling-btn-primary"
+                                    onClick={handleReactivate}
+                                >
+                                    Reactivate Plan
+                                </button>
 
-                    <button
-                        className="PlansBilling-btn PlansBilling-btn-upgrade"
-                        onClick={() => setView('upgrade')}
-                    >
-                        Upgrade Plan
-                    </button>
-                </>
+                                <button
+                                    className="PlansBilling-btn PlansBilling-btn-upgrade"
+                                    onClick={() => setView('upgrade')}
+                                >
+                                    Upgrade Plan
+                                </button>
+                            </>
 
-            ) : (
+                        ) : (
 
-                <button
-                    className="PlansBilling-btn PlansBilling-btn-upgrade"
-                    onClick={() => setView('upgrade')}
-                >
-                    Upgrade Plan
-                </button>
+                            <button
+                                className="PlansBilling-btn PlansBilling-btn-upgrade"
+                                onClick={() => setView('upgrade')}
+                            >
+                                Upgrade Plan
+                            </button>
 
-            )}
+                        )}
 
-        </div>
-    </div>
-</div>
+                    </div>
+                </div>
+            </div>
 
             <div className="PlansBilling-grid-row">
                 <div className="PlansBilling-card PlansBilling-invoice-box">

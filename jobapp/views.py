@@ -4006,25 +4006,87 @@ class CreateOrderView(APIView):
 
     def post(self, request):
         plan_id = request.data.get("plan_id")
-        duration = request.data.get("duration", "monthly")
-       
+        duration = request.data.get("duration", "monthly")  # 'monthly', '6_months', 'yearly'
+        
         plan = get_object_or_404(Plan, id=plan_id)
-        pricing = self.calculate_discounted_price(plan, duration)
-       
+        
+        # =============================================
+        # CRITICAL: Correct price calculation
+        # =============================================
+        from decimal import Decimal
+        monthly_price = Decimal(str(plan.monthly_price))
+        
+        if duration == 'monthly':
+            multiplier = Decimal('1')
+            discount_percent = Decimal('0')
+            duration_days = plan.duration_days
+            
+        elif duration == '6_months':
+            multiplier = Decimal('6')
+            discount_percent = Decimal(str(plan.discount_halfyear)) if plan.discount_halfyear else Decimal('0')
+            duration_days = 180
+            
+        elif duration == 'yearly':
+            multiplier = Decimal('12')
+            discount_percent = Decimal(str(plan.discount_annual)) if plan.discount_annual else Decimal('0')
+            duration_days = 365
+            
+        else:
+            multiplier = Decimal('1')
+            discount_percent = Decimal('0')
+            duration_days = plan.duration_days
+        
+        # Calculate price
+        base_price = monthly_price * multiplier
+        discount_amount = base_price * (discount_percent / Decimal('100'))
+        price_after_discount = base_price - discount_amount
+        
+        # Calculate GST (tax from plan)
+        tax_rate = Decimal(str(plan.tax)) if plan.tax else Decimal('18')
+        gst_amount = price_after_discount * (tax_rate / Decimal('100'))
+        total_price = price_after_discount + gst_amount
+        
+        # Create Razorpay order
+        import razorpay
+        from django.conf import settings
+        client = razorpay.Client(auth=(settings.RAZORPAY_KEY, settings.RAZORPAY_SECRET))
+        
         order = client.order.create({
-            "amount": int(pricing['total'] * 100),
+            "amount": int(total_price * 100),  # Convert to paise
             "currency": "INR",
             "payment_capture": 1
         })
-
+        
+        # =============================================
+        # FIX: Remove 'payment_data' - Payment model doesn't have this field
+        # Store calculation data separately or use JSON field if available
+        # =============================================
         payment = Payment.objects.create(
             user=request.user,
             plan=plan,
             razorpay_order_id=order["id"],
-            amount=Decimal(str(pricing['total'])),
+            amount=total_price,
             status="pending",
         )
-
+        
+        # Optional: Store price breakdown in a separate variable or log it
+        price_breakdown = {
+            'duration': duration,
+            'duration_days': duration_days,
+            'base_price': float(base_price),
+            'discount_percent': float(discount_percent),
+            'discount_amount': float(discount_amount),
+            'price_after_discount': float(price_after_discount),
+            'tax_rate': float(tax_rate),
+            'tax_amount': float(gst_amount),
+            'cgst': float(gst_amount / 2),
+            'sgst': float(gst_amount / 2),
+            'total': float(total_price)
+        }
+        
+        # Log for debugging
+        print(f"Price breakdown for {plan.name} ({duration}): {price_breakdown}")
+        
         return Response({
             "order_id": order["id"],
             "amount": order["amount"],
@@ -4032,55 +4094,15 @@ class CreateOrderView(APIView):
             "payment_db_id": payment.id,
             "razorpay_key": settings.RAZORPAY_KEY,
             "duration": duration,
-            "duration_days": pricing['duration_days'],
-            "pricing": pricing
+            "duration_days": duration_days,
+            "plan": {
+                "id": plan.id,
+                "name": plan.name,
+                "color": plan.color,
+                "summary": plan.summary
+            },
+            "price_breakdown": price_breakdown
         })
-   
-    def calculate_discounted_price(self, plan, duration):
-        # Convert to Decimal - THIS IS KEY
-        monthly_price = Decimal(str(plan.monthly_price))
-       
-        if duration == 'monthly':
-            multiplier = Decimal('1')
-            discount_percent = Decimal('0')
-            duration_days = plan.duration_days
-           
-        elif duration == '6_months':
-            multiplier = Decimal('6')
-            discount_percent = Decimal('10')
-            duration_days = 180
-           
-        elif duration == 'yearly':
-            multiplier = Decimal('12')
-            discount_percent = Decimal('15')
-            duration_days = 365
-           
-        else:
-            multiplier = Decimal('1')
-            discount_percent = Decimal('0')
-            duration_days = plan.duration_days
-       
-        # All calculations using Decimal
-        original_price = monthly_price * multiplier
-        discount_amount = original_price * (discount_percent / Decimal('100'))
-        subtotal = original_price - discount_amount
-       
-        cgst = subtotal * Decimal('0.09')
-        sgst = subtotal * Decimal('0.09')
-        total = subtotal + cgst + sgst
-       
-        return {
-            'duration': duration,
-            'duration_days': duration_days,
-            'monthly_price': float(round(monthly_price, 2)),
-            'original_price': float(round(original_price, 2)),
-            'discount_percent': int(discount_percent),
-            'discount_amount': float(round(discount_amount, 2)),
-            'subtotal': float(round(subtotal, 2)),
-            'cgst': float(round(cgst, 2)),
-            'sgst': float(round(sgst, 2)),
-            'total': float(round(total, 2)),
-        }
  
 from django.utils import timezone
  
