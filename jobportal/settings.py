@@ -184,27 +184,27 @@ WSGI_APPLICATION = 'jobportal.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
  
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',  
-    }
-}
-
 # DATABASES = {
 #     'default': {
-#         'ENGINE': 'django.db.backends.mysql',
-#         'NAME': 'jobportal_dev',
-#         'USER': 'jobportal_user',
-#         'PASSWORD': 'Jobportal@01',
-#         'HOST': '54.183.89.14',
-#         'PORT': '3306',
-#         'CONN_MAX_AGE':60,
-#         'OPTIONS': {
-#             'charset': 'utf8mb4',
-#         }
+#         'ENGINE': 'django.db.backends.sqlite3',
+#         'NAME': BASE_DIR / 'db.sqlite3',  
 #     }
 # }
+
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'jobportal_dev',
+        'USER': 'jobportal_user',
+        'PASSWORD': 'Jobportal@01',
+        'HOST': '54.183.89.14',
+        'PORT': '3306',
+        'CONN_MAX_AGE':60,
+        'OPTIONS': {
+            'charset': 'utf8mb4',
+        }
+    }
+}
  
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
  
@@ -250,7 +250,7 @@ TIME_ZONE = 'Asia/Kolkata'
  
 USE_I18N = True
  
-USE_TZ = True
+USE_TZ = False
  
  
 # Static files (CSS, JavaScript, Images)

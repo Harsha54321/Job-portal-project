@@ -732,6 +732,9 @@ class ApplicationFlag(models.Model):
     is_reviewed = models.BooleanField(default=False)
  
     created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'ApplicationFlag'
  
     def __str__(self):
         return f"{self.flag_reason} - {self.application.id}"
@@ -1081,7 +1084,7 @@ class PasswordResetToken(models.Model):
     is_used = models.BooleanField(default=False)
 
     class Meta:
-        db_table = 'PasswordRestToken'
+        db_table = 'PasswordResetToken'
 
     def __str__(self):
         return f"Reset token for {self.user.email}"
@@ -1320,9 +1323,8 @@ class CompanyReview(models.Model):  #newly added
     )
 
     class Meta:
-
+        db_table = 'CompanyReview'
         ordering = ['-created_at']
-
         unique_together = ['company', 'reviewer']
 
     # ─────────────────────────────────────────
@@ -1543,6 +1545,7 @@ class PlanFeature(models.Model):
 
     class Meta:
         ordering = ['order']
+        db_table = 'PlanFeature'
 
     def __str__(self):
         return f"{self.plan.name} → {self.text}: {self.value}"
@@ -1873,6 +1876,9 @@ class NotificationConfig(models.Model):  #newly added 08/05
     push = models.BooleanField(default=False)
  
     updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'NotificationConfig'
  
     def __str__(self):
         return self.category
@@ -1887,9 +1893,9 @@ class AdminQuietHours(models.Model):  #newly added 08/05
         ("Europe/Berlin", "(UTC +02:00) Europe/Berlin"),
     ]
     admin = models.OneToOneField(
-    User,
-    on_delete=models.CASCADE
-)
+        User,
+        on_delete=models.CASCADE
+    )
  
     enabled = models.BooleanField(default=False)
  
@@ -1914,6 +1920,9 @@ class AdminQuietHours(models.Model):  #newly added 08/05
     updated_at = models.DateTimeField(
         auto_now=True
     )
+
+    class Meta:
+        db_table = 'AdminQuietHours'
  
     def __str__(self):
         return self.admin.email
@@ -1930,6 +1939,9 @@ class NotificationChannelSettings(models.Model): #newly added 08/05
     push_notif = models.BooleanField(default=False)
  
     updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'NotificationChannelSettings'
  
     def __str__(self):
         return "Notification Channel Settings"
@@ -1971,6 +1983,9 @@ class UserDevice(models.Model):#newly added 11/05
         auto_now=True
     )
 
+    class Meta:
+        db_table = 'UserDevice'
+
     def __str__(self):
 
         return (
@@ -2004,6 +2019,9 @@ class SMSOTP(models.Model):
  
     def is_valid(self):
         return timezone.now() < self.expires_at
+    
+    class Meta:
+        db_table = 'SMSOTP'
  
     def __str__(self):
         return f"{self.phone} - {self.purpose}"
@@ -2070,6 +2088,7 @@ class AdminAccessLog(models.Model):
     )
  
     class Meta:
+        db_table = 'AdminAccessLog'
         ordering = ["-timestamp"]
  
     def __str__(self):
@@ -2123,6 +2142,7 @@ class AdminTrustedDevice(models.Model): #changed on 11/05
     )
  
     class Meta:
+        db_table = 'AdminTrustedDevice'
         ordering = ["-last_used_at"]
  
     def __str__(self):
@@ -2284,7 +2304,7 @@ class EmployerPlatformSettings(models.Model):
     )
  
     class Meta:
- 
+        db_table = 'EmployerPlatformSettings' 
         unique_together = (
             'plan',
             'account_status'
@@ -2360,6 +2380,7 @@ class NotificationDeliveryLog(models.Model):
     )
 
     class Meta:
+        db_table = 'NotificationDeliveryLog'
         ordering = ['-created_at']
 
     def __str__(self):
@@ -2527,6 +2548,9 @@ class JobseekerPlatformSettings(models.Model):
         )
 
         return obj
+    
+    class Meta:
+        db_table = 'JobseekerPlatformSettings'
         
 # from django.db.models.signals import post_save
 # from django.dispatch import receiver
