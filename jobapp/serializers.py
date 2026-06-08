@@ -2605,7 +2605,8 @@ class PlanSerializer(serializers.ModelSerializer):
             'id', 'name', 'summary', 'color', 'is_published',
             'monthly_price', 'tax', 'discount_halfyear', 'discount_annual',
             'duration_days', 'is_trial_enabled', 'trial_duration',
-            'is_auto_renewal', 'grace_time', 'features', 'pricing'
+            'is_auto_renewal', 'grace_time', 'features', 'pricing',
+            'Analytics', 'Candidate_Search', 'Premium_Support', 'Account_Manager'
         ]
     
     def get_features(self, obj):
@@ -2659,8 +2660,42 @@ class PlanSerializer(serializers.ModelSerializer):
     
     def get_pricing(self, obj):
         """Calculate pricing for all durations"""
-        monthly_price = float(obj.monthly_price)
-        tax_rate = float(obj.tax) if obj.tax else 18
+        monthly_price = float(obj.monthly_price) if obj.monthly_price else 0.0
+        tax_rate = float(obj.tax) if obj.tax else 18.0
+        
+        if monthly_price == 0.0:
+            return {
+                "monthly": {
+                    "base_price": 0.0,
+                    "cgst": 0.0,
+                    "sgst": 0.0,
+                    "total": 0.0
+                },
+                "six_months": {
+                    "base_price": 0.0,
+                    "discount_percent": 0.0,
+                    "discount_amount": 0.0,
+                    "price_after_discount": 0.0,
+                    "cgst": 0.0,
+                    "sgst": 0.0,
+                    "total": 0.0,
+                    "savings": 0.0
+                },
+                "yearly": {
+                    "base_price": 0.0,
+                    "discount_percent": 0.0,
+                    "discount_amount": 0.0,
+                    "price_after_discount": 0.0,
+                    "cgst": 0.0,
+                    "sgst": 0.0,
+                    "total": 0.0,
+                    "savings": 0.0
+                }
+            }
+        
+        # Safe parsing for discounts
+        discount_halfyear = float(obj.discount_halfyear) if obj.discount_halfyear else 0.0
+        discount_annual = float(obj.discount_annual) if obj.discount_annual else 0.0
         
         # Monthly calculation
         monthly_cgst = round(monthly_price * (tax_rate / 2) / 100, 2)
@@ -2669,7 +2704,7 @@ class PlanSerializer(serializers.ModelSerializer):
         
         # 6 Months calculation
         six_month_base = monthly_price * 6
-        six_month_discount = six_month_base * (float(obj.discount_halfyear) / 100)
+        six_month_discount = six_month_base * (discount_halfyear / 100)
         six_month_after_discount = six_month_base - six_month_discount
         six_month_cgst = round(six_month_after_discount * (tax_rate / 2) / 100, 2)
         six_month_sgst = round(six_month_after_discount * (tax_rate / 2) / 100, 2)
@@ -2677,7 +2712,7 @@ class PlanSerializer(serializers.ModelSerializer):
         
         # Yearly calculation
         yearly_base = monthly_price * 12
-        yearly_discount = yearly_base * (float(obj.discount_annual) / 100)
+        yearly_discount = yearly_base * (discount_annual / 100)
         yearly_after_discount = yearly_base - yearly_discount
         yearly_cgst = round(yearly_after_discount * (tax_rate / 2) / 100, 2)
         yearly_sgst = round(yearly_after_discount * (tax_rate / 2) / 100, 2)
@@ -2692,7 +2727,7 @@ class PlanSerializer(serializers.ModelSerializer):
             },
             "six_months": {
                 "base_price": six_month_base,
-                "discount_percent": float(obj.discount_halfyear),
+                "discount_percent": discount_halfyear,
                 "discount_amount": round(six_month_discount, 2),
                 "price_after_discount": round(six_month_after_discount, 2),
                 "cgst": six_month_cgst,
@@ -2702,7 +2737,7 @@ class PlanSerializer(serializers.ModelSerializer):
             },
             "yearly": {
                 "base_price": yearly_base,
-                "discount_percent": float(obj.discount_annual),
+                "discount_percent": discount_annual,
                 "discount_amount": round(yearly_discount, 2),
                 "price_after_discount": round(yearly_after_discount, 2),
                 "cgst": yearly_cgst,
@@ -2711,6 +2746,97 @@ class PlanSerializer(serializers.ModelSerializer):
                 "savings": round(yearly_base - yearly_after_discount, 2)
             }
         }
+    
+    def create(self, validated_data):
+        """Create a new plan"""
+        # Remove any features data if present (handled separately)
+        validated_data.pop('features', None)
+        return Plan.objects.create(**validated_data)
+    
+    def update(self, instance, validated_data):
+        """Update an existing plan with features support"""
+        print(f"[DEBUG] Updating plan: {instance.name}")
+        print(f"[DEBUG] Validated data: {validated_data.keys() if validated_data else 'None'}")
+    
+        # Get features from request context if available
+        features_data = None
+        request_data = {}
+        if self.context.get('request'):
+            request_data = self.context['request'].data
+            features_data = request_data.get('features', None)
+            print(f"[DEBUG] Features from request: {features_data}")
+    
+        # Update scalar fields
+        for attr, value in validated_data.items():
+            if attr not in ['features']:
+                setattr(instance, attr, value)
+    
+        instance.save()
+    
+        # Update features if provided
+        if features_data:
+            print(f"[DEBUG] Updating features for plan: {instance.name}")
+            try:
+                # Get or create EmployerPlatformSettings for ACTIVE status
+                settings, created = EmployerPlatformSettings.objects.get_or_create(
+                    plan=instance,
+                    account_status=User.AccountStatus.ACTIVE,
+                    defaults={
+                        "max_job_posts": 10,
+                        "featured_job_limit": 3,
+                        "featured_employer_option": False,
+                        "job_expire_days": 30,
+                    }
+                )
+            
+                for feature in features_data:
+                    text = feature.get('text')
+                    value = feature.get('value')
+
+                    print(f"[DEBUG] Processing feature: {text} = {value}")
+                
+                    if text == 'Jobs Posting':
+                        try:
+                            settings.max_job_posts = int(value) if value else 0
+                        except (ValueError, TypeError):
+                            settings.max_job_posts = 0
+                        
+                    elif text == 'Highlight Your Job Listing':
+                        try:
+                            numeric_value = int(value) if value else 0
+                            if numeric_value > 0:
+                                settings.featured_employer_option = True
+                                settings.featured_job_limit = numeric_value
+                            else:
+                                settings.featured_employer_option = False
+                                settings.featured_job_limit = 0
+                        except (ValueError, TypeError):
+                            settings.featured_employer_option = False
+                            settings.featured_job_limit = 0
+                        
+                    elif text == 'Analytics':
+                        instance.Analytics = (str(value).lower() == 'true')
+                    
+                    elif text == 'Candidate Search':
+                        instance.Candidate_Search = (str(value).lower() == 'true')
+                    
+                    elif text == 'Premium Support':
+                        instance.Premium_Support = (str(value).lower() == 'true')
+                    
+                    elif text == 'Account Manager':
+                        instance.Account_Manager = (str(value).lower() == 'true')
+            
+                # Save settings and plan
+                settings.save()
+                instance.save()
+                print(f"[DEBUG] Features updated successfully - Settings max_job_posts: {settings.max_job_posts}, featured_employer_option: {settings.featured_employer_option}")
+            
+            except Exception as e:
+                print(f"[DEBUG] Error updating features: {str(e)}")
+                import traceback
+                traceback.print_exc()
+    
+        return instance
     
 class SubscriptionSerializer(serializers.ModelSerializer):
     plan = PlanSerializer()
@@ -3435,6 +3561,8 @@ class EmployerPlatformSettingsSerializer(
         )
  
         data = request.data
+        print(f"[DEBUG] Updating EmployerPlatformSettings for plan: {instance.plan.name}")
+        print(f"[DEBUG] Received data: {data}")
  
         # Required Docs
  
@@ -3577,6 +3705,23 @@ class EmployerPlatformSettingsSerializer(
             instance.notif_weekly_summary
 
         )
+        
+        # Critical: Job posting limits (these need to be saved)
+        job_expire_days = data.get("job_expire_days")
+        if job_expire_days is not None:
+            instance.job_expire_days = int(job_expire_days)
+            
+        max_job_posts = data.get("max_job_posts")
+        if max_job_posts is not None:
+            instance.max_job_posts = int(max_job_posts)
+            
+        featured_job_limit = data.get("featured_job_limit")
+        if featured_job_limit is not None:
+            instance.featured_job_limit = int(featured_job_limit)
+            
+        allow_edit_after_approval = data.get("allow_edit_after_approval")
+        if allow_edit_after_approval is not None:
+            instance.allow_edit_after_approval = bool(allow_edit_after_approval)
  
         # Normal Fields
  

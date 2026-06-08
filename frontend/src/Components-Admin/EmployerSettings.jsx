@@ -51,6 +51,12 @@ export const EmployerSettings = () => {
   });
 
   // ─────────────────────────────────────────
+  // PREVIEW STATE
+  // ─────────────────────────────────────────
+  const [showPreview, setShowPreview] = useState(false);
+  const [previewData, setPreviewData] = useState(null);
+
+  // ─────────────────────────────────────────
   // STATUS MAPPING HELPERS
   // ─────────────────────────────────────────
 
@@ -122,26 +128,25 @@ export const EmployerSettings = () => {
           emailVerification: data.email_verification ?? false,
           mobileVerification: data.mobile_verification ?? false,
           approvalType: data.approval_type ?? 'Manual Type',
-          // ✅ WITH THIS:
           requiredDocs: {
-            companyCert: data.requiredDocs?.companyCert ?? false,
-            gstCert: data.requiredDocs?.gstCert ?? false,
-            businessEmail: data.requiredDocs?.businessEmail ?? false,
-            companyWebsite: data.requiredDocs?.companyWebsite ?? false,
+            companyCert: data.req_company_cert ?? false,
+            gstCert: data.req_gst_cert ?? false,
+            businessEmail: data.req_business_email ?? false,
+            companyWebsite: data.req_company_website ?? false,
           },
           preferences: {
-            multipleCompany: data.preferences?.multipleCompany ?? false,
-            multipleUsers: data.preferences?.multipleUsers ?? false,
-            companyReviews: data.preferences?.companyReviews ?? false,
-            companyBranding: data.preferences?.companyBranding ?? false,
-            featuredEmployer: data.preferences?.featuredEmployer ?? false,
+            multipleCompany: data.allow_multiple_company ?? false,
+            multipleUsers: data.allow_multiple_users ?? false,
+            companyReviews: data.show_company_reviews ?? false,
+            companyBranding: data.enable_company_branding ?? false,
+            featuredEmployer: data.featured_employer_option ?? false,
           },
           notifications: {
-            email: data.notifications?.email ?? false,
-            newSignups: data.notifications?.newSignups ?? false,
-            alerts: data.notifications?.alerts ?? false,
-            announcements: data.notifications?.announcements ?? false,
-            weeklySummary: data.notifications?.weeklySummary ?? false,
+            email: data.notif_email ?? false,
+            newSignups: data.notif_new_signups ?? false,
+            alerts: data.notif_alerts ?? false,
+            announcements: data.notif_announcements ?? false,
+            weeklySummary: data.notif_weekly_summary ?? false,
           },
           defaultPlan: data.plan || 'Free plan',
           // Derived from selectedAccountStatus — never from the API response
@@ -188,6 +193,22 @@ export const EmployerSettings = () => {
   };
 
   // ─────────────────────────────────────────
+  // PREVIEW CHANGES
+  // ─────────────────────────────────────────
+
+  const handlePreviewChanges = () => {
+    // Create a copy of current settings for preview
+    const preview = {
+      ...settings,
+      jobExpireDays: Number(settings.jobExpireDays),
+      maxJobPosts: Number(settings.maxJobPosts),
+      featuredJobLimit: Number(settings.featuredJobLimit),
+    };
+    setPreviewData(preview);
+    setShowPreview(true);
+  };
+
+  // ─────────────────────────────────────────
   // SAVE SETTINGS
   // ─────────────────────────────────────────
 
@@ -209,34 +230,47 @@ export const EmployerSettings = () => {
         max_job_posts: Number(settings.maxJobPosts),
         featured_job_limit: Number(settings.featuredJobLimit),
         allow_edit_after_approval: settings.allowEditAfterApproval,
-        requiredDocs: {
-          companyCert: settings.requiredDocs.companyCert,
-          gstCert: settings.requiredDocs.gstCert,
-          businessEmail: settings.requiredDocs.businessEmail,
-          companyWebsite: settings.requiredDocs.companyWebsite,
-        },
-        preferences: {
-          multipleCompany: false,
-          multipleUsers: false,
-          companyReviews: false,
-          companyBranding: false,
-          featuredEmployer: true,
-        },
-        notifications: {
-          email: settings.notifications.email,
-          newSignups: settings.notifications.newSignups,
-          alerts: settings.notifications.alerts,
-          announcements: settings.notifications.announcements,
-          weeklySummary: settings.notifications.weeklySummary,
-        },
+        // Required Docs
+        req_company_cert: settings.requiredDocs.companyCert,
+        req_gst_cert: settings.requiredDocs.gstCert,
+        req_business_email: settings.requiredDocs.businessEmail,
+        req_company_website: settings.requiredDocs.companyWebsite,
+        // Preferences
+        allow_multiple_company: settings.preferences.multipleCompany,
+        allow_multiple_users: settings.preferences.multipleUsers,
+        show_company_reviews: settings.preferences.companyReviews,
+        enable_company_branding: settings.preferences.companyBranding,
+        featured_employer_option: settings.preferences.featuredEmployer,
+        // Notifications
+        notif_email: settings.notifications.email,
+        notif_new_signups: settings.notifications.newSignups,
+        notif_alerts: settings.notifications.alerts,
+        notif_announcements: settings.notifications.announcements,
+        notif_weekly_summary: settings.notifications.weeklySummary,
       };
 
-      await api.patch(url, payload);
-      alert("Settings saved successfully!");
+      console.log("[DEBUG] Saving payload:", payload);
 
-      // No re-fetch needed after save — the state already reflects
-      // what was just saved, and selectedAccountStatus hasn't changed.
-
+      const response = await api.patch(url, payload);
+      
+      if (response.status === 200) {
+        alert("Settings saved successfully!");
+        setShowPreview(false);
+        
+        // Refresh data to confirm save
+        const refreshUrl = `employer-settings/${selectedPlanId}/${selectedAccountStatus}/`;
+        const refreshRes = await api.get(refreshUrl);
+        const data = refreshRes.data;
+        
+        // Update settings with saved data
+        setSettings(prev => ({
+          ...prev,
+          jobExpireDays: data.job_expire_days ?? prev.jobExpireDays,
+          maxJobPosts: data.max_job_posts ?? prev.maxJobPosts,
+          featuredJobLimit: data.featured_job_limit ?? prev.featuredJobLimit,
+          allowEditAfterApproval: data.allow_edit_after_approval ?? prev.allowEditAfterApproval,
+        }));
+      }
     } catch (err) {
       console.error("Failed to save settings:", err);
       alert("Failed to save settings. Please try again.");
@@ -278,13 +312,171 @@ export const EmployerSettings = () => {
   };
 
   // ─────────────────────────────────────────
+  // PREVIEW MODAL COMPONENT
+  // ─────────────────────────────────────────
+
+  const PreviewModal = () => {
+    if (!showPreview || !previewData) return null;
+
+    const getStatusClass = (value) => {
+      return value ? 'preview-enabled' : 'preview-disabled';
+    };
+
+    return (
+      <div className="employer-preview-overlay" onClick={() => setShowPreview(false)}>
+        <div className="employer-preview-modal" onClick={(e) => e.stopPropagation()}>
+          <div className="preview-header">
+            <h3>📋 Preview Changes</h3>
+            <button className="preview-close" onClick={() => setShowPreview(false)}>✕</button>
+          </div>
+          
+          <div className="preview-content">
+            {/* Job Posting Settings */}
+            <div className="preview-section">
+              <h4>📌 Job Posting Settings</h4>
+              <div className="preview-row">
+                <span>Job Expire Days:</span>
+                <strong>{previewData.jobExpireDays} days</strong>
+              </div>
+              <div className="preview-row">
+                <span>Max Job Posts:</span>
+                <strong>{previewData.maxJobPosts}</strong>
+              </div>
+              <div className="preview-row">
+                <span>Featured Job Limit:</span>
+                <strong>{previewData.featuredJobLimit}</strong>
+              </div>
+              <div className="preview-row">
+                <span>Allow Edit After Approval:</span>
+                <strong className={getStatusClass(previewData.allowEditAfterApproval)}>
+                  {previewData.allowEditAfterApproval ? "✅ Allowed" : "❌ Not Allowed"}
+                </strong>
+              </div>
+            </div>
+
+            {/* Registration Settings */}
+            <div className="preview-section">
+              <h4>🔐 Registration & Access</h4>
+              <div className="preview-row">
+                <span>Employer Registration:</span>
+                <strong className={getStatusClass(previewData.employerRegistration)}>
+                  {previewData.employerRegistration ? "✅ Enabled" : "❌ Disabled"}
+                </strong>
+              </div>
+              <div className="preview-row">
+                <span>Email Verification:</span>
+                <strong className={getStatusClass(previewData.emailVerification)}>
+                  {previewData.emailVerification ? "✅ Required" : "❌ Not Required"}
+                </strong>
+              </div>
+              <div className="preview-row">
+                <span>Mobile Verification:</span>
+                <strong className={getStatusClass(previewData.mobileVerification)}>
+                  {previewData.mobileVerification ? "✅ Required" : "❌ Not Required"}
+                </strong>
+              </div>
+              <div className="preview-row">
+                <span>Approval Type:</span>
+                <strong>{previewData.approvalType}</strong>
+              </div>
+            </div>
+
+            {/* Required Documents */}
+            <div className="preview-section">
+              <h4>📄 Required Documents</h4>
+              <div className="preview-row">
+                <span>Company Certificate:</span>
+                <strong className={getStatusClass(previewData.requiredDocs?.companyCert)}>
+                  {previewData.requiredDocs?.companyCert ? "✅ Required" : "❌ Not Required"}
+                </strong>
+              </div>
+              <div className="preview-row">
+                <span>GST Certificate:</span>
+                <strong className={getStatusClass(previewData.requiredDocs?.gstCert)}>
+                  {previewData.requiredDocs?.gstCert ? "✅ Required" : "❌ Not Required"}
+                </strong>
+              </div>
+              <div className="preview-row">
+                <span>Business Email:</span>
+                <strong className={getStatusClass(previewData.requiredDocs?.businessEmail)}>
+                  {previewData.requiredDocs?.businessEmail ? "✅ Required" : "❌ Not Required"}
+                </strong>
+              </div>
+              <div className="preview-row">
+                <span>Company Website:</span>
+                <strong className={getStatusClass(previewData.requiredDocs?.companyWebsite)}>
+                  {previewData.requiredDocs?.companyWebsite ? "✅ Required" : "❌ Not Required"}
+                </strong>
+              </div>
+            </div>
+
+            {/* Notification Settings */}
+            <div className="preview-section">
+              <h4>🔔 Notification Settings</h4>
+              <div className="preview-row">
+                <span>Email Notifications:</span>
+                <strong className={getStatusClass(previewData.notifications?.email)}>
+                  {previewData.notifications?.email ? "✅ Enabled" : "❌ Disabled"}
+                </strong>
+              </div>
+              <div className="preview-row">
+                <span>New Signups:</span>
+                <strong className={getStatusClass(previewData.notifications?.newSignups)}>
+                  {previewData.notifications?.newSignups ? "✅ Enabled" : "❌ Disabled"}
+                </strong>
+              </div>
+              <div className="preview-row">
+                <span>Alerts:</span>
+                <strong className={getStatusClass(previewData.notifications?.alerts)}>
+                  {previewData.notifications?.alerts ? "✅ Enabled" : "❌ Disabled"}
+                </strong>
+              </div>
+              <div className="preview-row">
+                <span>Weekly Summary:</span>
+                <strong className={getStatusClass(previewData.notifications?.weeklySummary)}>
+                  {previewData.notifications?.weeklySummary ? "✅ Enabled" : "❌ Disabled"}
+                </strong>
+              </div>
+            </div>
+
+            {/* Plan & Status */}
+            <div className="preview-section">
+              <h4>📊 Plan Configuration</h4>
+              <div className="preview-row">
+                <span>Default Plan:</span>
+                <strong>{previewData.defaultPlan}</strong>
+              </div>
+              <div className="preview-row">
+                <span>Account Status:</span>
+                <strong>{previewData.accountStatus}</strong>
+              </div>
+            </div>
+          </div>
+
+          <div className="preview-actions">
+            <button className="preview-cancel" onClick={() => setShowPreview(false)}>
+              Cancel
+            </button>
+            <button className="preview-save" onClick={handleSave} disabled={saving}>
+              {saving ? "Saving..." : "Confirm & Save"}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // ─────────────────────────────────────────
   // LOADING STATE
   // ─────────────────────────────────────────
 
   if (loading) {
     return (
       <div className="Jobseeker-Set-main-wrapper">
-        <p style={{ padding: '2rem' }}>Loading...</p>
+        <div className="loading-spinner">
+          <div className="spinner"></div>
+          <p>Loading settings...</p>
+        </div>
       </div>
     );
   }
@@ -295,6 +487,8 @@ export const EmployerSettings = () => {
 
   return (
     <div className="Jobseeker-Set-main-wrapper">
+
+      <PreviewModal />
 
       {/* ── Registration & Access ── */}
       <div className="Jobseeker-Set-registration">
@@ -348,31 +542,13 @@ export const EmployerSettings = () => {
             Select documents required during registration
           </p>
           <div className="Jobseeker-Set-checkbox-group">
-            {/* {[
-              { label: 'Company registration certificate', id: 'companyCert' },
-              { label: 'GST certificate', id: 'gstCert' },
-              { label: 'Business email', id: 'businessEmail' },
-              { label: 'Company website', id: 'companyWebsite' },
-            ].map(doc => (
-              <label className="Jobseeker-Set-checkbox-item" key={doc.id}>
-                <input
-                  type="checkbox"
-                  checked={settings.requiredDocs[doc.id]}
-                  onChange={(e) =>
-                    handleChange('requiredDocs', doc.id, e.target.checked, true)
-                  }
-                />
-                <span>{doc.label}</span>
-              </label>
-            ))} */}
-
             {[
               { label: 'Company registration certificate', id: 'companyCert' },
               { label: 'GST certificate', id: 'gstCert' },
               { label: 'Business email', id: 'businessEmail' },
               { label: 'Company website', id: 'companyWebsite' },
             ].map(doc => (
-              <label className="Jobseeker-Set-checkbox-item Jobseeker-Set-disabled-item" key={doc.id}>
+              <label className="Jobseeker-Set-checkbox-item" key={doc.id}>
                 <input
                   type="checkbox"
                   checked={settings.requiredDocs[doc.id]}
@@ -392,7 +568,7 @@ export const EmployerSettings = () => {
         {/* Other Preferences */}
         <div className="Jobseeker-Set-preferences-column">
           <h2>Other Preferences</h2>
-          {/* {[
+          {[
             { label: 'Allow Multiple Company', id: 'multipleCompany' },
             { label: 'Allow Multiple Users', id: 'multipleUsers' },
             { label: 'Show Company Reviews', id: 'companyReviews' },
@@ -403,26 +579,7 @@ export const EmployerSettings = () => {
               <input
                 type="checkbox"
                 checked={settings.preferences[pref.id]}
-                onChange={(e) =>
-                  handleChange('preferences', pref.id, e.target.checked, true)
-                }
-              />
-              <span>{pref.label}</span>
-            </label>
-          ))} */}
-          {[
-            { label: 'Allow Multiple Company', id: 'multipleCompany' },
-            { label: 'Allow Multiple Users', id: 'multipleUsers' },
-            { label: 'Show Company Reviews', id: 'companyReviews' },
-            { label: 'Enable Company Branding', id: 'companyBranding' },
-            { label: 'Feature Employer Option', id: 'featuredEmployer' },
-          ].map(pref => (
-            <label className="Jobseeker-Set-checkbox-item Jobseeker-Set-disabled-item" key={pref.id}>
-              <input
-                type="checkbox"
-                checked={settings.preferences[pref.id]}
                 onChange={(e) => handleChange('preferences', pref.id, e.target.checked, true)}
-
               />
               <span>{pref.label}</span>
             </label>
@@ -443,9 +600,7 @@ export const EmployerSettings = () => {
               <input
                 type="checkbox"
                 checked={settings.notifications[notif.id]}
-                onChange={(e) =>
-                  handleChange('notifications', notif.id, e.target.checked, true)
-                }
+                onChange={(e) => handleChange('notifications', notif.id, e.target.checked, true)}
               />
               <span>{notif.label}</span>
             </label>
@@ -491,7 +646,7 @@ export const EmployerSettings = () => {
         <div className="Jobseeker-Set-job-settings-grid">
 
           <div className="Jobseeker-Set-job-setting-box">
-            <h3>Job Expire(Days)</h3>
+            <h3>Job Expire (Days)</h3>
             <input
               type="number"
               value={settings.jobExpireDays}
@@ -499,6 +654,7 @@ export const EmployerSettings = () => {
                 handleChange(null, 'jobExpireDays', parseInt(e.target.value) || 0)
               }
             />
+            <p className="setting-hint">Jobs will expire after this many days</p>
           </div>
 
           <div className="Jobseeker-Set-job-setting-box">
@@ -510,6 +666,7 @@ export const EmployerSettings = () => {
                 handleChange(null, 'maxJobPosts', parseInt(e.target.value) || 0)
               }
             />
+            <p className="setting-hint">Maximum number of jobs an employer can post</p>
           </div>
 
           <div className="Jobseeker-Set-job-setting-box">
@@ -521,6 +678,7 @@ export const EmployerSettings = () => {
                 handleChange(null, 'featuredJobLimit', parseInt(e.target.value) || 0)
               }
             />
+            <p className="setting-hint">Maximum number of featured jobs allowed</p>
           </div>
 
           <div className="Jobseeker-Set-job-setting-box">
@@ -540,24 +698,33 @@ export const EmployerSettings = () => {
                 {settings.allowEditAfterApproval ? "Allowed" : "Not Allowed"}
               </span>
             </div>
+            <p className="setting-hint">Allow employers to edit jobs after approval</p>
           </div>
 
         </div>
       </div>
 
-      {/* ── Save ── */}
+      {/* ── Save & Preview Buttons ── */}
       <div className="Jobseeker-Set-save-section">
         <div className="Jobseeker-Set-info-message">
           <img src={Info} width="19" alt="CircleI" />
           Changes will apply to all Employers users on the platform
         </div>
-        <button
-          className="Jobseeker-Set-save-btn"
-          onClick={handleSave}
-          disabled={saving}
-        >
-          {saving ? "Saving..." : "Save Changes"}
-        </button>
+        <div className="Jobseeker-Set-button-group">
+          <button
+            className="Jobseeker-Set-preview-btn"
+            onClick={handlePreviewChanges}
+          >
+             Preview Changes
+          </button>
+          <button
+            className="Jobseeker-Set-save-btn"
+            onClick={handleSave}
+            disabled={saving}
+          >
+            {saving ? "Saving..." : " Save Changes"}
+          </button>
+        </div>
       </div>
 
     </div>

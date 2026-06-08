@@ -18,6 +18,7 @@ export const CompanyVerify = () => {
 
   const location = useLocation();
   const isFirstTime = location.state?.fromCompanyProfile === true;
+  const employerEmail = location.state?.employerEmail || "";
   console.log("🔍 location.state:", location.state);
   console.log("🔍 isFirstTime:", isFirstTime);
 
@@ -166,7 +167,7 @@ export const CompanyVerify = () => {
 
   // Verification status effect
   useEffect(() => {
-    if (isFirstTime) {
+    if (isFirstTime || employerEmail) {
       console.log("First time user - skipping verification status check");
       return;
     }
@@ -319,6 +320,10 @@ export const CompanyVerify = () => {
       formDataToSend.append("phone_number", formData.phoneNumber);
       formDataToSend.append("incorporation_certificate", formData.incorporationCertificate);
 
+      if (employerEmail) {
+        formDataToSend.append("employer_email", employerEmail);
+      }
+
       console.log("Submitting verification data...");
 
       const response = await api.post("/company/verify/", formDataToSend, {
@@ -332,13 +337,13 @@ export const CompanyVerify = () => {
       if (response.status === 200 || response.status === 201) {
         alert("Verification submitted successfully! Admin will review your application.");
         // ✅ Navigate to dashboard with auto-refresh state
-        navigate('/Job-portal/Employer/Dashboard', { 
+        navigate('/Job-portal/Employer/Dashboard', {
           replace: true,
-          state: { 
-            fromVerify: true, 
+          state: {
+            fromVerify: true,
             verificationSubmitted: true,
             justLoggedIn: true  // ✅ This triggers auto-refresh in dashboard
-          } 
+          }
         });
       }
     } catch (err) {

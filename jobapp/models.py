@@ -1548,23 +1548,26 @@ class PlanFeature(models.Model):
         return f"{self.plan.name} → {self.text}: {self.value}"
 
 class Plan(models.Model):
-    # Basic
-    name       = models.CharField(max_length=100, unique=True)
-    summary    = models.CharField(max_length=255, blank=True)
-    color      = models.CharField(max_length=30, default='#1E88E5')
+   # Basic
+    name         = models.CharField(max_length=100, unique=True)
+    summary      = models.CharField(max_length=255, blank=True)
+    color        = models.CharField(max_length=30, default='#1E88E5')
     is_published = models.BooleanField(default=True)
-    Analytics = models.BooleanField(default=False)
+    
+    # Feature Flags
+    Analytics        = models.BooleanField(default=False)
     Candidate_Search = models.BooleanField(default=False)
-    Premium_Support = models.BooleanField(default=False)
-    Account_Manager = models.BooleanField(default=False)
+    Premium_Support  = models.BooleanField(default=False)
+    Account_Manager  = models.BooleanField(default=False)
+    
     # Pricing
-    monthly_price             = models.DecimalField(max_digits=10, decimal_places=2)
+    monthly_price     = models.DecimalField(max_digits=10, decimal_places=2)
     tax               = models.DecimalField(max_digits=5, decimal_places=2, default=0)
     discount_halfyear = models.DecimalField(max_digits=5, decimal_places=2, default=0)
     discount_annual   = models.DecimalField(max_digits=5, decimal_places=2, default=0)
 
-    # Duration (your existing field — kept as is)
-    duration_days = models.IntegerField(default=30)
+    # Duration
+    duration_days   = models.IntegerField(default=30)
     highlight_limit = models.PositiveIntegerField(default=0)
 
     # Trial
@@ -1585,8 +1588,11 @@ class Plan(models.Model):
 
     @property
     def total_payable(self):
-        base = float(self.price)
-        tax  = float(self.tax)
+        """Calculates total payable for 1 month including tax safely"""
+        base = float(self.monthly_price) if self.monthly_price else 0.0
+        tax  = float(self.tax) if self.tax else 0.0
+        if base == 0.0:
+            return 0.0
         return round(base + base * (tax / 100), 2)
 
     def __str__(self):

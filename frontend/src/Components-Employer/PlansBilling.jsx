@@ -4,6 +4,7 @@ import FileIcon from '../assets/Billing/File_icon.png';
 import DeleteIcon from '../assets/Billing/Delete_icon.png';
 import { MembershipPlans } from './MembershipPlans';
 import { PaymentMethods } from './PaymentMethods';
+import { PlanExpiryPopup } from './PlanExpiryPopup';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import api from '../api/axios';
@@ -24,6 +25,25 @@ export const PlansBilling = () => {
     const [activePlan, setActivePlan] = useState(null);
     const [savedCards, setSavedCards] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [showExpiryPopup, setShowExpiryPopup] = useState(false);
+
+    const handleUpgradeFromExpiry = () => {
+    setShowExpiryPopup(false);
+    setView('upgrade');
+};
+
+useEffect(() => {
+    // Check if user just logged in and show expiry popup if needed
+    const lastExpiryCheck = sessionStorage.getItem('lastExpiryCheck');
+    const now = Date.now();
+    
+    if (!lastExpiryCheck || (now - parseInt(lastExpiryCheck)) > 3600000) { // Check every hour
+        sessionStorage.setItem('lastExpiryCheck', now.toString());
+    }
+}, []);
+
+
+
 
     useEffect(() => {
         fetchRealData();
@@ -651,6 +671,7 @@ export const PlansBilling = () => {
         if (!cardToDelete) return null;
 
         return (
+            
             <div className="PlansBilling-modal-overlay">
                 <div className="PlansBilling-modal-content">
                     <h2 className="PlansBilling-modal-title">DELETE CARD?</h2>
@@ -700,6 +721,11 @@ export const PlansBilling = () => {
     }
 
     return (
+        <>
+        <PlanExpiryPopup 
+            onUpgrade={handleUpgradeFromExpiry}
+            onClose={() => setShowExpiryPopup(false)}
+        />
         <div className="PlansBilling-container">
             <div className="PlansBilling-header-box">
                 <h1 className="PlansBilling-main-title">Plans & Billing</h1>
@@ -983,5 +1009,6 @@ export const PlansBilling = () => {
                 </div>
             )}
         </div>
+        </>
     );
 };

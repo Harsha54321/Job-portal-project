@@ -2526,6 +2526,26 @@ class RaiseTicketCreateView(APIView):
             },
             status=status.HTTP_400_BAD_REQUEST
         )
+        
+# Inside views.py
+from rest_framework.permissions import AllowAny
+from rest_framework.decorators import api_view, permission_classes
+
+@api_view(['POST'])
+@permission_classes([AllowAny]) # Allows unauthenticated creation safely during signup
+def company_profile_create_view(request):
+    email = request.data.get('employer_email')
+    
+    # If it's a tokenless multi-step registration request
+    if email:
+        user = get_object_or_404(User, email=email)
+    else:
+        # Fall back to standard session token validation if logging in normally
+        if not request.user.is_authenticated:
+            return Response({"detail": "Authentication required"}, status=401)
+        user = request.user
+
+    # Process Form data using 'user' variable instead of request.user...
  
  
 # ADMIN LIST TICKETS
@@ -8037,10 +8057,10 @@ from .serializers import (
  
 class EmployerPlatformSettingsView(APIView):
  
-    # permission_classes = [
-    #     IsAuthenticated,
-    #     IsAdminUserType
-    # ]
+    permission_classes = [
+        IsAuthenticated,
+        IsAdminUserType
+    ]
  
     # ─────────────────────────────────────────
     # GET SETTINGS
@@ -8211,6 +8231,61 @@ class EmployerPlatformSettingsView(APIView):
  
             status=status.HTTP_200_OK
         )
+        
+from django.db.models import Q
+from django.utils import timezone
+
+class CheckPlanExpiryView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request):
+        user = request.user
+        
+        if user.user_type != 'employer':
+            return Response({"error": "Only employers can access this"}, status=403)
+        
+        subscription = Subscription.objects.filter(
+            user=user,
+            status='active'
+        ).select_related('plan').first()
+        
+        if not subscription:
+            return Response({
+                "has_active_plan": False,
+                "is_expired": True,
+                "message": "You don't have an active subscription plan."
+            })
+        
+        # Check if plan is expired
+        is_expired = subscription.end_date and subscription.end_date < timezone.now()
+        
+        # Check if plan is expiring soon (within 7 days)
+        days_until_expiry = None
+        if subscription.end_date and not is_expired:
+            days_until_expiry = (subscription.end_date - timezone.now()).days
+            
+            # If expiring within 7 days, create notification
+            if days_until_expiry <= 7 and days_until_expiry > 0:
+                NotificationService.create_notification(
+                    recipient=user,
+                    title="Plan Expiring Soon",
+                    message=f"Your {subscription.plan.name} plan will expire in {days_until_expiry} days. Please renew to continue enjoying premium features.",
+                    category="alert",
+                    event_type="plan_expiring_soon",
+                    notification_type="system",
+                    related_object_id=subscription.id
+                )
+        
+        return Response({
+            "has_active_plan": True,
+            "is_expired": is_expired,
+            "plan_name": subscription.plan.name,
+            "plan_type": "Free" if subscription.plan.monthly_price == 0 else "Paid",
+            "start_date": subscription.start_date,
+            "end_date": subscription.end_date,
+            "days_until_expiry": days_until_expiry,
+            "message": "Your plan has expired. Please upgrade to continue." if is_expired else None
+        })
  
  
 class EmployerWeeklySummaryView(APIView):
@@ -9442,7 +9517,8 @@ class PlanDetailView(APIView):
                 {"error": "Plan not found."},
                 status=status.HTTP_404_NOT_FOUND
             )
-        return Response(PlanSerializer(plan).data, status=status.HTTP_200_OK)
+        serializer = PlanSerializer(plan, context={'request': request})
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     def put(self, request, pk):
         plan = self._get_plan(pk)
@@ -9451,13 +9527,23 @@ class PlanDetailView(APIView):
                 {"error": "Plan not found."},
                 status=status.HTTP_404_NOT_FOUND
             )
-        serializer = PlanSerializer(plan, data=request.data)
+        
+        # If it's STARTER PLAN, force price fields to 0
+        if plan.name.upper() == 'STARTER PLAN':
+            data = request.data.copy() if hasattr(request, 'data') else {}
+            data['monthly_price'] = 0
+            data['tax'] = 0
+            data['discount_halfyear'] = 0
+            data['discount_annual'] = 0
+            request._full_data = data
+        
+        serializer = PlanSerializer(plan, data=request.data, context={'request': request})
         if serializer.is_valid():
             updated_plan = serializer.save()
             return Response(
                 {
                     "message": "Plan updated successfully.",
-                    "data": PlanSerializer(updated_plan).data,
+                    "data": PlanSerializer(updated_plan, context={'request': request}).data,
                 },
                 status=status.HTTP_200_OK,
             )
@@ -9470,16 +9556,89 @@ class PlanDetailView(APIView):
                 {"error": "Plan not found."},
                 status=status.HTTP_404_NOT_FOUND
             )
-        serializer = PlanSerializer(plan, data=request.data, partial=True)
+        
+        # If it's STARTER PLAN, force price fields to 0
+        if plan.name.upper() == 'STARTER PLAN':
+            data = request.data.copy() if hasattr(request, 'data') else {}
+            # Force price fields to 0 for Starter Plan
+            data['monthly_price'] = 0
+            data['tax'] = 0
+            data['discount_halfyear'] = 0
+            data['discount_annual'] = 0
+            # Keep features and other fields as they are
+            request._full_data = data
+            print(f"[DEBUG] STARTER PLAN - Forcing price fields to 0, keeping features: {data.get('features', 'no features')}")
+        
+        serializer = PlanSerializer(plan, data=request.data, partial=True, context={'request': request})
         if serializer.is_valid():
             updated_plan = serializer.save()
             return Response(
                 {
                     "message": "Plan updated successfully.",
-                    "data": PlanSerializer(updated_plan).data,
+                    "data": PlanSerializer(updated_plan, context={'request': request}).data,
                 },
                 status=status.HTTP_200_OK,
             )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, pk):
+        plan = self._get_plan(pk)
+        if plan is None:
+            return Response(
+                {"error": "Plan not found."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # Prevent deleting STARTER PLAN
+        if plan.name.upper() == 'STARTER PLAN':
+            return Response(
+                {"error": "Starter Plan cannot be deleted as it is the core system plan."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        plan_name = plan.name
+        plan.delete()
+        return Response(
+            {"message": f"Plan '{plan_name}' deleted successfully."},
+            status=status.HTTP_200_OK,
+        )
+
+    def patch(self, request, pk):
+        plan = self._get_plan(pk)
+        if plan is None:
+            return Response(
+                {"error": "Plan not found."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+    
+        # If it's STARTER PLAN, force price fields to 0
+        if plan.name.upper() == 'STARTER PLAN':
+            data = request.data.copy() if hasattr(request, 'data') else {}
+            # Force price fields to 0 for Starter Plan
+            data['monthly_price'] = 0
+            data['tax'] = 0
+            data['discount_halfyear'] = 0
+            data['discount_annual'] = 0
+            request._full_data = data
+            print(f"[DEBUG] STARTER PLAN - Forcing price fields to 0")
+    
+        print(f"[DEBUG] PATCH request data: {request.data}")
+    
+        serializer = PlanSerializer(plan, data=request.data, partial=True, context={'request': request})
+        if serializer.is_valid():
+            updated_plan = serializer.save()
+        
+            # Fetch fresh data with updated settings
+            fresh_serializer = PlanSerializer(updated_plan, context={'request': request})
+        
+            return Response(
+                {
+                    "message": "Plan updated successfully.",
+                    "data": fresh_serializer.data,
+                },
+                status=status.HTTP_200_OK,
+            )
+        print(f"[DEBUG] Serializer errors: {serializer.errors}")
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request, pk):

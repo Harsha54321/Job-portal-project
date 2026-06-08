@@ -14,6 +14,7 @@ from .views import (
     AdminTicketListView,
     AdminTicketUpdateView,
     AdminUpdateComplaintView,
+    CheckPlanExpiryView,
     CompanyProfileCreateView,
     ContactMessageDeleteAPIView,
     ContactMessageStatusUpdateAPIView,
@@ -388,5 +389,7 @@ urlpatterns = [
     path('plans/', PlanListCreateView.as_view(), name='plan-list-create'),
     path('plans/<int:pk>/', PlanDetailView.as_view(), name='plan-detail'),
     path('plans/<int:pk>/toggle-publish/', PlanPublishToggleView.as_view(), name='plan-toggle-publish'),
+    path('check-plan-expiry/', CheckPlanExpiryView.as_view(), name='check-plan-expiry'),
+    
 
 ]

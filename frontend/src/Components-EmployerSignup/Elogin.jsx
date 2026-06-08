@@ -102,7 +102,6 @@ export const Elogin = () => {
     } catch (error) {
       console.error("Error checking status, falling back:", error);
 
-      // Fallback destination mapping if API status check fails
       const intendedPath = location.state?.intendedPath || '/Job-portal/employer/dashboard';
       const targetTab = location.state?.targetTab || 'Dashboard';
 
@@ -166,16 +165,30 @@ export const Elogin = () => {
       await checkAndRedirect();
 
     } catch (err) {
-      console.error("Login error:", err);
+      console.error("Login error context:", err);
 
       const newErrors = {};
+      const errorData = err.response?.data;
+      
+      // --- FIXED LOOKUP FOR INTERCEPTING ACTIVE/HOLD LIFECYCLE ERRORS ---
+      const backendMessage = errorData?.detail || errorData?.message || "";
+      const isInactive = errorData?.account_inactive || backendMessage.toLowerCase().includes("inactive") || backendMessage.toLowerCase().includes("approval") || backendMessage.toLowerCase().includes("hold");
+
+      if (isInactive) {
+        alert("Your user authentication profile is verified, but access is currently restricted pending active profile verification steps. Redirecting to setup...");
+        
+        // Push tokenless state context variables directly back into profile flow loop!
+        navigate('/Job-portal/Employer/about-your-company', {
+          state: { fromSignup: false, employerEmail: formValues.username }
+        });
+        return;
+      }
+      // -----------------------------------------------------------------
 
       if (err.response?.data?.detail) {
         const detail = err.response.data.detail;
 
-        if (Array.isArray(detail) && detail[0] === "jobseeker_portal") {
-          newErrors.general = "Access denied. Please use the Job Seeker login.";
-        } else if (detail === "jobseeker_portal") {
+        if (Array.isArray(detail) && (detail[0] === "jobseeker_portal" || detail === "jobseeker_portal")) {
           newErrors.general = "Access denied. Please use the Job Seeker login.";
         }
         else if (Array.isArray(detail) && detail[0].toLowerCase().includes('password')) {
@@ -198,27 +211,19 @@ export const Elogin = () => {
       }
 
       if (err.response?.data?.email) {
-        newErrors.username = Array.isArray(err.response.data.email)
-          ? err.response.data.email[0]
-          : err.response.data.email;
+        newErrors.username = Array.isArray(err.response.data.email) ? err.response.data.email[0] : err.response.data.email;
       }
 
       if (err.response?.data?.username) {
-        newErrors.username = Array.isArray(err.response.data.username)
-          ? err.response.data.username[0]
-          : err.response.data.username;
+        newErrors.username = Array.isArray(err.response.data.username) ? err.response.data.username[0] : err.response.data.username;
       }
 
       if (err.response?.data?.password) {
-        newErrors.password = Array.isArray(err.response.data.password)
-          ? err.response.data.password[0]
-          : err.response.data.password;
+        newErrors.password = Array.isArray(err.response.data.password) ? err.response.data.password[0] : err.response.data.password;
       }
 
       if (err.response?.data?.non_field_errors) {
-        const nonFieldError = Array.isArray(err.response.data.non_field_errors)
-          ? err.response.data.non_field_errors[0]
-          : err.response.data.non_field_errors;
+        const nonFieldError = Array.isArray(err.response.data.non_field_errors) ? err.response.data.non_field_errors[0] : err.response.data.non_field_errors;
         newErrors.general = nonFieldError;
       }
 
@@ -242,14 +247,8 @@ export const Elogin = () => {
         </Link>
         <div className="login-header-actions">
           <span className="no-account">Don’t have an account?</span>
-
-          <Link to="/Job-portal/employer/signup" className="signup-btn">
-            Create
-          </Link>
-
-          <Link to="/Job-portal/role-selection" className="login-header-back-btn">
-            ← Back
-          </Link>
+          <Link to="/Job-portal/employer/signup" className="signup-btn">Create</Link>
+          <Link to="/Job-portal/role-selection" className="login-header-back-btn">← Back</Link>
         </div>
       </header>
 
@@ -277,9 +276,7 @@ export const Elogin = () => {
             className={errors.username ? "input-error" : ""}
             disabled={loading}
           />
-          {errors.username && (
-            <span className="error-msg">{errors.username}</span>
-          )}
+          {errors.username && <span className="error-msg">{errors.username}</span>}
 
           <label>Password</label>
           <div className="password-wrapper">
@@ -293,16 +290,10 @@ export const Elogin = () => {
               disabled={loading}
             />
             <span className="eye-icon" onClick={togglePasswordView}>
-              <img
-                src={passwordShow ? eyeHide : eye}
-                className="show-icon"
-                alt="toggle"
-              />
+              <img src={passwordShow ? eyeHide : eye} className="show-icon" alt="toggle" />
             </span>
           </div>
-          {errors.password && (
-            <span className="error-msg">{errors.password}</span>
-          )}
+          {errors.password && <span className="error-msg">{errors.password}</span>}
 
           <div className="form-options">
             <label>
@@ -314,10 +305,7 @@ export const Elogin = () => {
               />
               Remember me
             </label>
-            <Link
-              to="/Job-portal/employer/login/forgotpassword"
-              className="forgot-password"
-            >
+            <Link to="/Job-portal/employer/login/forgotpassword" className="forgot-password">
               Forgot Password?
             </Link>
           </div>

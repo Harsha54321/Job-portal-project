@@ -178,10 +178,6 @@ export const Esignup = () => {
     setIsLoading(true);
 
     try {
-      // If you have a mobile OTP endpoint, use it
-      // const response = await api.post('send-mobile-otp/', { phone: phone });
-
-      // For now, simulate OTP sending
       setTimeout(() => {
         alert(`OTP sent to ${phone}`);
         setTimer(180);
@@ -212,7 +208,6 @@ export const Esignup = () => {
     setIsLoading(true);
 
     try {
-      // For demo purposes, accept 123456 as valid OTP
       if (code === "123456") {
         setIsMobileVerified(true);
 
@@ -303,98 +298,17 @@ export const Esignup = () => {
   }
 
   // SIGNUP SUBMISSION
-  // const handleSubmit = async (e) => {
-  //   e.preventDefault();
-
-  //   if (!validateForm()) {
-  //     console.log("Validation failed");
-  //     return;
-  //   }
-
-  //   setIsLoading(true);
-  //   setBackendError("");
-
-  //   try {
-  //     const response = await api.post("register/employer/", {
-  //       username: formValues.username,
-  //       email: formValues.email,
-  //       phone: formValues.phone,
-  //       password: formValues.password,
-  //       password_confirm: formValues.confirmpassword,
-  //     });
-
-  //     console.log("Registration response:", response.data);
-
-  //     if (response.status === 201 || response.status === 200) {
-  //       alert("Employer account created successfully! Please complete your company profile.");
-  //       console.log("Signed up successfully", formValues);
-
-  //       // Store tokens if returned
-  //       if (response.data.access && response.data.refresh) {
-  //         sessionStorage.setItem("access", response.data.access);
-  //         sessionStorage.setItem("refresh", response.data.refresh);
-  //         sessionStorage.setItem("userType", "employer");
-  //         console.log("✅ Tokens stored successfully");
-  //       }
-
-  //       // Clear form but keep verification states
-  //       setFormValues(initialValues);
-
-  //       setTimeout(() => {
-  //         // navigate("/Job-portal/Employer/about-your-company");
-  //         navigate("/Job-portal/Employer/about-your-company", {
-  //           state: { fromSignup: true }  // ← fromSignup flag pass cheyyali
-  //         });
-  //       }, 2000);
-  //     } else {
-  //       alert("Signup failed. Please try again.");
-  //     }
-  //   } catch (err) {
-  //     console.error("Registration error:", err);
-  //     const apiErrors = err.response?.data;
-
-  //     if (apiErrors) {
-  //       const newErrors = {};
-  //       Object.keys(apiErrors).forEach((key) => {
-  //         newErrors[key] = Array.isArray(apiErrors[key])
-  //           ? apiErrors[key][0]
-  //           : apiErrors[key];
-  //       });
-  //       setErrors(newErrors);
-
-  //       if (apiErrors.detail) {
-  //         setBackendError(apiErrors.detail);
-  //       } else if (apiErrors.error) {
-  //         setBackendError(apiErrors.error);
-  //       }
-  //     } else {
-  //       setBackendError("Signup failed. Please check your connection.");
-  //     }
-  //   } finally {
-  //     setIsLoading(false);
-  //   }
-  // };  
-
-
-  const handleSubmit = async (e) => {  // Make it async
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     const isValid = validateForm();
-
     if (!isValid) {
       console.log("Validation failed, errors set in state");
-      // Explicitly scroll to the top so the user sees the error messages
       window.scrollTo({ top: 0, behavior: 'smooth' });
-      return; // STOP execution here
+      return;
     }
 
-    // if (!validateForm()) {
-    //   console.log("Validation failed");
-    //   return;
-    // }
-
-    setIsLoading(true); // Add loading state
-
+    setIsLoading(true);
     setBackendError("");
 
     try {
@@ -409,40 +323,44 @@ export const Esignup = () => {
 
       console.log("Registration response:", registerResponse.data);
 
-      if (registerResponse.status === 201) {
-        console.log("Registration successful!");
+      if (registerResponse.status === 201 || registerResponse.status === 200) {
+        console.log("Registration successful! Storing temporary context tokens...");
 
-        try {
-          const loginResponse = await api.post("login/", {
-          email: formValues.email,
-          password: formValues.password,
-        });
-
-        if (loginResponse.data.access) {
-          // Store tokens
-          sessionStorage.setItem("access", loginResponse.data.access);
-          sessionStorage.setItem("refresh", loginResponse.data.refresh);
+        // --- ADDED TOKEN STORAGE MANAGEMENT BLOCK ---
+        if (registerResponse.data?.access) {
+          sessionStorage.setItem("access", registerResponse.data.access);
+          sessionStorage.setItem("refresh", registerResponse.data.refresh);
           sessionStorage.setItem("userType", "employer");
-
-          console.log(" Tokens stored");
-
-          // Step 3: Navigate to About Your Company
-          navigate("/Job-portal/Employer/about-your-company", {
-            state: { fromSignup: true }
-          });
+          console.log("Tokens stored successfully into sessionStorage");
         }
-          
-        } catch (error) {
-          const errorMessage=error.response?.data?.error || error.response?.data?.detail ? "you have registered successfully,it is under account approval" : "something went wrong"|| "something went wrong" 
 
-          alert(errorMessage)
-        }
-        // Step 2: Auto-login to get tokens
-        
+        const userEmail = formValues.email;
+        setFormValues(initialValues); // Clear registration state
+
+        // Bypassing login completely to avoid 400 Bad Request since account is on Hold
+
+        navigate("/Job-portal/Employer/about-your-company", {
+          state: { fromSignup: true, employerEmail: userEmail }
+        });
       }
     } catch (err) {
       console.error("Registration error:", err);
-      const errorMessage=err.response?.data?.error || "something went wrong"
+      const apiErrors = err.response?.data;
+      let errorMessage = "Something went wrong during account creation.";
+
+      if (apiErrors) {
+        if (typeof apiErrors === 'object') {
+          const newErrors = {};
+          Object.keys(apiErrors).forEach((key) => {
+            newErrors[key] = Array.isArray(apiErrors[key]) ? apiErrors[key][0] : apiErrors[key];
+          });
+          setErrors(newErrors);
+          errorMessage = apiErrors.error || apiErrors.detail || Object.values(newErrors)[0] || errorMessage;
+        } else if (typeof apiErrors === 'string') {
+          errorMessage = apiErrors;
+        }
+      }
+      setBackendError(errorMessage);
       alert(errorMessage);
     } finally {
       setIsLoading(false);
@@ -455,7 +373,6 @@ export const Esignup = () => {
     const otpKey = isEmail ? "emailOtp" : "mobileOtp";
     const isCurrentlyVerified = isEmail ? isEmailVerified : isMobileVerified;
 
-    // SUCCESS POPUP VIEW
     if (isCurrentlyVerified) {
       return (
         <div className="otp-modal-overlay">
@@ -476,6 +393,7 @@ export const Esignup = () => {
       <div className="otp-modal-overlay">
         <div className="otp-modal-content">
           <button
+            type="button"
             className="back-arrow"
             onClick={() => {
               setTimer(0);
@@ -732,12 +650,10 @@ export const Esignup = () => {
           <button
             type="submit"
             className="j-sign-up-submit"
-            // disabled={!isEmailVerified || !isMobileVerified || isLoading}
             disabled={isLoading}
           >
             {isLoading ? "Creating Account..." : "Create Account"}
           </button>
-
         </form>
       </div>
     </div>
