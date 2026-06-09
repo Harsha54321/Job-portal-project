@@ -65,7 +65,7 @@ def create_default_features_and_settings(sender, instance, created, **kwargs):
             },
             { 
                 "text": "Highlight Your Job Listing", 
-                "value": "0", # Strictly hardcoded to 0/Disabled for the free plan
+                "value": "1", # Strictly hardcoded to 0/Disabled for the free plan
                 "order": 3 
             },
             { 

@@ -40,7 +40,10 @@ export const MembershipPlans = ({ onSelectPlan, plans: externalPlans }) => {
 
     const handleGetStarted = (plan) => {
         const isFreePlan = plan.name.toLowerCase() === 'free' || plan.name.toLowerCase() === 'starter plan';
-
+        if (isFreePlan) {
+            alert("currently disabled for free plans");
+            return;
+        }
         let pricing = plan.pricing;
         let duration = activeTab;
         let priceWithoutTax = 0;
@@ -214,6 +217,7 @@ export const MembershipPlans = ({ onSelectPlan, plans: externalPlans }) => {
                                 <button
                                     className={`MembershipPlans-btn-start ${getPlanColor(index, plan.name)}`}
                                     onClick={() => handleGetStarted(plan)}
+                                    title={isFreePlan ? "This plan is currently disabled" : ""}
                                 >
                                     {isFreePlan ? 'Get Started For Free' : 'Get started'}
                                 </button>

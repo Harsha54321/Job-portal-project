@@ -230,6 +230,14 @@
     box-shadow: 0 0 20px rgba(168, 85, 247, 0.5);
 }
 
+.disabled-btn {
+    background-color: #cccccc !important;
+    color: #666666 !important;
+    cursor: not-allowed !important;
+    border: none !important;
+    opacity: 0.7;
+}
+
 /* Responsive Adjustments */
 @media (max-width: 900px) {
   .MembershipPlans-grid, .MembershipPlans-grid.two-cols {
