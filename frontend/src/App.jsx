@@ -1,103 +1,53 @@
 import React from 'react'
-
 import './App.css'
-
 import { createBrowserRouter, RouterProvider, Outlet } from 'react-router-dom'
-
 import { Landingpage } from './Landingpage'
-
 import { Elogin } from './Components-EmployerSignup/Elogin'
-
 import { Jlogin } from './Components-JobseekerSignup/Jlogin'
-
 import { Jsignup } from './Components-JobseekerSignup/Jsignup'
-
 import { Jcreatepassword } from './Components-JobseekerSignup/Jcreatepassword'
-
 import { Jforgotpassword } from './Components-JobseekerSignup/Jforgotpassword'
-
 import { Afterloginlanding } from './Components-Jobseeker/Afterloginlanding'
-
 import { Esignup } from './Components-EmployerSignup/Esignup'
-
 import { Eforgotpassword } from './Components-EmployerSignup/Eforgotpassword'
-
 import { Ecreatepassword } from './Components-EmployerSignup/Ecreatepassword'
-
 import { OpportunityOverview } from './Components-Jobseeker/OpportunityOverview'
-
 import { MyJobs } from './Components-Jobseeker/MyJobs'
-
 import { JobsTab } from './Components-Jobseeker/JobsTab'
-
 import { CompaniesTab } from './Components-Jobseeker/CompaniesTab'
-
 import { MyProfile } from './Components-Jobseeker/MyProfile'
-
 import { JobsThroughCompany } from './Components-Jobseeker/JobsThroughCompany'
-
 import { AboutUs } from './Components-LandingPage/AboutUs'
-
 import RoleLanding from './Components-LandingPage/RoleLanding'
-
 import { SearchResults } from './Components-Jobseeker/SearchResults'
-
 import { JobProvider } from './JobContext';
-
 import { JobApplication } from './Components-Jobseeker/JobApplication'
-
 import { ApplicationStatusScreen } from './Components-Jobseeker/ApplicationStatusScreen'
-
 import { AppliedJobsOverview } from './Components-Jobseeker/AppliedJobsOverview'
-
 import { Revoked } from './Components-Jobseeker/Revoked'
-
 import { Settings } from './Components-Jobseeker/Settings'
-
-import { BlogPage, } from './Components-LandingPage/BlogPage'
-
+import { BlogPage } from './Components-LandingPage/BlogPage'
 import { BlogCategory } from './Components-LandingPage/BlogCategory'
-
 import { TechnologyBlog } from './Components-LandingPage/TechnologyBlog'
-
 import { ContactUs } from './Components-LandingPage/ContactUs'
-
 import { FAQ } from './Components-LandingPage/FAQ'
-
 import { HelpCenter } from './Components-Jobseeker/HelpCenter'
-
 import { RaiseTicket } from './Components-Jobseeker/RaiseTicket'
-
 import { LiveChat } from './Components-Jobseeker/LiveChat'
-
 import { ProfileCreationHelp } from './Components-Jobseeker/ProfileCreationHelp'
-
 import { ResumeUploadHelp } from './Components-Jobseeker/ResumeUploadHelp'
-
 import { JobApplyIssuesHelp } from './Components-Jobseeker/JobApplyIssuesHelp'
-
 import { InterviewSchedulingHelp } from './Components-Jobseeker/InterviewSchedulingHelp'
-
 import { JobPostingHelp } from './Components-Jobseeker/JobPostingHelp'
-
 import { CandidateSearchHelp } from './Components-Jobseeker/CandidateSearchHelp'
-
 import { SubscriptionIssuesHelp } from './Components-Jobseeker/SubscriptionIssuesHelp'
-
 import { InvoicePaymentHelp } from './Components-Jobseeker/InvoicePaymentHelp'
-
 import { LoginIssuesHelp } from './Components-Jobseeker/LoginIssuesHelp'
-
 import { PageErrorsHelp } from './Components-Jobseeker/PageErrorsHelp'
-
 import { FileUploadHelp } from './Components-Jobseeker/FileUploadHelp'
-
 import { EmployerDashboard } from './Components-Employer/EmployerDashboard'
-
 import { EMessenger } from './Components-Employer/EMessenger'
-
 import { JMessenger } from './Components-Jobseeker/JMessenger'
-
 import ScrollToTop from './ScrollToTop'
 import { ReportAJob } from './Components-Jobseeker/ReportAJob'
 import { OtpVerification } from './Components-JobseekerSignup/OtpVerification'
@@ -116,6 +66,8 @@ import { BillingSec } from './Components-Employer/BillingSec'
 import { GoogleOAuthProvider } from "@react-oauth/google"
 import { AdminLogin } from './Components-Admin/AdminLogin'
 import { AdminDashboard } from './Components-Admin/AdminDashboard'
+import { ViewAllBlogs } from './Components-LandingPage/ViewallBlogs'
+import { BlogDatas } from './Components-LandingPage/BlogDatas'
 
 /* ---------- LAYOUT ---------- */
 
@@ -207,6 +159,10 @@ const router = createBrowserRouter([
               { path: 'Category', element: <BlogCategory /> },
 
               { path: 'Technology', element: <TechnologyBlog /> },
+
+              { path: 'BlogDatas/:title', element: <BlogDatas /> },
+              
+              { path: 'view-all/:category', element: <ViewAllBlogs /> },
 
             ]
 

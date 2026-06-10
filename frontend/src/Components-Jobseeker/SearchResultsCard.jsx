@@ -8,6 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import starIcon from '../assets/Star_icon.png';
 import api from '../api/axios';
 import { useJobs } from '../JobContext';
+import { LocationDisplay } from './LocationDisplay';
 
 export function SearchResultsCard({ job }) {
     const navigate = useNavigate();
@@ -57,17 +58,17 @@ export function SearchResultsCard({ job }) {
         </div>
     );
 
-    const formatLocation = (location) => {
+    // const formatLocation = (location) => {
 
-        if (!location) return "Location not specified";
+    //     if (!location) return "Location not specified";
 
-        if (Array.isArray(location)) {
-            return location.join(", ");
-        }
-        return location;
-    };
+    //     if (Array.isArray(location)) {
+    //         return location.join(", ");
+    //     }
+    //     return location;
+    // };
 
-    const locationDisplay = formatLocation(job.location);
+    // const locationDisplay = formatLocation(job.location);
 
     return (
         <div className="SearchResults-job-card">
@@ -90,18 +91,18 @@ export function SearchResultsCard({ job }) {
                 </div>
 
                 <div className="SearchResults-job-card-details">
-                    <p className="SearchResults-job-card-detail-line">
+                    <div className="SearchResults-job-card-detail-line">
                         <img src={time} className="SearchResults-job-card-icons" alt="type" />
                         {job.work_duration}
                         <span className="SearchResults-job-card-divider">|</span>
-                        ₹ {job.salary || "Salary not disclosed"} Lpa
+                        ₹ {job.salary || "Salary not disclosed"}
                         <span className="SearchResults-job-card-divider">|</span>
                         <img src={experience} className="SearchResults-job-card-icons" alt="experience" />
-                        {job.experience || "Experience not specified"} years of experience
+                        {job.experience || "Experience not specified"}
                         <span className="SearchResults-job-card-divider">|</span>
                         <img src={place} className="SearchResults-job-card-icons" alt="location" />
-                        {locationDisplay || "Location not specified"}
-                    </p>
+                        <LocationDisplay locations={job.location} />
+                    </div>
 
                     <p className="SearchResults-job-card-detail-line">
                         <img src={time} className='SearchResults-job-card-icons' alt='shit_type' />

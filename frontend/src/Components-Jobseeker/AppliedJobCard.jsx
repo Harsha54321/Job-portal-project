@@ -82,16 +82,16 @@ export const AppliedJobCard = ({ appliedJob }) => {
           <img src={time} className='card-icons' />
           {opp.WorkType}
           <span className="Opportunities-divider">|</span>
-          {opp.salary} Lpa
+          {opp.salary}
         </p>
         <p className='Opportunities-detail-line'>
           <img src={experience} className='card-icons' />
-          {opp.experience} years of experience
+          {opp.experience}
         </p>
-        <p className='Opportunities-detail-line'>
+        <div className='Opportunities-detail-line'>
           <img src={place} className='card-icons' alt="location" />
           <LocationDisplay locations={job.location} />
-        </p>
+        </div>
         <p className='Opportunities-detail-line'>
           <img src={calender} className='card-icons' />
           {opp.posted}

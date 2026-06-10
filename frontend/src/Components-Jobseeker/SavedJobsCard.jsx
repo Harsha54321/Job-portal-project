@@ -82,18 +82,18 @@ export const SavedJobsCard = ({ job, onRemoved }) => {
                             {job.work_type}
                         </span>
                         <span className="Opportunities-divider">|</span>
-                        ₹ {job.salary} Lpa
+                        ₹ {job.salary}
                     </p>
 
                     <p className="Opportunities-detail-line">
                         <img src={experience} className="card-icons" alt="" />
-                        {job.experience} years of experience
+                        {job.experience}
                     </p>
 
-                    <p className="Opportunities-detail-line">
+                    <div className="Opportunities-detail-line">
                         <img src={place} className="card-icons" alt="" />
                         <LocationDisplay locations={job.location} />
-                    </p>
+                    </div>
 
                     <p className="Opportunities-detail-line">
                         <img src={calender} className="card-icons" alt="" />

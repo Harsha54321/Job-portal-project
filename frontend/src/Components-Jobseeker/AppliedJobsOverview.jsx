@@ -180,7 +180,7 @@ export const AppliedJobsOverview = () => {
             <p className="myjobs-company-name"> {viewJob.company} <span className="Opportunities-divider">|</span><span className="star"><img src={starIcon} /></span> {viewJob.ratings}<span className="Opportunities-divider">|</span><span>{viewJob.reviewNo}</span></p>
           </div>
           <div style={{ marginTop: "20px" }} className="Opportunities-job-details">
-            <p className='Opportunities-detail-line'><img src={time} className='card-icons' />{viewJob.WorkType} <span className="Opportunities-divider">|</span> <span>{viewJob.salary}</span><span className="Opportunities-divider">|</span> <img src={experience} className='card-icons' />{viewJob.experience} years of experience <span className="Opportunities-divider">|</span><img src={place} className='card-icons' /> Coimbatore </p>
+            <p className='Opportunities-detail-line'><img src={time} className='card-icons' />{viewJob.WorkType} <span className="Opportunities-divider">|</span> <span>{viewJob.salary}</span><span className="Opportunities-divider">|</span> <img src={experience} className='card-icons' />{viewJob.experience} <span className="Opportunities-divider">|</span><img src={place} className='card-icons' /> Coimbatore </p>
           </div>
           <div style={{ marginTop: "20px", alignItems: "center", display: "flex", justifyContent: "space-between" }} className="Applied-job-tags">
             {viewJob.tags && (

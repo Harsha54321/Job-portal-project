@@ -366,11 +366,11 @@ export const JobApplication = () => {
               {job.work_duration}
             </span>
 
-            <span>₹ {job.salary} Lpa</span>
+            <span>₹ {job.salary}</span>
 
             <span>
               <img src={experience} className="apply-form-card-icons" />
-              {job.experience} years of experience
+              {job.experience}
             </span>
 
             <span>

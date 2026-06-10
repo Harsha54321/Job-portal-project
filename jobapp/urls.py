@@ -14,6 +14,12 @@ from .views import (
     AdminTicketListView,
     AdminTicketUpdateView,
     AdminUpdateComplaintView,
+    BlogCategoryDetailView,
+    BlogCategoryListCreateView,
+    BlogDetailView,
+    BlogListCreateView,
+    BlogStatsView,
+    BlogsGroupedView,
     CheckPlanExpiryView,
     CompanyProfileCreateView,
     ContactMessageDeleteAPIView,
@@ -393,5 +399,12 @@ urlpatterns = [
     path('plans/<int:pk>/toggle-publish/', PlanPublishToggleView.as_view(), name='plan-toggle-publish'),
     path('check-plan-expiry/', CheckPlanExpiryView.as_view(), name='check-plan-expiry'),
     
+
+    path('blogs/', BlogListCreateView.as_view(), name='blog-list-create'),
+    path('blogs/grouped/', BlogsGroupedView.as_view(), name='blogs-grouped'),
+    path('blogs/<int:pk>/', BlogDetailView.as_view(), name='blog-detail'),
+    path('blog-categories/', BlogCategoryListCreateView.as_view(), name='blog-category-list-create'),
+    path('blog-categories/<int:pk>/', BlogCategoryDetailView.as_view(), name='blog-category-detail'),
+    path('blog-stats/', BlogStatsView.as_view(), name='blog-stats'),
 
 ]

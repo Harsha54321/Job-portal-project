@@ -660,8 +660,6 @@ export const JobProvider = ({ children }) => {
     }, []);
 
 
-
-
     // ================Admin Reports/Escalation=================
     const [reports, setReports] = useState([]);
     const [reportsLoading, setReportsLoading] = useState(false);
@@ -699,6 +697,45 @@ export const JobProvider = ({ children }) => {
             setReportsLoading(false);
         }
     }, []);
+
+    // ── BLOG STATE ──────────────────────────────────────────
+    const [publishedBlogs, setPublishedBlogs] = useState({});
+    const [blogsLoading, setBlogsLoading] = useState(false);
+
+    const fetchPublishedBlogs = useCallback(async () => {
+        setBlogsLoading(true);
+        try {
+            const res = await api.get('blogs/grouped/');
+            setPublishedBlogs(res.data || {});
+            console.log(res.data)
+        } catch (err) {
+            console.error('Failed to fetch blogs:', err);
+            setPublishedBlogs({});
+        } finally {
+            setBlogsLoading(false);
+        }
+    }, []);
+
+const [blogStats, setBlogStats] = useState({ total: 0, published: 0, drafts: 0, trash: 0 });
+
+const fetchBlogStats = useCallback(async () => {
+    try {
+        const res = await api.get('blog-stats/');
+        setBlogStats(res.data);
+    } catch (err) {
+        console.error('Failed to fetch blog stats:', err);
+    }
+}, []);
+
+useEffect(() => {
+    fetchBlogStats();
+}, [fetchBlogStats]);
+
+
+useEffect(() => {
+    fetchPublishedBlogs();
+    fetchBlogStats();
+}, [fetchPublishedBlogs, fetchBlogStats]);
 
     // ================= PROVIDER =================
     return (
@@ -776,6 +813,12 @@ export const JobProvider = ({ children }) => {
             setReports,
             reportsLoading,
             fetchReports,
+
+            // Blogs
+            publishedBlogs, setPublishedBlogs,
+            blogsLoading,
+            fetchPublishedBlogs,
+            blogStats, fetchBlogStats,
 
 
         }}>

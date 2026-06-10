@@ -215,11 +215,12 @@ export const CompanyVerify = () => {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // COMPANY EMAIL OTP FUNCTIONS - FIXED with separate loading state
-  const sendCompanyEmailOtp = async (e) => {
-    if (e) {
-      e.preventDefault();
-      e.stopPropagation();
+  // COMPANY EMAIL OTP FUNCTIONS
+  const sendCompanyEmailOtp = async (event) => {
+    // Stop event propagation at the very beginning
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
     }
 
     const email = formData.officialEmail;
@@ -261,7 +262,11 @@ export const CompanyVerify = () => {
     }
   };
 
-  const verifyCompanyEmailOtp = async () => {
+  const verifyCompanyEmailOtp = async (event) => {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
     if (otpValues.emailOtp.length !== 6) {
       alert("Enter 6-digit OTP");
       return;
@@ -276,6 +281,7 @@ export const CompanyVerify = () => {
 
       if (response.status === 200 && response.data.verified) {
         setIsEmailVerified(true);
+        setErrors(prev => ({ ...prev, officialEmail: "" }));
         setTimeout(() => setShowEmailOtp(false), 1500);
         alert("Email verified successfully!");
       }
@@ -287,8 +293,8 @@ export const CompanyVerify = () => {
     }
   };
 
-  // MOBILE OTP FUNCTIONS - FIXED with separate loading state
-  const sendMobileOtp = (event) => {
+  // MOBILE OTP FUNCTIONS
+  const sendMobileOtp = async (event) => {
     if (event) {
       event.preventDefault();
       event.stopPropagation();
@@ -296,37 +302,58 @@ export const CompanyVerify = () => {
 
     const phone = formData.phoneNumber;
     if (!/^[6-9]\d{9}$/.test(phone)) {
-      // REMOVE: return alert("Enter valid 10-digit number");
-      // REPLACE WITH:
       setErrors(prev => ({ ...prev, phoneNumber: "Enter valid 10-digit mobile number (starts with 6-9)" }));
       return;
     }
-    alert(`OTP sent to ${phone}`);
-    setTimer(180);
-    setMobileForOtp(phone);
-    setShowMobileOtp(true);
-    setOtpValues(prev => ({ ...prev, mobileOtp: "" }));
+
+    setIsMobileLoading(true);
+    try {
+      // Simulate network delay for demo
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      alert(`OTP sent to ${phone}`);
+      setTimer(180);
+      setMobileForOtp(phone);
+      setShowMobileOtp(true);
+      setOtpValues(prev => ({ ...prev, mobileOtp: "" }));
+    } catch (err) {
+      alert("Failed to send OTP. Please try again.");
+    } finally {
+      setIsMobileLoading(false);
+    }
   };
 
-  const verifyMobileOtp = (event) => {
+  const verifyMobileOtp = async (event) => {
     if (event) {
       event.preventDefault();
       event.stopPropagation();
     }
 
-    if (otpValues.mobileOtp === "123456") {
-      setIsMobileVerified(true);
-      setErrors(prev => ({ ...prev, phoneNumber: "" }));
+    if (otpValues.mobileOtp.length !== 6) {
+      alert("Enter 6-digit OTP");
+      return;
+    }
 
-      setTimeout(() => setShowMobileOtp(false), 1500);
-      alert("Mobile verified successfully!");
-    } else {
-      alert("Invalid OTP");
+    setIsMobileLoading(true);
+    try {
+      await new Promise(resolve => setTimeout(resolve, 800));
+
+      if (otpValues.mobileOtp === "123456") {
+        setIsMobileVerified(true);
+        setErrors(prev => ({ ...prev, phoneNumber: "" }));
+        setTimeout(() => setShowMobileOtp(false), 1500);
+        alert("Mobile verified successfully!");
+      } else {
+        alert("Invalid OTP. For demo, use 123456");
+      }
+    } catch (err) {
+      alert("Verification failed");
+    } finally {
+      setIsMobileLoading(false);  // ✅ loading end
     }
   };
 
-
-  // Handle Submit - FIXED with separate submitting state
+  // Handle Submit with auto-refresh
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -408,8 +435,8 @@ export const CompanyVerify = () => {
 
     if (isCurrentlyVerified) {
       return (
-        <div className="otp-modal-overlay">
-          <div className="otp-modal-content success-popup-content">
+        <div className="otp-modal-overlay" onClick={(e) => e.stopPropagation()}>
+          <div className="otp-modal-content success-popup-content" onClick={(e) => e.stopPropagation()}>
             <div className="verified-container">
               <img
                 src={Verified}
@@ -423,11 +450,14 @@ export const CompanyVerify = () => {
     }
 
     return (
-      <div className="otp-modal-overlay">
-        <div className="otp-modal-content">
+      <div className="otp-modal-overlay" onClick={(e) => e.stopPropagation()}>
+        <div className="otp-modal-content" onClick={(e) => e.stopPropagation()}>
           <button
+            type="button"
             className="back-arrow"
-            onClick={() => {
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
               setTimer(0);
               setOtpValues({ ...otpValues, [otpKey]: "" });
               isEmail ? setShowEmailOtp(false) : setShowMobileOtp(false);
@@ -481,7 +511,11 @@ export const CompanyVerify = () => {
                 <span
                   className="resend-link"
                   style={{ cursor: 'pointer', color: '#0081FF', fontWeight: 'bold' }}
-                  onClick={(e) => isEmail ? sendCompanyEmailOtp(e) : sendMobileOtp(e)}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    isEmail ? sendCompanyEmailOtp(e) : sendMobileOtp(e);
+                  }}
                 >
                   Resend OTP
                 </span>
@@ -491,10 +525,17 @@ export const CompanyVerify = () => {
               <button
                 type="button"
                 className="verify-final-btn"
-                onClick={() => isEmail ? verifyCompanyEmailOtp() : verifyMobileOtp()}
-                disabled={isEmailLoading || isMobileLoading}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  isEmail ? verifyCompanyEmailOtp(e) : verifyMobileOtp(e);
+                }}
+                disabled={isEmail ? isEmailLoading : isMobileLoading}
               >
-                {isEmailLoading || isMobileLoading ? "Verifying..." : "Verify"}
+                {isEmail
+                  ? (isEmailLoading ? "Verifying..." : "Verify")
+                  : (isMobileLoading ? "Verifying..." : "Verify")
+                }
               </button>
             </>
           ) : (
@@ -504,10 +545,17 @@ export const CompanyVerify = () => {
               <button
                 type="button"
                 className="verify-final-btn"
-                onClick={(e) => isEmail ? sendCompanyEmailOtp(e) : sendMobileOtp(e)}
-                disabled={isEmailLoading || isMobileLoading}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  isEmail ? sendCompanyEmailOtp(e) : sendMobileOtp(e);
+                }}
+                disabled={isEmail ? isEmailLoading : isMobileLoading}
               >
-                {isEmailLoading || isMobileLoading ? "Sending..." : "Resend New OTP"}
+                {isEmail
+                  ? (isEmailLoading ? "Sending..." : "Resend New OTP")
+                  : (isMobileLoading ? "Sending..." : "Resend New OTP")
+                }
               </button>
             </div>
           )}
@@ -517,192 +565,203 @@ export const CompanyVerify = () => {
   }
 
   return (
-    <div className="verify-page">
+    <>
+      {/* MODALS RENDERED OUTSIDE */}
       {showEmailOtp && renderEmployerOtpModal('email')}
       {showMobileOtp && renderEmployerOtpModal('mobile')}
 
-      <EHeader />
+      <div className="verify-page">
+        <EHeader />
 
-      <div className="company-verify-container">
-        <h2 className="company-verify-title">Company Verify</h2>
+        <div className="company-verify-container">
+          <h2 className="company-verify-title">Company Verify</h2>
 
-        {backendError && (
-          <div style={{
-            backgroundColor: "#ffebee", color: "#d32f2f",
-            padding: "10px", borderRadius: "5px", marginBottom: "20px", textAlign: "center"
-          }}>
-            {backendError}
-          </div>
-        )}
-
-        <form className="company-verify-form" onSubmit={handleSubmit}>
-          <div className="company-verify-form-group">
-            <label>Company Legal Name</label>
-            <input
-              type="text"
-              name="legalName"
-              className={errors.legalName ? "input-error" : ""}
-              placeholder="e.g., Wipro Technologies"
-              value={formData.legalName}
-              onChange={handleChange}
-              disabled={isSubmitting}
-            />
-            {errors.legalName && <span className="error-msg" style={{ color: 'red', fontSize: '12px' }}>{errors.legalName}</span>}
-          </div>
-
-          <div className="company-verify-form-group">
-            <label>Registration Number</label>
-            <input
-              type="text"
-              name="registrationNumber"
-              className={errors.registrationNumber ? "input-error" : ""}
-              placeholder="e.g., L12345MH2023PTC123456"
-              value={formData.registrationNumber}
-              onChange={handleChange}
-              disabled={isSubmitting}
-            />
-            {errors.registrationNumber && <span className="error-msg" style={{ color: 'red', fontSize: '12px' }}>{errors.registrationNumber}</span>}
-          </div>
-
-          <div className="company-verify-form-group">
-            <label>Tax Id / VAT / GST</label>
-            <input
-              type="text"
-              name="taxId"
-              className={errors.taxId ? "input-error" : ""}
-              placeholder="e.g., 22AAAAA0000A1Z5"
-              value={formData.taxId}
-              onChange={handleChange}
-              disabled={isSubmitting}
-            />
-            {errors.taxId && <span className="error-msg" style={{ color: 'red', fontSize: '12px' }}>{errors.taxId}</span>}
-          </div>
-
-          <div className="company-verify-form-group">
-            <label>Web Site URL</label>
-            <input
-              type="text"
-              name="websiteUrl"
-              className={errors.websiteUrl ? "input-error" : ""}
-              placeholder="e.g., https://example.com"
-              value={formData.websiteUrl}
-              onChange={handleChange}
-              disabled={isSubmitting}
-            />
-            {errors.websiteUrl && <span className="error-msg" style={{ color: 'red', fontSize: '12px' }}>{errors.websiteUrl}</span>}
-          </div>
-
-          <div className="company-verify-form-group">
-            <label>Official Company Mail Id</label>
-            <div className="company-verify-input-with-btn">
-              <input
-                type="email"
-                name="officialEmail"
-                className={errors.officialEmail ? "input-error" : ""}
-                placeholder="e.g., hr@example.com"
-                value={formData.officialEmail}
-                onChange={handleChange}
-                disabled={isSubmitting || isEmailVerified}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    sendCompanyEmailOtp();
-                  }
-                }}
-              />
-              {!isEmailVerified && formData.officialEmail.length > 0 && (
-                <button
-                  type="button"
-                  className="company-small-verify-btn"
-                  onClick={(e) => sendCompanyEmailOtp(e)}
-                  disabled={isEmailLoading || isSubmitting}
-                >
-                  {isEmailLoading ? "Sending..." : "Verify"}
-                </button>
-              )}
-              {isEmailVerified && <span className="verified-badge" style={{ color: 'green', marginLeft: '10px' }}>✓ Verified</span>}
+          {backendError && (
+            <div style={{
+              backgroundColor: "#ffebee", color: "#d32f2f",
+              padding: "10px", borderRadius: "5px", marginBottom: "20px", textAlign: "center"
+            }}>
+              {backendError}
             </div>
-            {errors.officialEmail && <span style={{ color: 'red', fontSize: '12px' }}>{errors.officialEmail}</span>}
-          </div>
+          )}
 
-          <div className="company-verify-form-group">
-            <label>Phone Number</label>
-            <div className="company-verify-input-with-btn">
+          <form className="company-verify-form" onSubmit={handleSubmit}>
+            <div className="company-verify-form-group">
+              <label>Company Legal Name</label>
               <input
                 type="text"
-                name="phoneNumber"
-                className={errors.phoneNumber ? "input-error" : ""}
-                placeholder="e.g., 9876543210"
-                value={formData.phoneNumber}
+                name="legalName"
+                className={errors.legalName ? "input-error" : ""}
+                placeholder="e.g., Wipro Technologies"
+                value={formData.legalName}
                 onChange={handleChange}
                 disabled={isSubmitting}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && formData.phoneNumber.length === 10) {
-                    e.preventDefault();
-                    sendMobileOtp();
-                  }
-                }}
               />
-              {!isMobileVerified && formData.phoneNumber.length === 10 && (
-                <button
-                  type="button"
-                  className="company-small-verify-btn"
-                  onClick={(e) => sendMobileOtp(e)}
-                  disabled={isMobileLoading || isSubmitting}
-                >
-                  {isMobileLoading ? "Sending..." : "Verify"}
-                </button>
-              )}
-              {isMobileVerified && <span className="verified-badge" style={{ color: 'green', marginLeft: '10px' }}>✓ Verified</span>}
+              {errors.legalName && <span className="error-msg" style={{ color: 'red', fontSize: '12px' }}>{errors.legalName}</span>}
             </div>
-            {errors.phoneNumber && <span style={{ color: 'red', fontSize: '12px' }}>{errors.phoneNumber}</span>}
-          </div>
 
-          <div className="company-verify-form-group">
-            <label>Company Incorporation Certificate</label>
-            <div className={`company-verify-file-upload-box ${errors.incorporationCertificate ? "input-error" : ""}`}>
+            <div className="company-verify-form-group">
+              <label>Registration Number</label>
               <input
-                type="file"
-                name="incorporationCertificate"
-                accept="application/pdf, image/jpeg, image/jpg, image/png"
-                id="pdfUpload"
+                type="text"
+                name="registrationNumber"
+                className={errors.registrationNumber ? "input-error" : ""}
+                placeholder="e.g., L12345MH2023PTC123456"
+                value={formData.registrationNumber}
                 onChange={handleChange}
-                hidden
                 disabled={isSubmitting}
               />
-
-              {!formData.incorporationCertificate && (
-                <label htmlFor="pdfUpload" className="company-verify-upload-placeholder">
-                  <p>Click to Upload File</p>
-                </label>
-              )}
-
-              {formData.incorporationCertificate && (
-                <div className="company-verify-file-preview">
-                  <label htmlFor="pdfUpload" className="company-verify-file-left clickable-area">
-                    <img src={fileIcon} alt="file" />
-                    <div>
-                      <p>{formData.incorporationCertificate.name}</p>
-                      <span>
-                        {formData.incorporationCertificate.size < 1024 * 1024 ? `${(formData.incorporationCertificate.size / 1024).toFixed(2)} KB` : `${(formData.incorporationCertificate.size / (1024 * 1024)).toFixed(2)} MB`}
-                      </span>
-                    </div>
-                  </label>
-                </div>
-              )}
+              {errors.registrationNumber && <span className="error-msg" style={{ color: 'red', fontSize: '12px' }}>{errors.registrationNumber}</span>}
             </div>
-            {errors.incorporationCertificate && <span style={{ color: 'red', fontSize: '12px' }}>{errors.incorporationCertificate}</span>}
-          </div>
 
-          <div className="company-verify-btn-wrapper">
-            <button type="submit" className="company-main-verify-btn" disabled={isSubmitting || isEmailLoading || isMobileLoading}>
-              {isSubmitting ? "Submitting..." : "Verify"}
-            </button>
-          </div>
-        </form>
+            <div className="company-verify-form-group">
+              <label>Tax Id / VAT / GST</label>
+              <input
+                type="text"
+                name="taxId"
+                className={errors.taxId ? "input-error" : ""}
+                placeholder="e.g., 22AAAAA0000A1Z5"
+                value={formData.taxId}
+                onChange={handleChange}
+                disabled={isSubmitting}
+              />
+              {errors.taxId && <span className="error-msg" style={{ color: 'red', fontSize: '12px' }}>{errors.taxId}</span>}
+            </div>
+
+            <div className="company-verify-form-group">
+              <label>Web Site URL</label>
+              <input
+                type="text"
+                name="websiteUrl"
+                className={errors.websiteUrl ? "input-error" : ""}
+                placeholder="e.g., https://example.com"
+                value={formData.websiteUrl}
+                onChange={handleChange}
+                disabled={isSubmitting}
+              />
+              {errors.websiteUrl && <span className="error-msg" style={{ color: 'red', fontSize: '12px' }}>{errors.websiteUrl}</span>}
+            </div>
+
+            <div className="company-verify-form-group">
+              <label>Official Company Mail Id</label>
+              <div className="company-verify-input-with-btn">
+                <input
+                  type="email"
+                  name="officialEmail"
+                  className={errors.officialEmail ? "input-error" : ""}
+                  placeholder="e.g., hr@example.com"
+                  value={formData.officialEmail}
+                  onChange={handleChange}
+                  disabled={isSubmitting || isEmailVerified}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      sendCompanyEmailOtp();
+                    }
+                  }}
+                />
+                {!isEmailVerified && formData.officialEmail.length > 0 && (
+                  <button
+                    type="button"
+                    className="company-small-verify-btn"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      sendCompanyEmailOtp(e);
+                    }}
+                    disabled={isEmailLoading || isSubmitting}
+                  >
+                    {isEmailLoading ? "Sending..." : "Verify"}
+                  </button>
+                )}
+                {isEmailVerified && <span className="verified-badge" style={{ color: 'green', marginLeft: '10px' }}>✓ Verified</span>}
+              </div>
+              {errors.officialEmail && <span style={{ color: 'red', fontSize: '12px' }}>{errors.officialEmail}</span>}
+            </div>
+
+            <div className="company-verify-form-group">
+              <label>Phone Number</label>
+              <div className="company-verify-input-with-btn">
+                <input
+                  type="text"
+                  name="phoneNumber"
+                  className={errors.phoneNumber ? "input-error" : ""}
+                  placeholder="e.g., 9876543210"
+                  value={formData.phoneNumber}
+                  onChange={handleChange}
+                  disabled={isSubmitting}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && formData.phoneNumber.length === 10) {
+                      e.preventDefault();
+                      sendMobileOtp();
+                    }
+                  }}
+                />
+                {!isMobileVerified && formData.phoneNumber.length === 10 && (
+                  <button
+                    type="button"
+                    className="company-small-verify-btn"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      sendMobileOtp(e);
+                    }}
+                    disabled={isMobileLoading || isSubmitting}
+                  >
+                    {isMobileLoading ? "Sending..." : "Verify"}
+                  </button>
+                )}
+                {isMobileVerified && <span className="verified-badge" style={{ color: 'green', marginLeft: '10px' }}>✓ Verified</span>}
+              </div>
+              {errors.phoneNumber && <span style={{ color: 'red', fontSize: '12px' }}>{errors.phoneNumber}</span>}
+            </div>
+
+            <div className="company-verify-form-group">
+              <label>Company Incorporation Certificate</label>
+              <div className={`company-verify-file-upload-box ${errors.incorporationCertificate ? "input-error" : ""}`}>
+                <input
+                  type="file"
+                  name="incorporationCertificate"
+                  accept="application/pdf, image/jpeg, image/jpg, image/png"
+                  id="pdfUpload"
+                  onChange={handleChange}
+                  hidden
+                  disabled={isSubmitting}
+                />
+
+                {!formData.incorporationCertificate && (
+                  <label htmlFor="pdfUpload" className="company-verify-upload-placeholder">
+                    <p>Click to Upload File</p>
+                  </label>
+                )}
+
+                {formData.incorporationCertificate && (
+                  <div className="company-verify-file-preview">
+                    <label htmlFor="pdfUpload" className="company-verify-file-left clickable-area">
+                      <img src={fileIcon} alt="file" />
+                      <div>
+                        <p>{formData.incorporationCertificate.name}</p>
+                        <span>
+                          {formData.incorporationCertificate.size < 1024 * 1024 ? `${(formData.incorporationCertificate.size / 1024).toFixed(2)} KB` : `${(formData.incorporationCertificate.size / (1024 * 1024)).toFixed(2)} MB`}
+                        </span>
+                      </div>
+                    </label>
+                  </div>
+                )}
+              </div>
+              {errors.incorporationCertificate && <span style={{ color: 'red', fontSize: '12px' }}>{errors.incorporationCertificate}</span>}
+            </div>
+
+            <div className="company-verify-btn-wrapper">
+              <button type="submit" className="company-main-verify-btn" disabled={isSubmitting || isEmailLoading || isMobileLoading}>
+                {isSubmitting ? "Submitting..." : "Verify"}
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <Footer />
       </div>
-
-      <Footer />
-    </div>
+    </>
   );
 };

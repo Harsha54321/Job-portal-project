@@ -2552,25 +2552,88 @@ class JobseekerPlatformSettings(models.Model):
     class Meta:
         db_table = 'JobseekerPlatformSettings'
         
-# from django.db.models.signals import post_save
-# from django.dispatch import receiver
 
-# DEFAULT_FEATURES = [
-#     { "text": "Jobs Posting",               "value": "1",     "order": 0 },
-#     { "text": "Analytics",                  "value": "false", "order": 1 },
-#     { "text": "Candidate Search",           "value": "false", "order": 2 },
-#     { "text": "Highlight Your Job Listing", "value": "false", "order": 3 },
-#     { "text": "Premium Support",            "value": "false", "order": 4 },
-#     { "text": "Account Manager",            "value": "false", "order": 5 },
-# ]
+# ============================================================
+#  BLOG MODELS
+# ============================================================
 
-# @receiver(post_save, sender=Plan)
-# def create_default_features(sender, instance, created, **kwargs):
-#     if created:  # only runs when a NEW plan is created
-#         for feature in DEFAULT_FEATURES:
-#             PlanFeature.objects.create(
-#                 plan=instance,
-#                 text=feature['text'],
-#                 value=feature['value'],
-#                 order=feature['order']
-#             )
+class BlogCategory(models.Model):
+    """
+    Top-level blog category — mirrors the keys of publishedBlogs
+    in your React AdminBlogPost component.
+    """
+    name = models.CharField(max_length=255, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'BlogCategory'
+        verbose_name_plural = 'Blog Categories'
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name
+
+
+class Blog(models.Model):
+    STATUS_CHOICES = [
+        ('Published', 'Published'),
+        ('Draft', 'Draft'),
+    ]
+
+    category = models.ForeignKey(
+        BlogCategory,
+        on_delete=models.CASCADE,
+        related_name='blogs'
+    )
+    title     = models.CharField(max_length=500)
+    heading   = models.CharField(max_length=500, blank=True, default='')
+    desc      = models.TextField(blank=True, default='')
+    # thumbnail = models.URLField(max_length=1000, blank=True, default='')
+    thumbnail = models.ImageField(upload_to='blog_thumbnails/', blank=True, null=True, default='')
+    status    = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Draft')
+    # stored as string to match your existing React frontend field
+    date      = models.CharField(max_length=50, blank=True, default='')
+    time      = models.CharField(max_length=20, blank=True, default='12:00 PM')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    is_deleted = models.BooleanField(default=False)
+    deleted_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = 'Blog'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return self.title
+
+
+class BlogPoint(models.Model):
+    """
+    A heading point inside a blog post — maps to blog.points[n].title
+    """
+    blog  = models.ForeignKey(Blog, on_delete=models.CASCADE, related_name='points')
+    title = models.CharField(max_length=500, blank=True, default='')
+    order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        db_table = 'BlogPoint'
+        ordering = ['order']
+
+    def __str__(self):
+        return f"{self.blog.title} — Point {self.order}"
+
+
+class PointContent(models.Model):
+    """
+    A content line under a BlogPoint — maps to blog.points[n].content[m]
+    """
+    point = models.ForeignKey(BlogPoint, on_delete=models.CASCADE, related_name='content')
+    text  = models.TextField(blank=True, default='')
+    order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        db_table = 'PointContent'
+        ordering = ['order']
+
+    def __str__(self):
+        return f"Content[{self.order}] for Point {self.point.id}"

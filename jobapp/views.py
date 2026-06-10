@@ -31,8 +31,7 @@ from django.db.models.functions import (
     TruncMonth,
     Coalesce
 )
-
-
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 
 from .serializers import (
     JobSeekerRegistrationSerializer,
@@ -9840,3 +9839,213 @@ class PlanPublishToggleView(APIView):
             },
             status=status.HTTP_200_OK,
         )
+
+# ============================================================
+#  BLOG VIEWS 
+# ============================================================
+from .models import BlogCategory, Blog, BlogPoint, PointContent
+from .serializers import BlogReadSerializer, BlogWriteSerializer, BlogCategorySerializer
+
+class BlogListCreateView(APIView):
+    """
+    GET  /api/blogs/
+        List all blogs (excludes soft-deleted).
+        Optional query params:
+            ?search=keyword   — filters by title OR category name
+            ?status=Published — filters by status (Published / Draft)
+    POST /api/blogs/
+        Create a new blog.
+    """
+    permission_classes = [AllowAny]
+    def get(self, request):
+        search   = request.query_params.get('search', '').strip()
+        status_f = request.query_params.get('status', '').strip()
+        # Only show non-deleted blogs
+        blogs = Blog.objects.filter(is_deleted=False).select_related('category').prefetch_related('points__content')
+        if search:
+            blogs = blogs.filter(
+                Q(title__icontains=search) | Q(category__name__icontains=search)
+            )
+        if status_f:
+            blogs = blogs.filter(status__iexact=status_f)
+        # return Response(BlogReadSerializer(blogs, many=True).data, status=status.HTTP_200_OK)
+        return Response(BlogReadSerializer(blogs, many=True, context={'request': request}).data, ...)
+ 
+    def post(self, request):
+        serializer = BlogWriteSerializer(data=request.data)
+        if serializer.is_valid():
+            # blog = serializer.save()
+            # return Response(BlogReadSerializer(blog).data, status=status.HTTP_201_CREATED)
+            blog = serializer.save()
+            return Response(BlogReadSerializer(blog, context={'request': request}).data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class BlogDetailView(APIView):
+    """
+    GET    /api/blogs/<pk>/   — retrieve single blog
+    PUT    /api/blogs/<pk>/   — full update  (called from handleSaveChanges)
+    PATCH  /api/blogs/<pk>/   — partial update
+    DELETE /api/blogs/<pk>/   — soft delete, moves blog to trash
+    """
+    permission_classes = [AllowAny]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
+ 
+    def _get_blog(self, pk):
+        try:
+            return Blog.objects.select_related('category').prefetch_related('points__content').get(pk=pk)
+        except Blog.DoesNotExist:
+            return None
+ 
+    def get(self, request, pk):
+        blog = self._get_blog(pk)
+        if not blog:
+            return Response({'error': 'Blog not found.'}, status=status.HTTP_404_NOT_FOUND)
+        # return Response(BlogReadSerializer(blog).data)
+        return Response(BlogReadSerializer(blog, context={'request': request}).data)
+
+    def put(self, request, pk):
+        blog = self._get_blog(pk)
+        if not blog:
+            return Response({'error': 'Blog not found.'}, status=status.HTTP_404_NOT_FOUND)
+        s = BlogWriteSerializer(blog, data=request.data)
+        if s.is_valid():
+            # return Response(BlogReadSerializer(s.save()).data)
+            return Response(BlogReadSerializer(s.save(), context={'request': request}).data)
+        return Response(s.errors, status=status.HTTP_400_BAD_REQUEST)
+ 
+    def patch(self, request, pk):
+        blog = self._get_blog(pk)
+        if not blog:
+            return Response({'error': 'Blog not found.'}, status=status.HTTP_404_NOT_FOUND)
+        s = BlogWriteSerializer(blog, data=request.data, partial=True)
+
+        if s.is_valid():
+            # return Response(BlogReadSerializer(s.save()).data)
+            return Response(BlogReadSerializer(s.save(), context={'request': request}).data)
+
+        return Response(s.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    def delete(self, request, pk):
+        blog = self._get_blog(pk)
+        if not blog:
+            return Response({'error': 'Blog not found.'}, status=status.HTTP_404_NOT_FOUND)
+        # Soft delete — moves to trash instead of removing from DB
+        from django.utils import timezone
+        blog.is_deleted = True
+        blog.deleted_at = timezone.now()
+        blog.save()
+        return Response({'message': 'Blog moved to trash.'}, status=status.HTTP_200_OK)
+
+
+class BlogsGroupedView(APIView):
+    """
+    GET /api/blogs/grouped/
+    Returns non-deleted blogs grouped by category name.
+    Matches the publishedBlogs shape in your React frontend:
+    {
+        "Technology": [ {...blog}, ... ],
+        "Lifestyle":  [ {...blog} ]
+    }
+    Optional: ?search=keyword  filters by title or category
+    """
+    permission_classes = [AllowAny]
+    def get(self, request):
+        search = request.query_params.get('search', '').strip()
+        categories = BlogCategory.objects.prefetch_related('blogs__points__content')
+
+        if search:
+            categories = categories.filter(
+                Q(name__icontains=search) | Q(blogs__title__icontains=search)
+            ).distinct()
+        result = {}
+        for cat in categories:
+            # Always exclude soft-deleted blogs
+            blogs = cat.blogs.filter(is_deleted=False)
+            if search:
+                blogs = blogs.filter(
+                    Q(title__icontains=search) | Q(category__name__icontains=search)
+                )
+
+            if blogs.exists():
+                # result[cat.name] = BlogReadSerializer(blogs, many=True).data
+                result[cat.name] = BlogReadSerializer(blogs, many=True, context={'request': request}).data
+        return Response(result, status=status.HTTP_200_OK)
+
+
+class BlogCategoryListCreateView(APIView):
+    """
+    GET  /api/blog-categories/   — list all categories
+    POST /api/blog-categories/   — create a category
+
+    """
+    permission_classes = [AllowAny]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
+    def get(self, request):
+        cats = BlogCategory.objects.prefetch_related('blogs').all()
+        return Response(BlogCategorySerializer(cats, many=True).data)
+ 
+    def post(self, request):
+        name = request.data.get('name', '').strip()
+        if not name:
+            return Response({'error': 'Category name is required.'}, status=status.HTTP_400_BAD_REQUEST)
+        if BlogCategory.objects.filter(name__iexact=name).exists():
+            return Response({'error': 'Category already exists.'}, status=status.HTTP_409_CONFLICT)
+        cat = BlogCategory.objects.create(name=name)
+        return Response(BlogCategorySerializer(cat).data, status=status.HTTP_201_CREATED)
+
+
+class BlogCategoryDetailView(APIView):
+    """
+    GET    /api/blog-categories/<pk>/   — retrieve + all its blogs
+    PATCH  /api/blog-categories/<pk>/   — rename
+    DELETE /api/blog-categories/<pk>/   — delete category (cascades to all blogs)
+    """
+    permission_classes = [AllowAny]
+ 
+    def _get(self, pk):
+        try:
+            return BlogCategory.objects.prefetch_related('blogs__points__content').get(pk=pk)
+        except BlogCategory.DoesNotExist:
+            return None
+        
+    def get(self, request, pk):
+        cat = self._get(pk)
+        if not cat:
+            return Response({'error': 'Category not found.'}, status=status.HTTP_404_NOT_FOUND)
+        return Response(BlogCategorySerializer(cat).data)
+
+    def patch(self, request, pk):
+        cat = self._get(pk)
+        if not cat:
+            return Response({'error': 'Category not found.'}, status=status.HTTP_404_NOT_FOUND)
+        name = request.data.get('name', '').strip()
+        if not name:
+            return Response({'error': 'Name is required.'}, status=status.HTTP_400_BAD_REQUEST)
+        cat.name = name
+        cat.save()
+        return Response(BlogCategorySerializer(cat).data)
+
+    def delete(self, request, pk):
+        cat = self._get(pk)
+        if not cat:
+            return Response({'error': 'Category not found.'}, status=status.HTTP_404_NOT_FOUND)
+        cat.delete()
+        return Response({'message': 'Category and all its blogs deleted.'}, status=status.HTTP_200_OK)
+
+
+class BlogStatsView(APIView):
+    """
+    GET /api/blog-stats/
+    Powers all 4 dashboard cards in AdminBlogPost:
+    { total, published, drafts, trash }
+    """
+    permission_classes = [AllowAny]
+    def get(self, request):
+        return Response({
+            'total':     Blog.objects.filter(is_deleted=False).count(),
+            'published': Blog.objects.filter(status='Published', is_deleted=False).count(),
+            'drafts':    Blog.objects.filter(status='Draft', is_deleted=False).count(),
+            'trash':     Blog.objects.filter(is_deleted=True).count(),
+        })
+ 

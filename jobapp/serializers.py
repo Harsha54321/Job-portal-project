@@ -2468,22 +2468,23 @@ class ComplaintSerializer(
 
     def get_resolvedon(self, obj):
         if obj.resolved_at:
-            local_dt = timezone.localtime(obj.resolved_at)
+            from django.utils import timezone
+            dt = obj.resolved_at
+            if timezone.is_naive(dt):
+                dt = timezone.make_aware(dt)
+            local_dt = timezone.localtime(dt)
             return local_dt.strftime("%b %d, %Y, %I:%M %p")
         return None
  
     def get_date(self, obj):
- 
         if obj.created_at:
- 
-            local_dt = timezone.localtime(
-                obj.created_at
-            )
- 
-            return local_dt.strftime(
-                "%b %d, %Y, %I:%M %p"
-            )
- 
+            # Make timezone aware if it's naive
+            from django.utils import timezone
+            dt = obj.created_at
+            if timezone.is_naive(dt):
+                dt = timezone.make_aware(dt)
+            local_dt = timezone.localtime(dt)
+            return local_dt.strftime("%b %d, %Y, %I:%M %p")
         return None
  
     def get_status(self, obj):
@@ -4126,3 +4127,169 @@ class UserDetailSerializer(serializers.ModelSerializer):
             }
         except EmployerProfile.DoesNotExist:
             return {}
+
+# ============================================================
+#  BLOG SERIALIZERS
+#  Append these classes to the bottom of your serializers.py
+# ============================================================
+
+from .models import BlogCategory, Blog, BlogPoint, PointContent
+
+
+class PointContentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PointContent
+        fields = ['id', 'text', 'order']
+
+
+class BlogPointSerializer(serializers.ModelSerializer):
+    content = PointContentSerializer(many=True)
+
+    class Meta:
+        model = BlogPoint
+        fields = ['id', 'title', 'order', 'content']
+
+class BlogReadSerializer(serializers.ModelSerializer):
+    """
+    Read serializer — field names match your React component exactly:
+    Status (capital S), Thumbnail (capital T), categoryName
+    """
+    categoryName = serializers.CharField(source='category.name', read_only=True)
+    Status = serializers.CharField(source='status')
+    Thumbnail = serializers.SerializerMethodField()
+    points = BlogPointSerializer(many=True, read_only=True)
+
+    def get_Thumbnail(self, obj):
+        """
+        Returns absolute URL for thumbnail - same pattern as CompanyProfileSerializer
+        """
+        request = self.context.get('request')
+        if obj.thumbnail:
+            if request:
+                return request.build_absolute_uri(obj.thumbnail.url)
+            return obj.thumbnail.url
+        return ''
+
+    class Meta:
+        model = Blog
+        fields = [
+            'id', 'categoryName', 'title', 'heading', 'desc',
+            'Thumbnail', 'Status', 'date', 'time',
+            'points', 'created_at', 'updated_at',
+        ]
+
+
+class BlogWriteSerializer(serializers.Serializer):
+    """
+    Write serializer — accepts the exact shape your React frontend sends:
+    {
+        categoryName : "Technology",
+        title        : "...",
+        heading      : "...",
+        desc         : "...",
+        Thumbnail    : "https://...",
+        Status       : "Published" | "Draft",
+        date         : "2024-06-08",
+        time         : "10:30 AM",
+        points: [
+            { title: "Why React?", content: ["line1", "line2"] }
+        ]
+    }
+    """
+    categoryName = serializers.CharField(max_length=255)
+    title        = serializers.CharField(max_length=500)
+    heading      = serializers.CharField(max_length=500, required=False, default='')
+    desc         = serializers.CharField(required=False, default='', allow_blank=True)
+    # Thumbnail    = serializers.CharField(max_length=1000, required=False, default='', allow_blank=True)
+    Thumbnail = serializers.ImageField(required=False, allow_null=True, allow_empty_file=True)
+
+    Status       = serializers.ChoiceField(choices=['Published', 'Draft'], default='Draft')
+    date         = serializers.CharField(max_length=50, required=False, default='')
+    time         = serializers.CharField(max_length=20, required=False, default='12:00 PM')
+    # points       = serializers.ListField(child=serializers.DictField(), required=False, default=list)
+    # points = serializers.ListField(child=serializers.JSONField(), required=False, default=list)
+    points = serializers.CharField(required=False, default='[]', allow_blank=True)
+
+    def validate_points(self, value):
+        import json
+        if isinstance(value, str):
+            try:
+                parsed = json.loads(value)
+                if not isinstance(parsed, list):
+                    raise serializers.ValidationError("Points must be a list.")
+                return parsed
+            except (json.JSONDecodeError, TypeError):
+                raise serializers.ValidationError("Invalid points format.")
+        return value  # already a list (JSON body requests)
+
+
+    def _get_or_create_category(self, name):
+        category, _ = BlogCategory.objects.get_or_create(name=name.strip())
+        return category
+
+    def _save_points(self, blog, points_data):
+        for p_index, point in enumerate(points_data):
+            raw_content = point.get('content', [])
+            bp = BlogPoint.objects.create(
+                blog=blog,
+                title=point.get('title', ''),
+                order=p_index
+            )
+            for c_index, item in enumerate(raw_content):
+                # content items can be plain strings OR {text, order} dicts
+                text = item if isinstance(item, str) else item.get('text', '')
+                PointContent.objects.create(point=bp, text=text, order=c_index)
+
+    def create(self, validated_data):
+        category   = self._get_or_create_category(validated_data.pop('categoryName'))
+        points_data = validated_data.pop('points', [])
+
+        thumbnail = validated_data.pop('Thumbnail', None)
+
+
+        blog = Blog.objects.create(
+            category  = category,
+            title     = validated_data['title'],
+            heading   = validated_data.get('heading', ''),
+            desc      = validated_data.get('desc', ''),
+            # thumbnail = validated_data.get('Thumbnail', ''),
+                    thumbnail=thumbnail,          
+            status    = validated_data.get('Status', 'Draft'),
+            date      = validated_data.get('date', ''),
+            time      = validated_data.get('time', '12:00 PM'),
+        )
+        self._save_points(blog, points_data)
+        return blog
+
+    def update(self, instance, validated_data):
+        new_cat = validated_data.pop('categoryName', None)
+        if new_cat:
+            instance.category = self._get_or_create_category(new_cat)
+        
+        thumbnail = validated_data.pop('Thumbnail', None)
+        if thumbnail:
+            instance.thumbnail = thumbnail   
+
+        instance.title     = validated_data.get('title',     instance.title)
+        instance.heading   = validated_data.get('heading',   instance.heading)
+        instance.desc      = validated_data.get('desc',      instance.desc)
+        instance.thumbnail = validated_data.get('Thumbnail', instance.thumbnail)
+        instance.status    = validated_data.get('Status',    instance.status)
+        instance.date      = validated_data.get('date',      instance.date)
+        instance.time      = validated_data.get('time',      instance.time)
+        instance.save()
+
+        if 'points' in validated_data:
+            instance.points.all().delete()
+            self._save_points(instance, validated_data['points'])
+
+        return instance
+    
+
+class BlogCategorySerializer(serializers.ModelSerializer):
+    blogs      = BlogReadSerializer(many=True, read_only=True)
+    blog_count = serializers.IntegerField(source='blogs.count', read_only=True)
+
+    class Meta:
+        model  = BlogCategory
+        fields = ['id', 'name', 'blog_count', 'blogs', 'created_at']

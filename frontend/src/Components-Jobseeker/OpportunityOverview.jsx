@@ -250,11 +250,11 @@ export const OpportunityOverview = () => {
                   <img src={time} className='card-icons' alt="time" />
                   {job.work_duration}
                   <span className="Opportunities-divider">|</span>
-                  {job.salary} Lpa
+                  {job.salary}
                 </p>
                 <p className='Opportunities-detail-line'>
                   <img src={experience} className='card-icons' alt="experience" />
-                  {job.experience} years of experience
+                  {job.experience}
                 </p>
                 <p className='Opportunities-detail-line'>
                   <img src={place} className='card-icons' alt="location" />
@@ -431,7 +431,7 @@ export const OpportunityOverview = () => {
                   <div className="Opportunities-job-details">
                     <p className='Opportunities-detail-line'>
                       {Array.isArray(sim.tags) ? sim.tags.join(", ") : sim.tags}
-                      {" "}- {sim.experience} years of experience
+                      {" "}- {sim.experience}
                     </p>
                     <p className='Opportunities-detail-line'>
                       <img src={place} className='card-icons' alt="location" />
