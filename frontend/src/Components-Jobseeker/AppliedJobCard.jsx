@@ -7,6 +7,7 @@ import calender from '../assets/calender_card.png'
 import './AppliedJobCard.css'
 import { useNavigate } from "react-router-dom";
 import { formatPostedDate } from "./OpportunitiesCard";
+import { LocationDisplay } from './LocationDisplay';
 
 export const AppliedJobCard = ({ appliedJob }) => {
   const navigate = useNavigate();
@@ -15,17 +16,17 @@ export const AppliedJobCard = ({ appliedJob }) => {
   if (!job) return null;
   console.log("APPLIED CARD DATA:", appliedJob);
 
-  const formatLocation = (location) => {
+  // const formatLocation = (location) => {
 
-        if (!location) return "Location not specified";
+  //       if (!location) return "Location not specified";
 
-        if (Array.isArray(location)) {
-            return location.join(", ");
-        }
-        return location;
-    };
+  //       if (Array.isArray(location)) {
+  //           return location.join(", ");
+  //       }
+  //       return location;
+  //   };
 
-    const locationDisplay = formatLocation(job.location);
+  //   const locationDisplay = formatLocation(job.location);
 
   // 🔹 Adapter: backend data → requirement shape
   const opp = {
@@ -40,7 +41,7 @@ export const AppliedJobCard = ({ appliedJob }) => {
     WorkType: job.work_type || "N/A",
     salary: job.salary || "N/A",
     experience: job.experience || "N/A",
-    location: locationDisplay || "N/A",
+    // location: locationDisplay || "N/A",
 
     posted: formatPostedDate(job.posted_date),
     openings: job.openings || 0,
@@ -88,8 +89,8 @@ export const AppliedJobCard = ({ appliedJob }) => {
           {opp.experience} years of experience
         </p>
         <p className='Opportunities-detail-line'>
-          <img src={place} className='card-icons' />
-          {opp.location}
+          <img src={place} className='card-icons' alt="location" />
+          <LocationDisplay locations={job.location} />
         </p>
         <p className='Opportunities-detail-line'>
           <img src={calender} className='card-icons' />

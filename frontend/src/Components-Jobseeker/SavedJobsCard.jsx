@@ -9,6 +9,7 @@ import './SavedJobsCard.css';
 import { useJobs } from '../JobContext';
 import { formatPostedDate } from './OpportunitiesCard';
 import { useNavigate } from "react-router-dom";
+import { LocationDisplay } from './LocationDisplay';
 
 export const SavedJobsCard = ({ job, onRemoved }) => {
     // const { applyForJob, toggleSaveJob, appliedJobs } = useJobs();
@@ -40,17 +41,17 @@ export const SavedJobsCard = ({ job, onRemoved }) => {
         navigate(`/Job-portal/jobseeker/OpportunityOverview/${job.id}`)
     }
 
-    const formatLocation = (location) => {
+    // const formatLocation = (location) => {
 
-        if (!location) return "Location not specified";
+    //     if (!location) return "Location not specified";
 
-        if (Array.isArray(location)) {
-            return location.join(", ");
-        }
-        return location;
-    };
+    //     if (Array.isArray(location)) {
+    //         return location.join(", ");
+    //     }
+    //     return location;
+    // };
 
-    const locationDisplay = formatLocation(job.location);
+    // const locationDisplay = formatLocation(job.location);
 
     return (
         <div className="myjobs-job-card">
@@ -91,7 +92,7 @@ export const SavedJobsCard = ({ job, onRemoved }) => {
 
                     <p className="Opportunities-detail-line">
                         <img src={place} className="card-icons" alt="" />
-                        {locationDisplay}
+                        <LocationDisplay locations={job.location} />
                     </p>
 
                     <p className="Opportunities-detail-line">

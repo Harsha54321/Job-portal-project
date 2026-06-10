@@ -30,7 +30,8 @@ export const PostJobForm = ({ onCancel }) => {
 
   const categoryOptions = ["Aerospace & Defense", "Ai/MI", "Analytics", "Artificial Intelligence", "Automotive", "Big Data", "Biotechnology", "Business Consulting", "Business Intelligence", "Cloud Computing", "Cloud Services", "Construction", "Consulting", "Consumer Goods", "Consumer Tech", "Corporate", "Corporate Functions", "Customer Support", "Cybersecurity", "Data Infrastructure", "Data Science", "Design", "Digital Marketing", "Digital Media", "E-Commerce", "Ed-Tech", "Energy", "Enterprise Software", "Entertainment", "Finance", "Financial Services", "Fintech", "Fmcg", "Healthcare", "Hospital", "Hr Services", "Human Resources", "Internet", "It Consulting", "It Networking", "IT Services", "Logistics", "Marketing", "Marketing & Advertising", "Martech", "Mobile App Development", "Mobile Development", "Pharmaceutical", "Pharma", "Product Development", "Project Management", "Real Estate", "Recruitment", "Regional Sales", "Renewable Power", "Research", "Retail", "Retail Tech", "Saas", "Sales", "Site Reliability Engineering", "Software Development", "Software Product", "Software Testing", "Subscription Service", "Supply Chain", "Technology", "Telecommunications"];
   const educationOptions = [
-    "BS", "B.A", "CA", "B.Ed", "M.Com", "B.Sc", "MCA", "BCA", "LLM", "MS/M.Sc", "Diploma", "B.Com", "M.Tech", "MBA/PGDM", "PG Diploma", "B.B.A/ B.M.S", "Medical-MS/MD", "B.Tech/B.E.", "Any Graduate", "Other Post Graduate", "ITI Certification", "Any Postgraduate", "Graduation Not Required", "Post Graduation Not Required", "Bachelor Of Science", "Business Economics"
+    "BS", "B.A", "CA", "B.Ed", "M.Com", "B.Sc", "MCA", "BCA", "LLM", "MS/M.Sc", "Diploma", "B.Com", "M.Tech", "MBA/PGDM", "PG Diploma", "B.B.A/ B.M.S", "Medical-MS/MD", "B.Tech/B.E.", "Any Graduate", "Other Post Graduate", "ITI Certification", "Any Postgraduate", "Bachelor Of Science", "Business Economics", "Artificial Intelligence (AI)", "Machine Learning", "Data Science",
+    "Cyber Security", "Cloud Computing",
   ];
   const departmentOptions = [
     "Engineering", "Marketing", "Sales", "Human Resources", "Finance",
@@ -211,14 +212,14 @@ export const PostJobForm = ({ onCancel }) => {
     if (!formData.job_highlights[0]?.trim()) {
       newErrors.job_highlights = "First highlight is required";
     } else if (!contentRegex.test(formData.job_highlights[0])) {
-      newErrors.job_highlights = "Must contain letters (no symbols)";
+      newErrors.job_highlights = "Must be at least 5 characters";
     }
 
     // Responsibilities
     if (!formData.responsibilities[0]?.trim()) {
       newErrors.responsibilities = "First responsibility is required";
     } else if (!contentRegex.test(formData.responsibilities[0])) {
-      newErrors.responsibilities = "Must contain letters (no symbols)";
+      newErrors.responsibilities = "Must be at least 5 characters";
     }
 
     // Standard checks for the rest

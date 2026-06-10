@@ -13,7 +13,11 @@ import { useLocation } from "react-router-dom";
 export const CompanyVerify = () => {
 
   const navigate = useNavigate();
-  const [isLoading, setIsLoading] = useState(false);
+
+  // FIX: Separate loading states for different actions
+  const [isEmailLoading, setIsEmailLoading] = useState(false);
+  const [isMobileLoading, setIsMobileLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);  // For final submit
   const [backendError, setBackendError] = useState("");
 
   const location = useLocation();
@@ -63,14 +67,25 @@ export const CompanyVerify = () => {
         "image/png"
       ];
 
+      // if (file && !allowedTypes.includes(file.type)) {
+      //   alert("Only PDF, JPG, JPEG, and PNG files are allowed!");
+      //   return;
+      // }
+
+      // const maxSize = 5 * 1024 * 1024;
+      // if (file && file.size > maxSize) {
+      //   alert("File size exceeds 5 MB. Please upload a smaller file.");
+      //   return;
+      // }
+
       if (file && !allowedTypes.includes(file.type)) {
-        alert("Only PDF, JPG, JPEG, and PNG files are allowed!");
+        setErrors(prev => ({ ...prev, incorporationCertificate: "Only PDF, JPG, JPEG, and PNG files are allowed!" }));
         return;
       }
 
       const maxSize = 5 * 1024 * 1024;
       if (file && file.size > maxSize) {
-        alert("File size exceeds 5 MB. Please upload a smaller file.");
+        setErrors(prev => ({ ...prev, incorporationCertificate: "File size exceeds 5 MB. Please upload a smaller file." }));
         return;
       }
 
@@ -200,8 +215,13 @@ export const CompanyVerify = () => {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // COMPANY EMAIL OTP FUNCTIONS
-  const sendCompanyEmailOtp = async () => {
+  // COMPANY EMAIL OTP FUNCTIONS - FIXED with separate loading state
+  const sendCompanyEmailOtp = async (e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+
     const email = formData.officialEmail;
     if (!email) {
       setErrors({ ...errors, officialEmail: "Please enter email first" });
@@ -219,7 +239,7 @@ export const CompanyVerify = () => {
       return;
     }
 
-    setIsLoading(true);
+    setIsEmailLoading(true);  // Only email loading state
     try {
       const response = await api.post('/company/send-email-otp/', {
         email: email,
@@ -237,7 +257,7 @@ export const CompanyVerify = () => {
       console.error("Send OTP error:", err);
       alert(err.response?.data?.error || "Failed to send OTP. Please try again.");
     } finally {
-      setIsLoading(false);
+      setIsEmailLoading(false);
     }
   };
 
@@ -247,7 +267,7 @@ export const CompanyVerify = () => {
       return;
     }
 
-    setIsLoading(true);
+    setIsEmailLoading(true);
     try {
       const response = await api.post('/company/verify-email-otp/', {
         email: emailForOtp,
@@ -263,14 +283,24 @@ export const CompanyVerify = () => {
       console.error("Verify OTP error:", err);
       alert(err.response?.data?.error || "Invalid OTP");
     } finally {
-      setIsLoading(false);
+      setIsEmailLoading(false);
     }
   };
 
-  // MOBILE OTP FUNCTIONS
-  const sendMobileOtp = () => {
+  // MOBILE OTP FUNCTIONS - FIXED with separate loading state
+  const sendMobileOtp = (event) => {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+
     const phone = formData.phoneNumber;
-    if (!/^[6-9]\d{9}$/.test(phone)) return alert("Enter valid 10-digit number");
+    if (!/^[6-9]\d{9}$/.test(phone)) {
+      // REMOVE: return alert("Enter valid 10-digit number");
+      // REPLACE WITH:
+      setErrors(prev => ({ ...prev, phoneNumber: "Enter valid 10-digit mobile number (starts with 6-9)" }));
+      return;
+    }
     alert(`OTP sent to ${phone}`);
     setTimer(180);
     setMobileForOtp(phone);
@@ -278,9 +308,16 @@ export const CompanyVerify = () => {
     setOtpValues(prev => ({ ...prev, mobileOtp: "" }));
   };
 
-  const verifyMobileOtp = () => {
+  const verifyMobileOtp = (event) => {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+
     if (otpValues.mobileOtp === "123456") {
       setIsMobileVerified(true);
+      setErrors(prev => ({ ...prev, phoneNumber: "" }));
+
       setTimeout(() => setShowMobileOtp(false), 1500);
       alert("Mobile verified successfully!");
     } else {
@@ -288,7 +325,8 @@ export const CompanyVerify = () => {
     }
   };
 
-  // Handle Submit with auto-refresh
+
+  // Handle Submit - FIXED with separate submitting state
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -307,7 +345,7 @@ export const CompanyVerify = () => {
       return;
     }
 
-    setIsLoading(true);
+    setIsSubmitting(true);  // Only submitting state
     setBackendError("");
 
     try {
@@ -336,13 +374,12 @@ export const CompanyVerify = () => {
 
       if (response.status === 200 || response.status === 201) {
         alert("Verification submitted successfully! Admin will review your application.");
-        // ✅ Navigate to dashboard with auto-refresh state
         navigate('/Job-portal/Employer/Dashboard', {
           replace: true,
           state: {
             fromVerify: true,
             verificationSubmitted: true,
-            justLoggedIn: true  // ✅ This triggers auto-refresh in dashboard
+            justLoggedIn: true
           }
         });
       }
@@ -359,7 +396,7 @@ export const CompanyVerify = () => {
         alert("Failed to submit. Please try again.");
       }
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
 
@@ -434,7 +471,7 @@ export const CompanyVerify = () => {
                       }
                     }}
                     autoFocus={index === 0}
-                    disabled={isLoading}
+                    disabled={isEmailLoading || isMobileLoading}
                   />
                 ))}
               </div>
@@ -444,7 +481,7 @@ export const CompanyVerify = () => {
                 <span
                   className="resend-link"
                   style={{ cursor: 'pointer', color: '#0081FF', fontWeight: 'bold' }}
-                  onClick={() => isEmail ? sendCompanyEmailOtp() : sendMobileOtp()}
+                  onClick={(e) => isEmail ? sendCompanyEmailOtp(e) : sendMobileOtp(e)}
                 >
                   Resend OTP
                 </span>
@@ -455,9 +492,9 @@ export const CompanyVerify = () => {
                 type="button"
                 className="verify-final-btn"
                 onClick={() => isEmail ? verifyCompanyEmailOtp() : verifyMobileOtp()}
-                disabled={isLoading}
+                disabled={isEmailLoading || isMobileLoading}
               >
-                {isLoading ? "Verifying..." : "Verify"}
+                {isEmailLoading || isMobileLoading ? "Verifying..." : "Verify"}
               </button>
             </>
           ) : (
@@ -467,10 +504,10 @@ export const CompanyVerify = () => {
               <button
                 type="button"
                 className="verify-final-btn"
-                onClick={() => isEmail ? sendCompanyEmailOtp() : sendMobileOtp()}
-                disabled={isLoading}
+                onClick={(e) => isEmail ? sendCompanyEmailOtp(e) : sendMobileOtp(e)}
+                disabled={isEmailLoading || isMobileLoading}
               >
-                {isLoading ? "Sending..." : "Resend New OTP"}
+                {isEmailLoading || isMobileLoading ? "Sending..." : "Resend New OTP"}
               </button>
             </div>
           )}
@@ -508,7 +545,7 @@ export const CompanyVerify = () => {
               placeholder="e.g., Wipro Technologies"
               value={formData.legalName}
               onChange={handleChange}
-              disabled={isLoading}
+              disabled={isSubmitting}
             />
             {errors.legalName && <span className="error-msg" style={{ color: 'red', fontSize: '12px' }}>{errors.legalName}</span>}
           </div>
@@ -522,7 +559,7 @@ export const CompanyVerify = () => {
               placeholder="e.g., L12345MH2023PTC123456"
               value={formData.registrationNumber}
               onChange={handleChange}
-              disabled={isLoading}
+              disabled={isSubmitting}
             />
             {errors.registrationNumber && <span className="error-msg" style={{ color: 'red', fontSize: '12px' }}>{errors.registrationNumber}</span>}
           </div>
@@ -536,7 +573,7 @@ export const CompanyVerify = () => {
               placeholder="e.g., 22AAAAA0000A1Z5"
               value={formData.taxId}
               onChange={handleChange}
-              disabled={isLoading}
+              disabled={isSubmitting}
             />
             {errors.taxId && <span className="error-msg" style={{ color: 'red', fontSize: '12px' }}>{errors.taxId}</span>}
           </div>
@@ -550,7 +587,7 @@ export const CompanyVerify = () => {
               placeholder="e.g., https://example.com"
               value={formData.websiteUrl}
               onChange={handleChange}
-              disabled={isLoading}
+              disabled={isSubmitting}
             />
             {errors.websiteUrl && <span className="error-msg" style={{ color: 'red', fontSize: '12px' }}>{errors.websiteUrl}</span>}
           </div>
@@ -565,16 +602,22 @@ export const CompanyVerify = () => {
                 placeholder="e.g., hr@example.com"
                 value={formData.officialEmail}
                 onChange={handleChange}
-                disabled={isLoading || isEmailVerified}
+                disabled={isSubmitting || isEmailVerified}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    sendCompanyEmailOtp();
+                  }
+                }}
               />
               {!isEmailVerified && formData.officialEmail.length > 0 && (
                 <button
                   type="button"
                   className="company-small-verify-btn"
-                  onClick={sendCompanyEmailOtp}
-                  disabled={isLoading}
+                  onClick={(e) => sendCompanyEmailOtp(e)}
+                  disabled={isEmailLoading || isSubmitting}
                 >
-                  {isLoading ? "Sending..." : "Verify"}
+                  {isEmailLoading ? "Sending..." : "Verify"}
                 </button>
               )}
               {isEmailVerified && <span className="verified-badge" style={{ color: 'green', marginLeft: '10px' }}>✓ Verified</span>}
@@ -592,16 +635,22 @@ export const CompanyVerify = () => {
                 placeholder="e.g., 9876543210"
                 value={formData.phoneNumber}
                 onChange={handleChange}
-                disabled={isLoading}
+                disabled={isSubmitting}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && formData.phoneNumber.length === 10) {
+                    e.preventDefault();
+                    sendMobileOtp();
+                  }
+                }}
               />
               {!isMobileVerified && formData.phoneNumber.length === 10 && (
                 <button
                   type="button"
                   className="company-small-verify-btn"
-                  onClick={sendMobileOtp}
-                  disabled={isLoading}
+                  onClick={(e) => sendMobileOtp(e)}
+                  disabled={isMobileLoading || isSubmitting}
                 >
-                  Verify
+                  {isMobileLoading ? "Sending..." : "Verify"}
                 </button>
               )}
               {isMobileVerified && <span className="verified-badge" style={{ color: 'green', marginLeft: '10px' }}>✓ Verified</span>}
@@ -619,7 +668,7 @@ export const CompanyVerify = () => {
                 id="pdfUpload"
                 onChange={handleChange}
                 hidden
-                disabled={isLoading}
+                disabled={isSubmitting}
               />
 
               {!formData.incorporationCertificate && (
@@ -646,8 +695,8 @@ export const CompanyVerify = () => {
           </div>
 
           <div className="company-verify-btn-wrapper">
-            <button type="submit" className="company-main-verify-btn" disabled={isLoading}>
-              {isLoading ? "Submitting..." : "Verify"}
+            <button type="submit" className="company-main-verify-btn" disabled={isSubmitting || isEmailLoading || isMobileLoading}>
+              {isSubmitting ? "Submitting..." : "Verify"}
             </button>
           </div>
         </form>

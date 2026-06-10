@@ -13,6 +13,7 @@ import { EHeader } from './EHeader';
 import { Footer } from '../Components-LandingPage/Footer';
 import { useJobs } from '../JobContext';
 import api from '../api/axios';
+import { LocationDisplay } from '../Components-Jobseeker/LocationDisplay';
 
 export const PostJobPreview = () => {
   const { state } = useLocation();
@@ -371,15 +372,15 @@ export const PostJobPreview = () => {
                     <img src={time} className='card-icons' alt="time" />
                     {job.work_duration}
                     <span className="Opportunities-divider">|</span>
-                    ₹ {job.salary} Lpa
+                    ₹ {job.salary}
                   </p>
                   <p className='Opportunities-detail-line'>
                     <img src={experience} className='card-icons' alt="exp" />
-                    {job.experience} years of experience
+                    {job.experience}
                   </p>
                   <p className='Opportunities-detail-line'>
                     <img src={place} className='card-icons' alt="loc" />
-                    {Array.isArray(job.location) ? job.location.join(", ") : job.location}
+                    <LocationDisplay locations={job.location} />
                   </p>
                 </div>
 
@@ -459,16 +460,16 @@ export const PostJobPreview = () => {
                 </ul>
               </div>
 
-              <h4>Key Details:</h4>
+              {/* <h4>Key Details:</h4> */}
               <div className="jobpost-previous-meta-info-grid">
                 <p><strong>Role:</strong> {formatDisplay(job.job_title)}</p>
                 <p><strong>Industry Type:</strong> {formatDisplay(state.industry_type)}</p>
                 <p><strong>Department:</strong> {formatDisplay(state.department)}</p>
                 <p><strong>Job Type:</strong> {formatDisplay(job.work_type)}</p>
-                <p><strong>Experience level:</strong> {job.experience} years</p>
-                <p>
+                <p><strong>Experience level:</strong> {job.experience}</p>
+                <p style={{ display: 'flex', gap: '5px' }}>
                   <strong>Location:</strong>{' '}
-                  {Array.isArray(job.location) ? job.location.join(", ") : job.location}
+                  <LocationDisplay locations={job.location} />
                 </p>
                 <p><strong>Shift:</strong> {job.shift}</p>
                 <p><strong>Education:</strong> {formatDisplay(state.education)}</p>

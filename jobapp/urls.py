@@ -125,7 +125,8 @@ from .views import (
     NotificationPreferenceListView,
     ContactMessageListAPIView,
     AdminUpdateJobStatusView,
-    CurrentUserView
+    CurrentUserView,
+    EmployerForgotPasswordView
     
 
     # REMOVED: Company-related view imports (CompanyListView, CompanyDetailView, etc.)
@@ -207,6 +208,7 @@ urlpatterns = [
     
     # Password
     path('auth/forgot-password/', ForgotPasswordView.as_view(), name='forgot-password'),
+    path('auth/employer/forgot-password/', EmployerForgotPasswordView.as_view(), name='employer-forgot-password'),
     path('auth/reset-password-confirm/', ResetPasswordConfirmView.as_view(), name='reset-password-confirm'),
     path('auth/create-password/', CreatePasswordView.as_view(), name='create-password'),
     path('auth/validate-reset-token/', ValidateResetTokenView.as_view(), name='validate-reset-token'),

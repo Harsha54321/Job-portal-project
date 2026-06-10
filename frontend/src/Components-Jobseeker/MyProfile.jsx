@@ -1572,6 +1572,7 @@ const EducationDetails = ({
                                     <input
                                         type="date"
                                         name="year"
+                                        max="9999-12-31"
                                         value={data.sslc.year || ""}
                                         onChange={(e) => handleInputChange(e, 'sslc')}
                                         className={`${errors.sslcyear ? "input-error" : ""} cursor-as-pointer`}
@@ -1660,6 +1661,7 @@ const EducationDetails = ({
                                     <input
                                         type="date"
                                         name="year"
+                                        max="9999-12-31"
                                         value={data.hsc.year || ""}
                                         onChange={(e) => handleInputChange(e, 'hsc')}
                                         className={`${errors.hscyear ? "input-error" : ""} cursor-as-pointer`}
@@ -1798,6 +1800,7 @@ const EducationDetails = ({
                                         <input
                                             type="date"
                                             name="startYear"
+                                            max="9999-12-31"
                                             value={grad.startYear}
                                             onChange={(e) => handleInputChange(e, 'grad', grad.id)}
                                             className={`${errors[`gradstartYear${grad.id}`] ? "input-error" : ""} cursor-as-pointer`}
@@ -1809,6 +1812,7 @@ const EducationDetails = ({
                                         <input
                                             type="date"
                                             name="endYear"
+                                            max="9999-12-31"
                                             value={grad.endYear}
                                             onChange={(e) => handleInputChange(e, 'grad', grad.id)}
                                             className={`${errors[`gradendYear${grad.id}`] ? "input-error" : ""} cursor-as-pointer`}
@@ -2102,6 +2106,7 @@ const WorkExperience = ({
                                     <input
                                         type="date"
                                         name="startDate"
+                                        max="9999-12-31"
                                         value={entry.startDate || ""}
                                         onChange={(e) => handleDateChangeWithValidation(entry.id, 'startDate', e.target.value, entry)}
                                         className={`${errors[`startDate_${entry.id}`] ? "input-error" : ""} cursor-as-pointer`} />
@@ -2112,6 +2117,7 @@ const WorkExperience = ({
                                     <input
                                         type="date"
                                         name="endDate"
+                                        max="9999-12-31"
                                         value={entry.endDate || ""}
                                         onChange={(e) => handleDateChangeWithValidation(entry.id, 'endDate', e.target.value, entry)}
                                         className={`${errors[`endDate_${entry.id}`] ? "input-error" : ""} cursor-as-pointer`} />
@@ -2520,7 +2526,6 @@ const LanguagesKnown = ({
                         <option value="Fluent">Fluent</option>
                         <option value="Native">Native</option>
                     </select>
-
                 </div>
             </PopupModal>
         </form>
@@ -3058,7 +3063,7 @@ export const MyProfile = () => {
         try {
             const token = sessionStorage.getItem("access");
             if (!token) {
-                window.location.href = "/login";
+                window.location.href = "/";
                 return;
             }
             const res = await api.get("profile/jobseeker/");
@@ -3856,7 +3861,7 @@ export const MyProfile = () => {
         try {
             const token = sessionStorage.getItem("access");
             if (!token) {
-                window.location.href = "/login";
+                window.location.href = "/";
                 return;
             }
 

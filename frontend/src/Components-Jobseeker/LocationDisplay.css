@@ -1,0 +1,10 @@
+.loc-more { color: #1E88E5; font-weight: 600; cursor: pointer; }
+.loc-more:hover { text-decoration: underline; }
+.loc-wrap { white-space: normal; }
+
+.loc-modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+.loc-modal-content { background: #fff; width: 90%; max-width: 500px; padding: 20px; border-radius: 12px; }
+.loc-modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+.loc-modal-close { border: none; background: none; font-size: 24px; cursor: pointer; }
+.loc-modal-body { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 15px; max-height: 300px; overflow-y: auto; }
+.loc-chip { background: #f4f6f8; padding: 6px 12px; border-radius: 16px; font-size: 13px; color: #333; }

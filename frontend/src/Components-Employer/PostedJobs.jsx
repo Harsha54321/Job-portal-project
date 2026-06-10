@@ -4,6 +4,7 @@ import place from '../assets/opportunity_location.png'
 import { useNavigate } from 'react-router-dom';
 import { useJobs } from '../JobContext';
 import api from "../api/axios";
+import { LocationDisplay } from '../Components-Jobseeker/LocationDisplay';
 
 export const PostedJobs = ({ onViewApplicants }) => {
   const navigate = useNavigate();
@@ -126,7 +127,7 @@ export const PostedJobs = ({ onViewApplicants }) => {
                     <h3>{job.job_title}</h3>
                     <p className="postedjobs-loc flex items-center gap-2">
                       <img src={place} alt="location" className="post-job-locationicon" />
-                      {Array.isArray(job.location) ? job.location.join(", ") : job.location || "N/A"}
+                      <LocationDisplay locations={job.location} />
                     </p>
                     {/* <small>Created on: {job.created_at ? new Date(job.created_at).toLocaleDateString() : ''}</small> */}
                     <small>Created on: {new Date(job.created_at || job.posted_date).toLocaleDateString()}</small>

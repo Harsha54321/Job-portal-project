@@ -21,7 +21,7 @@ export const Header = () => {
   const { notificationsData, showNotification, setShowNotification, fetchNotifications, chats, currentUserId } = useJobs();
 
   const newNotificationsCount = Array.isArray(notificationsData)
-    ? notificationsData.filter(n => !n.is_read).length
+    ? notificationsData.filter(n => !n.isRead).length
     : 0;
 
   const unreadMessagesCount = chats.filter(

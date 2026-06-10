@@ -3,6 +3,7 @@ import './JobMonitoring.css';
 import place from '../assets/opportunity_location.png';
 import time from '../assets/opportunity_time.png';
 import starIcon from '../assets/Star_icon.png';
+import { LocationDisplay } from "../Components-Jobseeker/LocationDisplay";
 
 export const JobPreviewModal = ({ job, onClose }) => {
   if (!job) return null;
@@ -48,10 +49,10 @@ export const JobPreviewModal = ({ job, onClose }) => {
                   <span className="job-preview-reviews">55k+ reviews</span>
                 </div>
 
-                <div className="job-preview-meta-grid">
+              <div className="job-preview-meta-grid">
                   <div className="meta-item"><img src={time} className='card-icons' alt="time" /> {job.experience || ''}</div>
-                  <div className="meta-item"> {job.salary}LPA</div>
-                  <div className="meta-item"><img src={place} className='card-icons' alt="loc" /> {job.location || ''}</div>
+                  <div className="meta-item"> {job.salary}</div>
+                  <div className="meta-item"><img src={place} className='card-icons' alt="loc" /> <LocationDisplay locations={job.location} /></div>
                 </div>
 
                 <div className="job-preview-tags">

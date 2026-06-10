@@ -26,6 +26,13 @@ export const Esignup = () => {
   const [emailForOtp, setEmailForOtp] = useState("")
   const [mobileForOtp, setMobileForOtp] = useState("")
 
+
+  // Add these after your existing state declarations 05/06/26
+const [isEmailOtpSending, setIsEmailOtpSending] = useState(false)
+const [isMobileOtpSending, setIsMobileOtpSending] = useState(false)
+const [isEmailVerifying, setIsEmailVerifying] = useState(false)
+const [isMobileVerifying, setIsMobileVerifying] = useState(false)
+
   // --- TIMER LOGIC ---
   useEffect(() => {
     let interval;
@@ -64,8 +71,13 @@ export const Esignup = () => {
     setBackendError("")
   }
 
-  // SEND EMAIL OTP
-  const sendEmailOtp = async () => {
+  // SEND EMAIL OTP 05/06/26
+  // const sendEmailOtp = async () => {
+  //   const email = formValues.email;
+
+  const sendEmailOtp = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
     const email = formValues.email;
 
     if (!email) {
@@ -82,7 +94,7 @@ export const Esignup = () => {
       return;
     }
 
-    setIsLoading(true);
+  setIsEmailOtpSending(true);  // ← CHANGE THIS
 
     try {
       const response = await api.post('send-email-otp/', {
@@ -118,12 +130,17 @@ export const Esignup = () => {
         alert('Failed to send OTP. Please check your connection.');
       }
     } finally {
-      setIsLoading(false);
+    setIsEmailOtpSending(false);  // ← CHANGE THIS
     }
   }
 
-  // VERIFY EMAIL OTP
-  const verifyEmailOtp = async () => {
+  // VERIFY EMAIL OTP 05/06/26
+  // const verifyEmailOtp = async () => {
+  //   const code = otpValues.emailOtp;
+
+  const verifyEmailOtp = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
     const code = otpValues.emailOtp;
 
     if (!code || code.length !== 6) {
@@ -131,7 +148,7 @@ export const Esignup = () => {
       return;
     }
 
-    setIsLoading(true);
+  setIsEmailVerifying(true);  // ← CHANGE THIS
 
     try {
       const response = await api.post('/verify-email-otp/', {
@@ -157,12 +174,18 @@ export const Esignup = () => {
       const errorMsg = err.response?.data?.error || err.response?.data?.message || "Verification failed. Please try again.";
       alert(errorMsg);
     } finally {
-      setIsLoading(false);
+    setIsEmailVerifying(false);  // ← CHANGE THIS
     }
   }
 
-  // SEND MOBILE OTP
-  const sendMobileOtp = async () => {
+  // SEND MOBILE OTP 05/06/26
+
+  // const sendMobileOtp = async () => {
+  //   const phone = formValues.phone;
+
+  const sendMobileOtp = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
     const phone = formValues.phone;
 
     if (!phone) {
@@ -175,9 +198,13 @@ export const Esignup = () => {
       return;
     }
 
-    setIsLoading(true);
+  setIsMobileOtpSending(true);  // ← CHANGE THIS
 
     try {
+      // If you have a mobile OTP endpoint, use it
+      // const response = await api.post('send-mobile-otp/', { phone: phone });
+
+      // For now, simulate OTP sending
       setTimeout(() => {
         alert(`OTP sent to ${phone}`);
         setTimer(180);
@@ -192,12 +219,17 @@ export const Esignup = () => {
     } catch (err) {
       console.error("Send Mobile OTP error:", err);
       alert('Failed to send OTP. Please try again.');
-      setIsLoading(false);
+    setIsMobileOtpSending(false);  // ← CHANGE THIS
     }
   }
 
-  // VERIFY MOBILE OTP
-  const verifyMobileOtp = async () => {
+  // VERIFY MOBILE OTP 05/06/26
+  // const verifyMobileOtp = async () => {
+  //   const code = otpValues.mobileOtp;
+
+  const verifyMobileOtp = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
     const code = otpValues.mobileOtp;
 
     if (!code || code.length !== 6) {
@@ -205,9 +237,10 @@ export const Esignup = () => {
       return;
     }
 
-    setIsLoading(true);
+  setIsMobileVerifying(true);  // ← CHANGE THIS
 
     try {
+      // For demo purposes, accept 123456 as valid OTP
       if (code === "123456") {
         setIsMobileVerified(true);
 
@@ -225,7 +258,7 @@ export const Esignup = () => {
       console.error("Verify Mobile OTP error:", err);
       alert("Verification failed. Please try again.");
     } finally {
-      setIsLoading(false);
+    setIsMobileVerifying(false);  // ← CHANGE THIS
     }
   }
 
@@ -236,7 +269,8 @@ export const Esignup = () => {
     const regexofUppercase = /^(?=.*[A-Z]).+$/
     const regexofNumber = /^(?=.*\d).+$/
     const regexofSpecialChar = /^(?=.*[!@#$%^&*]).+$/
-    const regexofUserName = /^(?=[a-zA-Z])\S+$/
+    const regexofLowercase = /^(?=.*[a-z]).+$/
+    const regexofUserName = /^(?=[a-zA-Z])[a-zA-Z\s]+$/  // ← FIXED: Allows spaces
     const regexofMobile = /^[6-9]\d{9}$/
 
     if (!formValues.companyname.trim()) {
@@ -273,6 +307,8 @@ export const Esignup = () => {
       newErrors.password = "Password must be at least 8 characters"
     } else if (!regexofUppercase.test(formValues.password)) {
       newErrors.password = "Password must contain at least one uppercase letter"
+    } else if (!regexofLowercase.test(formValues.password)) {  // ← ADD THIS BLOCK
+      newErrors.password = "Password must contain at least one lowercase letter"
     } else if (!regexofNumber.test(formValues.password)) {
       newErrors.password = "Password must contain at least one number"
     } else if (!regexofSpecialChar.test(formValues.password)) {
@@ -298,17 +334,98 @@ export const Esignup = () => {
   }
 
   // SIGNUP SUBMISSION
-  const handleSubmit = async (e) => {
+  // const handleSubmit = async (e) => {
+  //   e.preventDefault();
+
+  //   if (!validateForm()) {
+  //     console.log("Validation failed");
+  //     return;
+  //   }
+
+  //   setIsLoading(true);
+  //   setBackendError("");
+
+  //   try {
+  //     const response = await api.post("register/employer/", {
+  //       username: formValues.username,
+  //       email: formValues.email,
+  //       phone: formValues.phone,
+  //       password: formValues.password,
+  //       password_confirm: formValues.confirmpassword,
+  //     });
+
+  //     console.log("Registration response:", response.data);
+
+  //     if (response.status === 201 || response.status === 200) {
+  //       alert("Employer account created successfully! Please complete your company profile.");
+  //       console.log("Signed up successfully", formValues);
+
+  //       // Store tokens if returned
+  //       if (response.data.access && response.data.refresh) {
+  //         sessionStorage.setItem("access", response.data.access);
+  //         sessionStorage.setItem("refresh", response.data.refresh);
+  //         sessionStorage.setItem("userType", "employer");
+  //         console.log("✅ Tokens stored successfully");
+  //       }
+
+  //       // Clear form but keep verification states
+  //       setFormValues(initialValues);
+
+  //       setTimeout(() => {
+  //         // navigate("/Job-portal/Employer/about-your-company");
+  //         navigate("/Job-portal/Employer/about-your-company", {
+  //           state: { fromSignup: true }  // ← fromSignup flag pass cheyyali
+  //         });
+  //       }, 2000);
+  //     } else {
+  //       alert("Signup failed. Please try again.");
+  //     }
+  //   } catch (err) {
+  //     console.error("Registration error:", err);
+  //     const apiErrors = err.response?.data;
+
+  //     if (apiErrors) {
+  //       const newErrors = {};
+  //       Object.keys(apiErrors).forEach((key) => {
+  //         newErrors[key] = Array.isArray(apiErrors[key])
+  //           ? apiErrors[key][0]
+  //           : apiErrors[key];
+  //       });
+  //       setErrors(newErrors);
+
+  //       if (apiErrors.detail) {
+  //         setBackendError(apiErrors.detail);
+  //       } else if (apiErrors.error) {
+  //         setBackendError(apiErrors.error);
+  //       }
+  //     } else {
+  //       setBackendError("Signup failed. Please check your connection.");
+  //     }
+  //   } finally {
+  //     setIsLoading(false);
+  //   }
+  // };  
+
+
+  const handleSubmit = async (e) => {  // Make it async
     e.preventDefault();
 
     const isValid = validateForm();
+
     if (!isValid) {
       console.log("Validation failed, errors set in state");
+      // Explicitly scroll to the top so the user sees the error messages
       window.scrollTo({ top: 0, behavior: 'smooth' });
-      return;
+      return; // STOP execution here
     }
 
-    setIsLoading(true);
+    // if (!validateForm()) {
+    //   console.log("Validation failed");
+    //   return;
+    // }
+
+    setIsLoading(true); // Add loading state
+
     setBackendError("");
 
     try {
@@ -323,44 +440,40 @@ export const Esignup = () => {
 
       console.log("Registration response:", registerResponse.data);
 
-      if (registerResponse.status === 201 || registerResponse.status === 200) {
-        console.log("Registration successful! Storing temporary context tokens...");
+      if (registerResponse.status === 201) {
+        console.log("Registration successful!");
 
-        // --- ADDED TOKEN STORAGE MANAGEMENT BLOCK ---
-        if (registerResponse.data?.access) {
-          sessionStorage.setItem("access", registerResponse.data.access);
-          sessionStorage.setItem("refresh", registerResponse.data.refresh);
-          sessionStorage.setItem("userType", "employer");
-          console.log("Tokens stored successfully into sessionStorage");
+        try {
+          const loginResponse = await api.post("login/", {
+            email: formValues.email,
+            password: formValues.password,
+          });
+
+          if (loginResponse.data.access) {
+            // Store tokens
+            sessionStorage.setItem("access", loginResponse.data.access);
+            sessionStorage.setItem("refresh", loginResponse.data.refresh);
+            sessionStorage.setItem("userType", "employer");
+
+            console.log(" Tokens stored");
+
+            // Step 3: Navigate to About Your Company
+            navigate("/Job-portal/Employer/about-your-company", {
+              state: { fromSignup: true }
+            });
+          }
+
+        } catch (error) {
+          const errorMessage = error.response?.data?.error || error.response?.data?.detail ? "you have registered successfully,it is under account approval" : "something went wrong" || "something went wrong"
+
+          alert(errorMessage)
         }
+        // Step 2: Auto-login to get tokens
 
-        const userEmail = formValues.email;
-        setFormValues(initialValues); // Clear registration state
-
-        // Bypassing login completely to avoid 400 Bad Request since account is on Hold
-
-        navigate("/Job-portal/Employer/about-your-company", {
-          state: { fromSignup: true, employerEmail: userEmail }
-        });
       }
     } catch (err) {
       console.error("Registration error:", err);
-      const apiErrors = err.response?.data;
-      let errorMessage = "Something went wrong during account creation.";
-
-      if (apiErrors) {
-        if (typeof apiErrors === 'object') {
-          const newErrors = {};
-          Object.keys(apiErrors).forEach((key) => {
-            newErrors[key] = Array.isArray(apiErrors[key]) ? apiErrors[key][0] : apiErrors[key];
-          });
-          setErrors(newErrors);
-          errorMessage = apiErrors.error || apiErrors.detail || Object.values(newErrors)[0] || errorMessage;
-        } else if (typeof apiErrors === 'string') {
-          errorMessage = apiErrors;
-        }
-      }
-      setBackendError(errorMessage);
+      const errorMessage = err.response?.data?.error || "something went wrong"
       alert(errorMessage);
     } finally {
       setIsLoading(false);
@@ -373,6 +486,7 @@ export const Esignup = () => {
     const otpKey = isEmail ? "emailOtp" : "mobileOtp";
     const isCurrentlyVerified = isEmail ? isEmailVerified : isMobileVerified;
 
+    // SUCCESS POPUP VIEW
     if (isCurrentlyVerified) {
       return (
         <div className="otp-modal-overlay">
@@ -393,7 +507,6 @@ export const Esignup = () => {
       <div className="otp-modal-overlay">
         <div className="otp-modal-content">
           <button
-            type="button"
             className="back-arrow"
             onClick={() => {
               setTimer(0);
@@ -449,8 +562,7 @@ export const Esignup = () => {
                 <span
                   className="resend-link"
                   style={{ cursor: 'pointer', color: '#0081FF', fontWeight: 'bold' }}
-                  onClick={() => isEmail ? sendEmailOtp() : sendMobileOtp()}
-                >
+                  onClick={(e) => isEmail ? sendEmailOtp(e) : sendMobileOtp(e)}                >
                   Resend OTP
                 </span>
                 {timer > 0 && <span> in {formatTime(timer)}</span>}
@@ -459,8 +571,7 @@ export const Esignup = () => {
               <button
                 type="button"
                 className="verify-final-btn"
-                onClick={() => isEmail ? verifyEmailOtp() : verifyMobileOtp()}
-                disabled={isLoading}
+                onClick={(e) => isEmail ? verifyEmailOtp(e) : verifyMobileOtp(e)} disabled={isLoading}
               >
                 {isLoading ? "Verifying..." : "Verify"}
               </button>
@@ -472,8 +583,7 @@ export const Esignup = () => {
               <button
                 type="button"
                 className="verify-final-btn"
-                onClick={() => isEmail ? sendEmailOtp() : sendMobileOtp()}
-                disabled={isLoading}
+                onClick={(e) => isEmail ? sendEmailOtp(e) : sendMobileOtp(e)} disabled={isLoading}
               >
                 {isLoading ? "Sending..." : "Resend New OTP"}
               </button>
@@ -567,13 +677,22 @@ export const Esignup = () => {
               disabled={isEmailVerified || isLoading}
             />
             {!isEmailVerified && formValues.email.length > 0 && (
+              // <button 05/06/26
+              //   type="button"
+              //   className="jsignup-small-verify-btn"
+              //   onClick={sendEmailOtp}
+              //   disabled={isLoading}
+              // >
+
               <button
                 type="button"
                 className="jsignup-small-verify-btn"
-                onClick={sendEmailOtp}
-                disabled={isLoading}
+                onClick={(e) => sendEmailOtp(e)}
+  disabled={isEmailOtpSending || isEmailVerified}  // ← CHANGE THIS
               >
-                {isLoading ? "Sending..." : "Verify"}
+
+                  {isEmailOtpSending ? "Sending..." : "Verify"}
+
               </button>
             )}
             {isEmailVerified && <span className="verified-badge">✓ Verified</span>}
@@ -633,13 +752,21 @@ export const Esignup = () => {
             />
 
             {!isMobileVerified && formValues.phone.length === 10 && (
+              // <button 05/06/26
+              //   type="button"
+              //   className="jsignup-small-verify-btn"
+              //   onClick={sendMobileOtp}
+              //   disabled={isLoading}
+              // >
+
               <button
                 type="button"
                 className="jsignup-small-verify-btn"
-                onClick={sendMobileOtp}
-                disabled={isLoading}
+                onClick={(e) => sendMobileOtp(e)}
+  disabled={isMobileOtpSending || isMobileVerified}  // ← CHANGE THIS
               >
-                {isLoading ? "Sending..." : "Verify"}
+
+                {isMobileOtpSending ? "Sending..." : "Verify"}
               </button>
             )}
 
@@ -650,6 +777,7 @@ export const Esignup = () => {
           <button
             type="submit"
             className="j-sign-up-submit"
+            disabled={!isEmailVerified || !isMobileVerified || isLoading} 
             disabled={isLoading}
           >
             {isLoading ? "Creating Account..." : "Create Account"}

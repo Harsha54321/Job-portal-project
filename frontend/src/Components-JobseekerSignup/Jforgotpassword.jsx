@@ -1,6 +1,5 @@
 import React, { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useNavigate } from "react-router-dom";
 import './Jforgotpassword.css'
 import forgot from "../assets/Forgot.png"
 import api from '../api/axios'
@@ -8,13 +7,15 @@ import api from '../api/axios'
 export const Jforgotpassword = () => {
 
   const [formValues, setFormValues] = useState({ email: "" })
-
   const [errors, setErrors] = useState({})
+  const [loading, setLoading] = useState(false)
+  const [apiError, setApiError] = useState("")
 
   const handleForm = (e) => {
     const { name, value } = e.target
     setFormValues({ ...formValues, [name]: value })
     setErrors({ ...errors, [name]: "" })
+    setApiError("")
   }
 
   const validateForm = () => {
@@ -23,7 +24,7 @@ export const Jforgotpassword = () => {
     const regexOfMail = /^[a-zA-Z][a-zA-Z0-9]*@(gmail|yahoo|outlook|hotmail)\.[a-zA-Z]{2,}$/;
 
     if (!formValues.email.trim()) {
-      newErrors.email = "email is required"
+      newErrors.email = "Email is required"
     } else if (!regexOfMail.test(formValues.email)) {
       newErrors.email = "Invalid email format"
     }
@@ -32,20 +33,36 @@ export const Jforgotpassword = () => {
     return Object.keys(newErrors).length === 0
   }
 
-  async function handleSubmit(formData) {
-    if (!validateForm()) {
-      return false // stops form submit if errors
-    }
-    try {
-      const res = await api.post('auth/forgot-password/',formValues)
-      alert(res.data.message)
-      
-    } catch (error) {
-     const message = error.response?.data?.email?.[0];
-     alert(message)
+  async function handleSubmit(e) {
+    e.preventDefault()
 
+    setApiError("")
+    setErrors({})
+
+    if (!validateForm()) {
+      return false
     }
-   
+
+    setLoading(true)
+
+    try {
+      const res = await api.post('auth/forgot-password/', formValues)
+      alert(res.data.message)
+      setFormValues({ email: "" })
+      setLoading(false)
+
+    } catch (error) {
+      setLoading(false)
+
+      const errorMessage = error.response?.data?.error
+
+      if (errorMessage) {
+        setApiError(errorMessage)
+      } else {
+        const message = error.response?.data?.email?.[0]
+        setApiError(message || "An error occurred. Please try again.")
+      }
+    }
   }
 
   return (
@@ -63,14 +80,28 @@ export const Jforgotpassword = () => {
         <div className="forgot-password-illustration">
           <img src={forgot} alt="Forgot password Illustration" />
         </div>
-        <form action={handleSubmit} className="forgot-password-form">
+        <form onSubmit={handleSubmit} className="forgot-password-form">
           <h2>Forgot Your Password?</h2>
 
           <label>Email ID</label>
-          <input type="text" placeholder="Enter your Email ID" name="email" value={formValues.email} onChange={handleForm} className={errors.email ? "input-error" : ""} />
-          {errors.email && <span className="error-msg">{errors.email}</span>}
+          <input
+            type="email"
+            placeholder="Enter your Email ID"
+            name="email"
+            value={formValues.email}
+            onChange={handleForm}
+            className={errors.email || apiError ? "input-error" : ""}
+          />
+          {errors.email && <p className="error-text">{errors.email}</p>}
+          {apiError && <p className="error-text">{apiError}</p>}
 
-          <button className="j-send-link-btn">Send Link</button>
+          <button
+            className="j-send-link-btn"
+            type="submit"
+            disabled={loading}
+          >
+            {loading ? "Sending..." : "Send Link"}
+          </button>
 
           <div className='center-div-text'>
             <p>Remember your password? <Link to="/Job-portal/jobseeker/login" className='j-password-form-login-link'>Login</Link></p>

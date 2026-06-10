@@ -27,6 +27,7 @@ export const OpportunityOverview = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchLocation, setSearchLocation] = useState("");
   const [searchExperience, setSearchExperience] = useState("");
+  const [isLocationPopupOpen, setIsLocationPopupOpen] = useState(false);
 
 
   const { jobs, appliedJobs, toggleSaveJob, saveJob, isJobSaved } = useJobs();
@@ -101,9 +102,9 @@ export const OpportunityOverview = () => {
         // const similar = jobsArray
         //   .filter(j => Number(j.id) !== Number(jobRes.data.id))
         //   .slice(0, 3);
-         const similar = jobsArray
+        const similar = jobsArray
           .filter(j => Number(j.id) !== Number(jobRes.data.id))
-          .filter(j => {                        
+          .filter(j => {
             if (jobRes.data.department && j.department) {
               const currentDept = Array.isArray(jobRes.data.department)
                 ? jobRes.data.department
@@ -111,13 +112,13 @@ export const OpportunityOverview = () => {
               const jobDept = Array.isArray(j.department)
                 ? j.department
                 : [j.department];
- 
+
               return currentDept.some(dept => jobDept.includes(dept));
             }
             return false;
           })
           .slice(0, 9);
- 
+
 
         setLimitedSimilarJob(similar);
 
@@ -170,18 +171,32 @@ export const OpportunityOverview = () => {
   }
 
   // if (!job) return null;
+  // 1. RESTORE formatLocation so the "Similar Jobs" sidebar doesn't crash!
   const formatLocation = (location) => {
+    if (!location) return "Location not specified";
+    if (Array.isArray(location)) {
+      return location.join(", ");
+    }
+    return location;
+  };
 
-        if (!location) return "Location not specified";
+  // 2. BULLETPROOF parsing for the main job locations
+  let locationsList = [];
+  if (job?.location) {
+    // Force the location into a single string first. 
+    // This handles both "City1, City2" and ["City1, City2"] safely.
+    const rawLocationStr = Array.isArray(job.location) ? job.location.join(', ') : job.location;
 
-        if (Array.isArray(location)) {
-            return location.join(", ");
-        }
-        return location;
-    };
+    // Now aggressively split it by commas so length is counted correctly
+    if (typeof rawLocationStr === 'string') {
+      locationsList = rawLocationStr
+        .split(',')
+        .map(l => l.trim())
+        .filter(l => l !== ""); // remove empty strings
+    }
+  }
 
-    const locationDisplay = formatLocation(job.location);
-
+  const locationDisplay = locationsList.length > 0 ? locationsList.join(", ") : "Location not specified";
   return (
     <>
       <Header />
@@ -243,7 +258,21 @@ export const OpportunityOverview = () => {
                 </p>
                 <p className='Opportunities-detail-line'>
                   <img src={place} className='card-icons' alt="location" />
-                  {locationDisplay}
+                  <span className="location-text-wrap">
+                    {locationsList.length > 3 ? (
+                      <>
+                        {locationsList.slice(0, 3).join(", ")}
+                        <span
+                          className="opp-show-more-link"
+                          onClick={() => setIsLocationPopupOpen(true)}
+                        >
+                          {" "}+{locationsList.length - 3} more
+                        </span>
+                      </>
+                    ) : (
+                      locationDisplay
+                    )}
+                  </span>
                 </p>
               </div>
 
@@ -262,7 +291,7 @@ export const OpportunityOverview = () => {
                       {job.job_category}
                     </span>
                   )}
-                </div>  
+                </div>
 
                 <div className="Opportunities-job-type">
                   {job.work_type}
@@ -332,7 +361,7 @@ export const OpportunityOverview = () => {
                   ))}
               </ul>
 
-              <h3>Key Details:</h3>
+              {/* <h3>Key Details:</h3> */}
               <p><strong>Role:</strong> {job.job_title}</p>
               <p><strong>Industry Type:</strong> {Array.isArray(job.industry_type) ? job.industry_type.join(", ") : job.industry_type}</p>
               <p><strong>Department:</strong> {Array.isArray(job.department) ? job.department.join(", ") : job.department}</p>
@@ -428,7 +457,23 @@ export const OpportunityOverview = () => {
         </div>
       </div>
       <Footer />
-    </>
 
+      {/* Location Popup Modal */}
+      {isLocationPopupOpen && (
+        <div className="opp-loc-modal-overlay" onClick={() => setIsLocationPopupOpen(false)}>
+          <div className="opp-loc-modal-content" onClick={e => e.stopPropagation()}>
+            <div className="opp-loc-modal-header">
+              <h3>All Locations</h3>
+              <button className="opp-loc-modal-close" onClick={() => setIsLocationPopupOpen(false)}>&times;</button>
+            </div>
+            <div className="opp-loc-modal-body">
+              {locationsList.map((loc, index) => (
+                <span key={index} className="opp-loc-chip">{loc}</span>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   )
 }

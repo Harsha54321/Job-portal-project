@@ -12,6 +12,7 @@ import { Header } from "../Components-LandingPage/Header";
 import api from "../api/axios";
 import { useJobs } from "../JobContext";
 import application_success from "../assets/application_success.png";
+import { LocationDisplay } from './LocationDisplay';
 
 
 export const JobApplication = () => {
@@ -164,14 +165,14 @@ export const JobApplication = () => {
     if (name === "coverLetter") {
       val = value.slice(0, 2000);
     }
-    
+
 
     // existing logic...
     if (name === "mobile" || name === "zip") {
       val = value.replace(/\D/g, "");
       if (name === "mobile") val = val.slice(0, 10);
       if (name === "zip") val = val.slice(0, 6);
-    } 
+    }
     else if (["name", "city", "state", "country"].includes(name)) {
       val = value.replace(/[^a-zA-Z\s]/g, "");
     }
@@ -257,7 +258,7 @@ export const JobApplication = () => {
       setErrors(newErrors);
       // Auto-focus the first error field
       setEditableField(["street", "city", "state", "zip", "country"].includes(firstError) ? "address" : firstError);
-      alert("Please correct the errors in the form before applying.");
+      alert("Please fill all required fields.");
       return false;
     }
 
@@ -333,17 +334,17 @@ export const JobApplication = () => {
     );
   }
 
-  const formatLocation = (location) => {
+  // const formatLocation = (location) => {
 
-        if (!location) return "Location not specified";
+  //   if (!location) return "Location not specified";
 
-        if (Array.isArray(location)) {
-            return location.join(", ");
-        }
-        return location;
-    };
+  //   if (Array.isArray(location)) {
+  //     return location.join(", ");
+  //   }
+  //   return location;
+  // };
 
-    const locationDisplay = formatLocation(job.location);
+  // const locationDisplay = formatLocation(job.location);
 
   return (
     <>
@@ -373,8 +374,8 @@ export const JobApplication = () => {
             </span>
 
             <span>
-              <img src={place} className="apply-form-card-icons" />
-              {locationDisplay}
+              <img src={place} className="apply-form-card-icons" alt="location" />
+              <LocationDisplay locations={job.location} />
             </span>
           </div>
         </div>
@@ -507,26 +508,20 @@ export const JobApplication = () => {
               <div className="apply-form-label">Cover letter</div>
               <div className="apply-form-input">
                 <textarea
-
                   className={`cover-textarea ${errors.coverLetter ? "error-border" : ""}`}
                   name="coverLetter"
                   placeholder="Write your cover letter here..."
-                  disabled={editableField !== "coverLetter"}
                   value={formData.coverLetter}
                   onChange={handleInputChange}
                   rows={4}
                   maxLength={2000}
                 />
-                
 
                 {errors.coverLetter && (
                   <small className="error-text" style={{ display: 'block', marginTop: '5px' }}>
                     {errors.coverLetter}
                   </small>
                 )}
-              </div>
-              <div className="apply-form-edit" onClick={() => setEditableField("coverLetter")}>
-                <img src={FormEditIcon} alt="edit" />
               </div>
             </div>
 

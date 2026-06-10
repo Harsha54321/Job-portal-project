@@ -15,7 +15,7 @@ export const EHeader = () => {
     const { employershowNotification, setEmployerShowNotification, employerNotifications, chats = [] } = useJobs();
     const location = useLocation();
 
-    const newNotificationsCount = employerNotifications.filter(n => !n.is_read).length;
+    const newNotificationsCount = employerNotifications.filter(n => !n.isRead).length;
 
     const unreadMessagesCount = chats.filter(
         chat => (chat.unread_count || 0) > 0

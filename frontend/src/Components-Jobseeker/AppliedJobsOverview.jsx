@@ -243,7 +243,7 @@ export const AppliedJobsOverview = () => {
               ))}
             </ul>
 
-            <h3>Key Details:</h3>
+            {/* <h3>Key Details:</h3> */}
             <p><strong>Role:</strong> {viewJob.title}</p>
             <p><strong>Job Type:</strong> {viewJob.WorkType}</p>
             <p><strong>Location:</strong> {viewJob.location}</p>

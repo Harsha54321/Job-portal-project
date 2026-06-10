@@ -6,6 +6,7 @@ import experience from '../assets/opportunity_bag.png';
 import place from '../assets/opportunity_location.png';
 import { useJobs } from "../JobContext";
 import { useNavigate } from 'react-router-dom';
+import { LocationDisplay } from './LocationDisplay';
 
 export function formatPostedDate(dateString) {
     const postedDate = new Date(dateString);
@@ -65,17 +66,17 @@ export const OpportunitiesCard = ({ job }) => {
 
     console.log(job);
 
-    const formatLocation = (location) => {
+    // const formatLocation = (location) => {
 
-        if (!location) return "Location not specified";
+    //     if (!location) return "Location not specified";
 
-        if (Array.isArray(location)) {
-            return location.join(", ");
-        }
-        return location;
-    };
+    //     if (Array.isArray(location)) {
+    //         return location.join(", ");
+    //     }
+    //     return location;
+    // };
 
-    const locationDisplay = formatLocation(job.location);
+    // const locationDisplay = formatLocation(job.location);
 
     return (
         <div className="Opportunities-job-card">
@@ -104,9 +105,12 @@ export const OpportunitiesCard = ({ job }) => {
                 </div>
 
                 <div className="Opportunities-job-details">
-                    <p className='Opportunities-detail-line'><img src={time} className='card-icons' />{job.work_duration}<span className="Opportunities-divider">|</span>₹ {job.salary} Lpa</p>
-                    <p className='Opportunities-detail-line'><img src={experience} className='card-icons' />{job.experience} years of experience</p>
-                    <p className='Opportunities-detail-line'><img src={place} className='card-icons' />{locationDisplay}</p>
+                    <p className='Opportunities-detail-line'><img src={time} className='card-icons' />{job.work_duration}<span className="Opportunities-divider">|</span>₹ {job.salary}</p>
+                    <p className='Opportunities-detail-line'><img src={experience} className='card-icons' />{job.experience}</p>
+                    <div className='Opportunities-detail-line'>
+                        <img src={place} className='card-icons' alt="location" />
+                        <LocationDisplay locations={job.location} />
+                    </div>
                 </div>
 
                 <div className='Opportunities-details-bottom'>

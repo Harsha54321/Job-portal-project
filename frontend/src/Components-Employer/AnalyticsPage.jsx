@@ -1,4 +1,3 @@
-
 import React, { useMemo, useEffect, useState } from "react";
 import "./Analytics.css";
 import { Doughnut } from "react-chartjs-2";
@@ -14,37 +13,26 @@ export const AnalyticsPage = () => {
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // FIX: API call cheyataniki proper useEffect
   useEffect(() => {
     const fetchApplications = async () => {
       try {
         console.log("🔵 Fetching applications for analytics...");
-        const token = sessionStorage.getItem('access');
-        console.log("Token exists:", !!token);
-
         const response = await api.get('jobs/applications/');
-
         console.log("✅ Applications response:", response.data);
-        console.log("✅ Applications count:", response.data?.length);
-        console.log("FIRST APPLICATION:", response.data[0]);
-
         setApplications(response.data || []);
       } catch (error) {
         console.error("❌ Error fetching applications:", error);
-        console.error("Error details:", error.response?.data);
       } finally {
         setLoading(false);
       }
     };
-
     fetchApplications();
-  }, []); // Empty dependency array - runs once when component mounts
+  }, []);
 
-  // Debug: Print when component renders
   console.log("Analytics Page rendered, applications:", applications.length);
 
-  const months = [];
   const getRecentMonths = () => {
+    const months = [];
     const date = new Date();
     for (let i = 2; i >= 0; i--) {
       const d = new Date(date.getFullYear(), date.getMonth() - i, 1);
@@ -60,13 +48,24 @@ export const AnalyticsPage = () => {
     sep: "September", oct: "October", nov: "November", dec: "December"
   };
 
-  getRecentMonths();
+  const months = getRecentMonths();
+
+  const getFullMonthWithYear = (shortMonth, index) => {
+    const date = new Date();
+    const targetDate = new Date(date.getFullYear(), date.getMonth() - (2 - index), 1);
+    const fullMonth = monthsMap[shortMonth.toLowerCase()] || shortMonth;
+    const year = targetDate.getFullYear();
+    return `${fullMonth} ${year}`;
+  };
 
   const firstMonthFullName = monthsMap[months[0]?.toLowerCase()] || months[0];
   const secondMonthFullName = monthsMap[months[1]?.toLowerCase()] || months[1];
   const thirdMonthFullName = monthsMap[months[2]?.toLowerCase()] || months[2];
 
-  // Dynamic Line Chart Data
+  const firstMonthWithYear = getFullMonthWithYear(months[0], 0);
+  const secondMonthWithYear = getFullMonthWithYear(months[1], 1);
+  const thirdMonthWithYear = getFullMonthWithYear(months[2], 2);
+
   const dynamicLineData = useMemo(() => {
     const stages = [
       { key: "Total applicants", status: ["applied", "resume_screening", "recruiter_review", "shortlisted", "interview_called", "offered", "hired"] },
@@ -76,17 +75,26 @@ export const AnalyticsPage = () => {
     ];
 
     if (!applications.length) {
-      console.log("No applications, returning empty line data");
-      return [];
+      return stages.map(stage => ({
+        stage: stage.key,
+        [firstMonthFullName]: 0,
+        [secondMonthFullName]: 0,
+        [thirdMonthFullName]: 0
+      }));
     }
 
     const employerJobIds = currentEmployer?.jobPosted?.map(job => String(job.id)) || [];
+    const currentDate = new Date();
+    const targetYears = months.map((_, index) => {
+      return new Date(currentDate.getFullYear(), currentDate.getMonth() - (2 - index), 1).getFullYear();
+    });
 
     return stages.map(stage => {
       const row = { stage: stage.key };
 
       months.forEach((m, index) => {
         const monthLabel = index === 0 ? firstMonthFullName : index === 1 ? secondMonthFullName : thirdMonthFullName;
+        const targetYear = targetYears[index];
 
         let count = 0;
         applications.forEach(app => {
@@ -97,7 +105,8 @@ export const AnalyticsPage = () => {
 
           const appDate = new Date(app.applied_date);
           const appMonth = appDate.toLocaleString('default', { month: 'short' });
-          const isCorrectMonth = appMonth.toLowerCase() === m.toLowerCase();
+          const appYear = appDate.getFullYear();
+          const isCorrectMonth = appMonth.toLowerCase() === m.toLowerCase() && appYear === targetYear;
 
           if (isOurJob && isCorrectStatus && isCorrectMonth) {
             count++;
@@ -109,21 +118,22 @@ export const AnalyticsPage = () => {
 
       return row;
     });
-  }, [applications, currentEmployer, months]);
+  }, [applications, currentEmployer, months, firstMonthFullName, secondMonthFullName, thirdMonthFullName]);
 
-  // Doughnut Chart Data
   const dynamicStatusData = useMemo(() => {
     const counts = { progress: 0, reviewing: 0, done: 0 };
-
     if (!currentEmployer?.jobPosted) return [0, 0, 0];
 
-    const currentMonth = new Date().toLocaleString('default', { month: 'long' });
+    const currentDate = new Date();
+    const currentMonth = currentDate.toLocaleString('default', { month: 'long' });
+    const currentYear = currentDate.getFullYear();
 
     currentEmployer.jobPosted.forEach(job => {
       const postDate = new Date(job.created_at || job.posted_date);
       const postMonth = postDate.toLocaleString('default', { month: 'long' });
+      const postYear = postDate.getFullYear();
 
-      if (postMonth === currentMonth) {
+      if (postMonth === currentMonth && postYear === currentYear) {
         const jobStatus = (job.job_status || "").toLowerCase();
         if (jobStatus === "hiring in progress") counts.progress++;
         else if (jobStatus === "reviewing application") counts.reviewing++;
@@ -134,20 +144,22 @@ export const AnalyticsPage = () => {
     return [counts.progress, counts.reviewing, counts.done];
   }, [currentEmployer]);
 
-  // Experience Chart Data
   const experienceChartData = useMemo(() => {
     if (!applications.length) return [];
 
-
-
     const levels = ["16-20+", "11-15", "6-10", "1-5", "Fresher"];
     const employerJobIds = currentEmployer?.jobPosted?.map(job => String(job.id)) || [];
+    const currentDate = new Date();
+    const targetYears = months.map((_, index) => {
+      return new Date(currentDate.getFullYear(), currentDate.getMonth() - (2 - index), 1).getFullYear();
+    });
 
     return levels.map((level) => {
       const row = { level };
 
       months.forEach((m, index) => {
         const monthLabel = index === 0 ? firstMonthFullName : index === 1 ? secondMonthFullName : thirdMonthFullName;
+        const targetYear = targetYears[index];
         let count = 0;
 
         applications.forEach(app => {
@@ -156,24 +168,16 @@ export const AnalyticsPage = () => {
 
           const appDate = new Date(app.applied_date);
           const appMonth = appDate.toLocaleString('default', { month: 'short' });
-          if (appMonth.toLowerCase() !== m.toLowerCase()) return;
-
-
-          console.log("Full application:", app);
+          const appYear = appDate.getFullYear();
+          
+          if (appMonth.toLowerCase() !== m.toLowerCase() || appYear !== targetYear) return;
 
           let expYears = app.total_experience_years;
-        
-        // Handle null, undefined, or string values
-        if (expYears === null || expYears === undefined) {
-          expYears = 0;
-        } else {
-          expYears = parseFloat(expYears);
-        }
-
-        console.log("User:", app.user?.username, "Experience:", expYears);
-
-
-
+          if (expYears === null || expYears === undefined) {
+            expYears = 0;
+          } else {
+            expYears = parseFloat(expYears);
+          }
 
           let isInRange = false;
           if (level === "Fresher" && expYears === 0) isInRange = true;
@@ -190,11 +194,7 @@ export const AnalyticsPage = () => {
 
       return row;
     });
-
-
-
-
-  }, [applications, currentEmployer, months]);
+  }, [applications, currentEmployer, months, firstMonthFullName, secondMonthFullName, thirdMonthFullName]);
 
   const TriangleDot = (props) => {
     const { cx, cy, stroke } = props;
@@ -220,8 +220,39 @@ export const AnalyticsPage = () => {
     maintainAspectRatio: false,
     plugins: {
       legend: { display: false },
-      tooltip: { enabled: true }
+      tooltip: { 
+        enabled: true,
+        callbacks: {
+          label: function(context) {
+            const label = context.label || '';
+            const value = context.raw || 0;
+            return `${label}: ${value}`;
+          }
+        }
+      }
     }
+  };
+
+  const CustomTooltip = ({ active, payload, label }) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="custom-tooltip" style={{
+          backgroundColor: 'white',
+          padding: '10px',
+          border: '1px solid #ccc',
+          borderRadius: '4px',
+          boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+        }}>
+          <p style={{ margin: 0, fontWeight: 'bold' }}>{label}</p>
+          {payload.map((entry, index) => (
+            <p key={index} style={{ margin: '5px 0', color: entry.color }}>
+              {entry.name}: {entry.value}
+            </p>
+          ))}
+        </div>
+      );
+    }
+    return null;
   };
 
   if (loading) {
@@ -265,7 +296,7 @@ export const AnalyticsPage = () => {
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e0e0e0" />
               <XAxis dataKey="stage" tick={{ fontSize: 13, fill: "#333" }} />
               <YAxis tick={{ fontSize: 13, fill: "#333" }} />
-              <Tooltip />
+              <Tooltip content={<CustomTooltip />} />
               <Area type="monotone" dataKey={firstMonthFullName} stroke="#7b61ff" fill="url(#colorJan)" strokeWidth={2} dot={<TriangleDot stroke="#7b61ff" />} />
               <Area type="monotone" dataKey={secondMonthFullName} stroke="#ff6b6b" fill="url(#colorFeb)" strokeWidth={2} dot={<TriangleDot stroke="#ff6b6b" />} />
               <Area type="monotone" dataKey={thirdMonthFullName} stroke="#00bcd4" fill="url(#colorMar)" strokeWidth={2} dot={<TriangleDot stroke="#00bcd4" />} />
@@ -302,7 +333,7 @@ export const AnalyticsPage = () => {
                 <CartesianGrid strokeDasharray="3 3" horizontal vertical stroke="#e0e0e0" opacity={0.5} />
                 <XAxis type="number" hide />
                 <YAxis dataKey="level" type="category" tick={{ fontSize: 14, fontWeight: "500" }} width={70} />
-                <Tooltip cursor={{ fill: 'transparent' }} />
+                <Tooltip content={<CustomTooltip />} cursor={{ fill: 'transparent' }} />
                 <Bar dataKey={firstMonthFullName} fill="#7b61ff" radius={[0, 10, 10, 0]} barSize={10}>
                   <LabelList dataKey={firstMonthFullName} position="right" />
                 </Bar>
@@ -314,10 +345,20 @@ export const AnalyticsPage = () => {
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
+            {/* FIXED: Legend colors now match chart bars exactly */}
             <div className="custom-legend-horizontal">
-              <div className="legend-item"><span className="square purple"></span> {months[0]}</div>
-              <div className="legend-item"><span className="square green"></span> {months[1]}</div>
-              <div className="legend-item"><span className="square mar"></span> {months[2]}</div>
+              <div className="legend-item">
+                <span className="square" style={{ backgroundColor: "#7b61ff" }}></span> 
+                {months[0]}
+              </div>
+              <div className="legend-item">
+                <span className="square" style={{ backgroundColor: "#ff6b6b" }}></span> 
+                {months[1]}
+              </div>
+              <div className="legend-item">
+                <span className="square" style={{ backgroundColor: "#00bcd4" }}></span> 
+                {months[2]}
+              </div>
             </div>
             <p className="chart-label">Experience Levels of Applicants</p>
           </div>

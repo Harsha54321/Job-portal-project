@@ -56,6 +56,22 @@ export const Jlogin = () => {
       }));
       setRememberMe(true);
     }
+
+    // Check for redirect from sessionStorage (from footer before login)
+    const redirectPath = sessionStorage.getItem("redirectAfterLogin");
+    const redirectTab = sessionStorage.getItem("redirectTab");
+    
+    if (redirectPath && redirectTab) {
+      // Store in location state for after login
+      window.history.replaceState(
+        { 
+          ...location.state, 
+          intendedPath: redirectPath, 
+          targetTab: redirectTab 
+        }, 
+        ''
+      );
+    }
   }, []);
 
   const handleForm = (e) => {
@@ -130,7 +146,9 @@ export const Jlogin = () => {
           fromSearch: location.state?.fromSearch || false,
           searchQuery: location.state?.searchQuery || "",
           searchLocation: location.state?.searchLocation || "",
-          searchExperience: location.state?.searchExperience || ""
+          searchExperience: location.state?.searchExperience || "",
+          intendedPath: location.state?.intendedPath || sessionStorage.getItem("redirectAfterLogin"),
+          targetTab: location.state?.targetTab || sessionStorage.getItem("redirectTab")
         }
       });
     } catch (error) {
@@ -197,7 +215,9 @@ export const Jlogin = () => {
           fromSearch: location.state?.fromSearch || false,
           searchQuery: location.state?.searchQuery || "",
           searchLocation: location.state?.searchLocation || "",
-          searchExperience: location.state?.searchExperience || ""
+          searchExperience: location.state?.searchExperience || "",
+          intendedPath: location.state?.intendedPath || sessionStorage.getItem("redirectAfterLogin"),
+          targetTab: location.state?.targetTab || sessionStorage.getItem("redirectTab")
         }
       });
 
@@ -214,6 +234,32 @@ export const Jlogin = () => {
   };
 
   const getRedirectAfterLogin = () => {
+    // First priority: Check for intendedPath from footer click
+    if (location.state?.intendedPath) {
+      return {
+        type: "redirect",
+        path: location.state.intendedPath,
+        targetTab: location.state.targetTab || "saved"
+      };
+    }
+    
+    // Second priority: Check sessionStorage (from footer before login)
+    const redirectPath = sessionStorage.getItem("redirectAfterLogin");
+    const redirectTab = sessionStorage.getItem("redirectTab");
+    
+    if (redirectPath) {
+      // Clear sessionStorage after reading
+      sessionStorage.removeItem("redirectAfterLogin");
+      sessionStorage.removeItem("redirectTab");
+      
+      return {
+        type: "redirect",
+        path: redirectPath,
+        targetTab: redirectTab || "saved"
+      };
+    }
+
+    // Third priority: Check from search
     if (location.state?.fromSearch) {
       return {
         type: "search",
@@ -225,12 +271,11 @@ export const Jlogin = () => {
       };
     }
 
-    sessionStorage.removeItem("pendingSearch");
-    sessionStorage.removeItem("savedSearch");
-
+    // Default redirect
     return {
       type: "redirect",
-      path: redirectTo
+      path: redirectTo,
+      targetTab: "Profile"
     };
   };
   const handleSubmit = async (e) => {
@@ -283,6 +328,8 @@ export const Jlogin = () => {
         if (nextStep.type === "search") {
           sessionStorage.removeItem('pendingSearch');
           sessionStorage.removeItem('savedSearch');
+          sessionStorage.removeItem("redirectAfterLogin");
+          sessionStorage.removeItem("redirectTab");
 
           navigate('/Job-portal/jobseeker/searchresults', {
             replace: true,
@@ -293,10 +340,14 @@ export const Jlogin = () => {
             }
           });
         } else {
-          navigate(location.state?.intendedPath || nextStep.path, {
+          // Clear sessionStorage for redirect only
+          sessionStorage.removeItem("redirectAfterLogin");
+          sessionStorage.removeItem("redirectTab");
+          
+          navigate(nextStep.path, {
             replace: true,
             state: {
-              targetTab: location.state?.targetTab || "Profile"
+              activeTab: nextStep.targetTab
             }
           });
         }

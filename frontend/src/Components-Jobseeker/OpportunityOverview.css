@@ -265,3 +265,113 @@ ul {
 .opp-socials-icon {
   cursor: pointer;
 }
+
+/* Show More Link */
+.opp-show-more-link {
+  color: #1E88E5;
+  font-weight: 600;
+  cursor: pointer;
+  margin-left: 4px;
+}
+
+.opp-show-more-link:hover {
+  text-decoration: underline;
+  color: #1565c0;
+}
+
+/* Location Modal Overlay */
+.opp-loc-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(2px);
+}
+
+/* Location Modal Content */
+.opp-loc-modal-content {
+  background: #fff;
+  width: 90%;
+  max-width: 550px;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.opp-loc-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #eaeaea;
+}
+
+.opp-loc-modal-header h3 {
+  margin: 0;
+  color: #032240;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.opp-loc-modal-close {
+  background: none;
+  border: none;
+  font-size: 28px;
+  line-height: 1;
+  color: #83858B;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.opp-loc-modal-close:hover {
+  color: #d32f2f;
+}
+
+/* Modal Body - Tags layout */
+.opp-loc-modal-body {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  max-height: 350px;
+  overflow-y: auto;
+  padding-right: 5px;
+}
+
+.opp-loc-modal-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.opp-loc-modal-body::-webkit-scrollbar-thumb {
+  background-color: #cfd4da;
+  border-radius: 4px;
+}
+
+/* Individual Location Chips */
+.opp-loc-chip {
+  background-color: #f4f6f8;
+  border: 1px solid #d9e1ec;
+  color: #032240;
+  padding: 8px 14px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.location-text-wrap {
+  white-space: normal;
+  word-break: break-word;
+  line-height: 1.5;
+}
