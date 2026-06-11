@@ -134,7 +134,7 @@ const handleEditStatusClick = () => {
                             <th>CATEGORY</th>
                             <th style={{paddingLeft:"40px"}}>PRIORITY</th>
                             <th>RECEIVED at</th>
-                            <th>RESOLVED on</th>
+                            <th>STATUS</th>
                             <th>ACTION</th>
                         </tr>
                     </thead>

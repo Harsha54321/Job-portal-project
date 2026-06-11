@@ -132,7 +132,8 @@ from .views import (
     ContactMessageListAPIView,
     AdminUpdateJobStatusView,
     CurrentUserView,
-    EmployerForgotPasswordView
+    EmployerForgotPasswordView,
+    LogoutView,
     
 
     # REMOVED: Company-related view imports (CompanyListView, CompanyDetailView, etc.)
@@ -406,5 +407,8 @@ urlpatterns = [
     path('blog-categories/', BlogCategoryListCreateView.as_view(), name='blog-category-list-create'),
     path('blog-categories/<int:pk>/', BlogCategoryDetailView.as_view(), name='blog-category-detail'),
     path('blog-stats/', BlogStatsView.as_view(), name='blog-stats'),
+
+    #Sessiontimout
+    path('logout/', LogoutView.as_view(), name='logout'),
 
 ]

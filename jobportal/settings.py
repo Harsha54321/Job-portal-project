@@ -156,8 +156,7 @@ CORS_ALLOWED_ORIGINS = [
     "http://54.183.89.14"
    
 ]
- 
- 
+
  
  
 ROOT_URLCONF = 'jobportal.urls'
@@ -273,6 +272,8 @@ SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
     'AUTH_HEADER_TYPES': ('Bearer',),
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True,
 }
  
 CHANNEL_LAYERS = {

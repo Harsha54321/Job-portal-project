@@ -131,7 +131,7 @@ export const Enquiries = () => {
                         onClick={() => setSelectedEnquiry(null)}
                         disabled={actionLoading}
                     >
-                        Back to Contact Us
+                        Back
                     </button>
                     <button 
                         className="enq-delete-action-btn" 
@@ -289,8 +289,8 @@ export const Enquiries = () => {
         <div className="Enquiries-container">
             <div className="Enquiries-header" style={{ marginTop: '30px' }}>
                 <div>
-                    <h2>Newly received enquiry</h2>
-                    <p>List of newly received enquiries on this portal</p>
+                    <h2>Received Enquiries</h2>
+                    <p>List of newly received enquiries on this portal(contact us)</p>
                 </div>
                 {/* <button 
                     onClick={() => fetchEnquiries()} 

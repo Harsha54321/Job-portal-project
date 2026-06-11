@@ -68,7 +68,7 @@ export const Jforgotpassword = () => {
   return (
     <div className="j-forgot-password-page">
       <header className="j-forgot-password-header">
-        <Link to="/Job-portal" className="logo">
+        <Link to="/" className="logo">
           <span className="logo-text">Job portal</span>
         </Link>
         <div className="j-forgot-password-header-links">

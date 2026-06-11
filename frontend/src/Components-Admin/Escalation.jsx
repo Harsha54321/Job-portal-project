@@ -329,7 +329,7 @@ export const Escalation = () => {
         <div className="RepAJob-container">
             <div className="RepAJob-header">
                 <div>
-                    <h2>Newly received reports</h2>
+                    <h2>Received Reports</h2>
                     <p>List of newly received reports for the job</p>
                 </div>
                 {/* ✅ Refresh button */}

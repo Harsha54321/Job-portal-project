@@ -1,4 +1,5 @@
 import React from 'react'
+import useInactivityLogout from './useInactivityLogout'
 import './App.css'
 import { createBrowserRouter, RouterProvider, Outlet } from 'react-router-dom'
 import { Landingpage } from './Landingpage'
@@ -72,15 +73,14 @@ import { BlogDatas } from './Components-LandingPage/BlogDatas'
 /* ---------- LAYOUT ---------- */
 
 const Layout = () => {
-
+  useInactivityLogout()
+ 
   return (
-    <>
-      <ScrollToTop />
-      <Outlet />
-    </>
-
+<>
+<ScrollToTop />
+<Outlet />
+</>
   )
-
 }
 
 

@@ -10048,4 +10048,46 @@ class BlogStatsView(APIView):
             'drafts':    Blog.objects.filter(status='Draft', is_deleted=False).count(),
             'trash':     Blog.objects.filter(is_deleted=True).count(),
         })
+
+
+# ============================================================
+# FILE: jobapp/views.py  (ADD this class — already exists,
+#       shown here for clarity. Your current LogoutView is
+#       already correct. No changes needed on the backend.)
+# ============================================================
  
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from rest_framework.permissions import IsAuthenticated
+from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework.exceptions import ValidationError
+ 
+ 
+class LogoutView(APIView):
+    """
+    POST /api/logout/
+    Body: { "refresh": "<refresh_token>" }
+    Header: Authorization: Bearer <access_token>
+ 
+    Blacklists the refresh token so it can never be reused.
+    Called automatically by the frontend after 10 min inactivity.
+    """
+    permission_classes = [IsAuthenticated]
+ 
+    def post(self, request):
+        try:
+            refresh_token = request.data.get("refresh")
+            if not refresh_token:
+                raise ValidationError("Refresh token is required.")
+            token = RefreshToken(refresh_token)
+            token.blacklist()
+            return Response(
+                {"message": "Logged out successfully"},
+                status=status.HTTP_200_OK
+            )
+        except Exception as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )

@@ -287,7 +287,6 @@ export const AdminDashboard = () => {
                                 </div>
                             </div>
 
-                            // ✅ REPLACE WITH
                             <div onClick={() => setActiveTab('Blog Post')} className={activetab === "Blog Post" ? "Admin-Active" : 'Admin-Navbar'}>
                                 <div className='Admin-Navbox'>
                                     {activetab === "Blog Post" ? <img src={BlogpostAct} width={15} height={15} alt="blog" />
@@ -620,7 +619,6 @@ export const AdminDashboard = () => {
                     {activetab === 'SupportHub' && (<SupportHub />)}
                     {activetab === 'settings' && (<AdminSettings />)}
                     {activetab === 'Blog Post' && (<AdminBlogPost />)}
-
                     {activetab === 'Highlighted Jobs' && (
                         <HighligtedJobs highlightedJobsData={dashboardData.highlighted_jobs} />
                     )}

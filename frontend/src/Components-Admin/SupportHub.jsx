@@ -22,7 +22,7 @@ export const SupportHub = () => {
                 <button className={`Ad-Settings-select ${activeTab === "Escalation" ? "Ad-Settings-active" : ""}`}
                     onClick={() => setActiveTab("Escalation")}
                 >
-                    Escalation         {/* Escalation,Fraud Reports,Complaints,Flagged jobs, */}
+                    Reports
                 </button>
 
                 <button className={`Ad-Settings-select ${activeTab === "Enquiries" ? "Ad-Settings-active" : ""}`}
