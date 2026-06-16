@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import './AdminBlogPost.css';
+import './AdminBlogpost.css';
 import Trash from '../assets/AdminAssets/TrashIcon.png';
 import Filter from '../assets/AdminAssets/Filter.png';
 import Drafts from '../assets/AdminAssets/Draft.png';

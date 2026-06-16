@@ -1,4 +1,3 @@
-import React from 'react'
 import useInactivityLogout from './useInactivityLogout'
 import './App.css'
 import { createBrowserRouter, RouterProvider, Outlet } from 'react-router-dom'
@@ -69,17 +68,28 @@ import { AdminLogin } from './Components-Admin/AdminLogin'
 import { AdminDashboard } from './Components-Admin/AdminDashboard'
 import { ViewAllBlogs } from './Components-LandingPage/ViewallBlogs'
 import { BlogDatas } from './Components-LandingPage/BlogDatas'
+import { Aforgotpassword } from './Components-Admin/Aforgotpassword'
+import { Acreatepassword } from './Components-Admin/Acreatepassword'
+import React, { useEffect } from 'react'
+import { requestAndRegisterNotificationPermission, listenForForegroundMessages } from "./firebaseTokenHandler";
 
 /* ---------- LAYOUT ---------- */
 
 const Layout = () => {
   useInactivityLogout()
- 
+  useEffect(() => {
+    const token = sessionStorage.getItem("access");
+    if (token) {
+      requestAndRegisterNotificationPermission();
+      listenForForegroundMessages();
+    }
+  }, []);
+
   return (
-<>
-<ScrollToTop />
-<Outlet />
-</>
+    <>
+      <ScrollToTop />
+      <Outlet />
+    </>
   )
 }
 
@@ -99,7 +109,7 @@ const router = createBrowserRouter([
         path: '/Job-portal/role-selection',
         element: <RoleLanding />,
       },
-      
+
       {
 
         path: '/Job-portal/jobseeker',
@@ -161,7 +171,7 @@ const router = createBrowserRouter([
               { path: 'Technology', element: <TechnologyBlog /> },
 
               { path: 'BlogDatas/:title', element: <BlogDatas /> },
-              
+
               { path: 'view-all/:category', element: <ViewAllBlogs /> },
 
             ]
@@ -323,12 +333,13 @@ const router = createBrowserRouter([
 
       },
       {
-        path: '/Job-portal/Admin/login',
-        element: <AdminLogin />,
-      },
-      {
-        path: '/Job-portal/Admin/Dashboard',
-        element: <AdminDashboard />,
+        path: '/Job-portal/Admin',
+        children: [
+          { path: 'login', element: <AdminLogin /> },
+          { path: 'login/forgotpassword', element: <Aforgotpassword /> },
+          { path: 'login/forgotpassword/createpassword', element: <Acreatepassword /> },
+          { path: 'Dashboard', element: <AdminDashboard /> },
+        ]
       },
     ]
 

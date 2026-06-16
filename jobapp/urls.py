@@ -128,12 +128,16 @@ from .views import (
     AdminQuietHoursUpdateView,
     NotificationChannelSettingsView,
     NotificationChannelSettingsUpdateView,
+    RegisterDeviceTokenView,
     NotificationPreferenceListView,
     ContactMessageListAPIView,
     AdminUpdateJobStatusView,
     CurrentUserView,
     EmployerForgotPasswordView,
     LogoutView,
+    AdminForgotPasswordView,
+    AdminResetPasswordConfirmView,
+    EmployerRegistrationSettingsView,
     
 
     # REMOVED: Company-related view imports (CompanyListView, CompanyDetailView, etc.)
@@ -220,6 +224,8 @@ urlpatterns = [
     path('auth/create-password/', CreatePasswordView.as_view(), name='create-password'),
     path('auth/validate-reset-token/', ValidateResetTokenView.as_view(), name='validate-reset-token'),
     path('admin/create-password-token/', AdminCreatePasswordTokenView.as_view(), name='admin-create-password-token'),
+    path('auth/admin/forgot-password/', AdminForgotPasswordView.as_view(), name='admin-forgot-password'),
+    path('auth/admin/reset-password-confirm/', AdminResetPasswordConfirmView.as_view(), name='admin-reset-password-confirm'),
     
     # raise ticket
      # CREATE TICKET
@@ -360,6 +366,11 @@ urlpatterns = [
  
     path("notification-channels/",NotificationChannelSettingsView.as_view(),name="notification-channels"),
     path("notification-channels/update/",NotificationChannelSettingsUpdateView.as_view(),name="notification-channels-update"),
+    path(
+        "devices/register/",
+        RegisterDeviceTokenView.as_view(),
+        name="register-device-token"
+    ),
 
 
 
@@ -390,6 +401,7 @@ urlpatterns = [
 
     path("employer-settings/<int:plan_id>/<str:account_status>/",EmployerPlatformSettingsView.as_view()),
     path('employer/weekly-summary/',EmployerWeeklySummaryView.as_view(),name='employer-weekly-summary'),
+    path('employer-registration-settings/',EmployerRegistrationSettingsView.as_view(),name='employer-registration-settings'),
 
     # jobseekersetting
     path('jobseeker/settings/',JobseekerPlatformSettingsView.as_view(),name='jobseeker-platform-settings'),

@@ -51,6 +51,7 @@ export const Footer = () => {
             <li><span onClick={() => navigate('/Job-portal/jobseeker/ContactUs')}>Contact Us</span></li>
             <li><span onClick={() => { navigate('/Job-portal/jobseeker/FAQ') }} >FAQs</span></li>
             <li><span onClick={() => { navigate('/Job-portal/jobseeker/Blogs') }}>Blog</span></li>
+            <li><span onClick={() => { navigate('/Job-portal/jobseeker/help-center') }}>HelpCenter</span></li>
           </ul>
         </div>
  

@@ -709,26 +709,23 @@ class NotificationService:
             allow_email = False
             allow_sms = False
             allow_push = False
-
+        
         # =================================================
-        # ALWAYS CREATE DATABASE NOTIFICATION
+        # CREATE IN-APP NOTIFICATION ONLY IF ENABLED
         # =================================================
-
-        notification = Notification.objects.create(
-            user=recipient,
-            title=title,
-            message=message,
-            category=category,
-            event_type=event_type,
-            notification_type=notification_type,
-            related_object_id=related_object_id
-        )
-
-        # =================================================
-        # IN-APP LOGGING
-        # =================================================
-
+        notification = None
         if allow_inapp:
+
+            notification = Notification.objects.create(
+                user=recipient,
+                title=title,
+                message=message,
+                category=category,
+                event_type=event_type,
+                notification_type=notification_type,
+                related_object_id=related_object_id
+
+            )
 
             NotificationService._log_delivery(
                 notification=notification,
@@ -739,12 +736,9 @@ class NotificationService:
 
         else:
 
-            NotificationService._log_delivery(
-                notification=notification,
-                recipient=recipient,
-                channel='inapp',
-                status_value='skipped',
-                reason='In-app notifications disabled'
+            logger.info(
+                "INAPP DISABLED | user=%s",
+                recipient.id
             )
 
         # =================================================
@@ -893,8 +887,14 @@ class NotificationService:
                     else ""
                 ),
 
-                "notification_id": (
-                    str(notification.id)
+                "notification_id": ( 
+                str(notification.id)
+
+            if notification is not None
+
+    else ""
+ 
+                    
                 ),
             }
 
@@ -985,10 +985,11 @@ class NotificationService:
                 reason='Push notifications disabled'
             )
 
-        logger.info(
-            "NOTIFICATION COMPLETED | user=%s | notification_id=%s",
-            recipient.id,
-            notification.id
-        )
+        # logger.info(
+        #     "NOTIFICATION COMPLETED | user=%s | notification_id=%s",
+        #     recipient.id,
+        #     notification.id
+        # )
+        
 
         return notification

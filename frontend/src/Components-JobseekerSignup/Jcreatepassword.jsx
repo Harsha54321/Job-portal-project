@@ -12,6 +12,7 @@ export const Jcreatepassword = () => {
 
   const [passwordShow, setPasswordShow] = useState(true)
   const [confirmPasswordShow, setconfirmPasswordShow] = useState(true)
+  const [loading, setLoading] = useState(false)
 
   const navigate = useNavigate();
 
@@ -28,14 +29,14 @@ export const Jcreatepassword = () => {
   const [formValues, setFormValues] = useState(initialValues)
   const [errors, setErrors] = useState({})
 
-
   const handleForm = (e) => {
     const { name, value } = e.target
     setFormValues({ ...formValues, [name]: value })
     setErrors({ ...errors, [name]: "" })
   }
 
-  const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*])[A-Za-z\d!@#$%^?&*]{8,}$/
+  // ✅ FIXED: Updated regex to require all 4 types
+  const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*])[A-Za-z\d!@#$%^&*]{8,}$/
 
   const validateForm = () => {
     const newErrors = {}
@@ -45,8 +46,7 @@ export const Jcreatepassword = () => {
     } else if (formValues.newPassword.length < 8) {
       newErrors.newPassword = "Password must be at least 8 characters"
     } else if (!passwordRegex.test(formValues.newPassword)) {
-      newErrors.newPassword =
-        "Password must be at least 8 characters long, with uppercase, lowercase, a number, and a special";;
+      newErrors.newPassword = "Password must contain at least one lowercase letter, one uppercase letter, one number, and one special character"
     }
 
     if (!formValues.confirmPassword.trim()) {
@@ -62,12 +62,12 @@ export const Jcreatepassword = () => {
   }
 
   
-  const location = useLocation(); //location
+  const location = useLocation();
 
   // for token validation
   useEffect(()=>{
-    const queryParams        = new URLSearchParams(location.search);
-    const tokenFromURL       = queryParams.get('token');
+    const queryParams = new URLSearchParams(location.search);
+    const tokenFromURL = queryParams.get('token');
 
     if(tokenFromURL){
       validateToken(tokenFromURL);
@@ -77,24 +77,23 @@ export const Jcreatepassword = () => {
   //validate's the token
   const validateToken = async (tokenString) => {
     try {
-       const data = await api.post('auth/validate-reset-token/',
-        {token : tokenString,} // object
+       await api.post('auth/validate-reset-token/',
+        {token : tokenString}
       )
     } catch (error) {
       alert('Invalid token or expired token')
     }
   }
 
-  // reset password integretion
-
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const queryParams        = new URLSearchParams(location.search);
-    const tokenFromURL       = queryParams.get('token');
+    const queryParams = new URLSearchParams(location.search);
+    const tokenFromURL = queryParams.get('token');
     if (!validateForm()) {
       return false
     }
+    setLoading(true)
     try {
       const res = await api.post('auth/reset-password-confirm/',
       { token : tokenFromURL,
@@ -106,6 +105,7 @@ export const Jcreatepassword = () => {
      navigate("/Job-portal/jobseeker/login")
 
     } catch (error) {
+      setLoading(false)
       alert('Invalid token or expired token')
       }
     }
@@ -148,7 +148,9 @@ export const Jcreatepassword = () => {
           </div>
           {errors.confirmPassword && <span className="error-msg">{errors.confirmPassword}</span>}
 
-          <button type='submit' className="j-reset-link-btn">Reset Password</button>
+          <button type='submit' className="j-reset-link-btn" disabled={loading}>
+            {loading ? "Resetting..." : "Reset Password"}
+          </button>
 
           <div className='center-div-text'>
             <p>Remember your password? <Link to="/Job-portal/jobseeker/login" className='j-password-form-login-link'>Login</Link></p>

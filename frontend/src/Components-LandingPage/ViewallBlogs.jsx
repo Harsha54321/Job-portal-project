@@ -2,7 +2,7 @@ import React from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Header } from '../Components-LandingPage/Header';
 import { Footer } from '../Components-LandingPage/Footer';
-import './Blogpage.css'; 
+import './BlogPage.css'; 
 import { BlogCard } from './BlogPage';
 
 export const ViewAllBlogs = () => {

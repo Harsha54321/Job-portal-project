@@ -5,6 +5,7 @@ import manSitting from "../assets/Illustration_1.png";
 import eye from "../assets/show_password.png";
 import eyeHide from "../assets/eye-hide.png";
 import "./Elogin.css";
+import { requestAndRegisterNotificationPermission } from "../firebaseTokenHandler";
 
 export const Elogin = () => {
   const navigate = useNavigate();
@@ -42,15 +43,32 @@ export const Elogin = () => {
     setErrors({ ...errors, [name]: "", general: "" });
   };
 
+  // Email validation regex
+  const validateEmail = (email) => {
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    return emailRegex.test(email);
+  };
+
+  // Password validation - at least 6 characters
+  const validatePassword = (password) => {
+    return password && password.trim().length >= 6;
+  };
+
   const validateForm = () => {
     const newErrors = {};
 
+    // Username/Email validation
     if (!formValues.username.trim()) {
       newErrors.username = "Username or Email is required";
+    } else if (!validateEmail(formValues.username)) {
+      newErrors.username = "Please enter a valid email address";
     }
 
+    // Password validation
     if (!formValues.password.trim()) {
       newErrors.password = "Password is required";
+    } else if (!validatePassword(formValues.password)) {
+      newErrors.password = "Password must be at least 6 characters";
     }
 
     setErrors(newErrors);
@@ -63,6 +81,7 @@ export const Elogin = () => {
       console.log("🔍 Checking onboarding status after login...");
       
       const response = await api.get('/employer/onboarding-status/');
+      requestAndRegisterNotificationPermission();
       console.log("Onboarding status:", response.data);
 
       const { has_company_profile, has_verification, verification_status } = response.data;
@@ -83,7 +102,6 @@ export const Elogin = () => {
         return;
       }
 
-      // If fully onboarded, check if they came from a deep footer link
       const intendedPath = location.state?.intendedPath || '/Job-portal/employer/dashboard';
       const targetTab = location.state?.targetTab || 'Dashboard';
       const fromFooter = location.state?.fromFooter || false;
@@ -131,7 +149,9 @@ export const Elogin = () => {
       console.log("Login response:", res.data);
 
       if (res.data.user.user_type !== 'employer') {
-        setErrors({ general: "Only employer credentials should be used here" });
+        setErrors({ 
+          username: "Invalid credentials. This login is only for Employer users."
+        });
         setLoading(false);
         return;
       }
@@ -165,70 +185,68 @@ export const Elogin = () => {
       await checkAndRedirect();
 
     } catch (err) {
-      console.error("Login error context:", err);
-
+      console.error("Login error:", err);
+      
       const newErrors = {};
       const errorData = err.response?.data;
       
-      // --- FIXED LOOKUP FOR INTERCEPTING ACTIVE/HOLD LIFECYCLE ERRORS ---
-      const backendMessage = errorData?.detail || errorData?.message || "";
-      const isInactive = errorData?.account_inactive || backendMessage.toLowerCase().includes("inactive") || backendMessage.toLowerCase().includes("approval") || backendMessage.toLowerCase().includes("hold");
-
-      if (isInactive) {
-        alert("Your user authentication profile is verified, but access is currently restricted pending active profile verification steps. Redirecting to setup...");
+      if (err.response?.status === 401) {
+        const errorMessage = errorData?.detail || errorData?.message || "";
         
-        // Push tokenless state context variables directly back into profile flow loop!
-        navigate('/Job-portal/Employer/about-your-company', {
-          state: { fromSignup: false, employerEmail: formValues.username }
-        });
-        return;
+        if (errorMessage && (errorMessage.toLowerCase().includes("password") || errorMessage.toLowerCase().includes("incorrect"))) {
+          newErrors.password = "Incorrect password. Please try again.";
+        } else if (errorMessage && (errorMessage.toLowerCase().includes("no account") || errorMessage.toLowerCase().includes("not found"))) {
+          newErrors.username = "No account found with this email address.";
+        } else {
+          newErrors.password = "Incorrect password. Please try again.";
+        }
       }
-      // -----------------------------------------------------------------
-
-      if (err.response?.data?.detail) {
-        const detail = err.response.data.detail;
-
-        if (Array.isArray(detail) && (detail[0] === "jobseeker_portal" || detail === "jobseeker_portal")) {
-          newErrors.general = "Access denied. Please use the Job Seeker login.";
-        }
-        else if (Array.isArray(detail) && detail[0].toLowerCase().includes('password')) {
-          newErrors.password = detail[0];
-        }
-        else if (Array.isArray(detail) && (detail[0].toLowerCase().includes('account') || detail[0].toLowerCase().includes('found'))) {
-          newErrors.username = detail[0];
-        }
-        else if (Array.isArray(detail)) {
-          newErrors.general = detail[0];
-        } else if (typeof detail === 'string') {
-          if (detail.toLowerCase().includes('password')) {
-            newErrors.password = detail;
-          } else if (detail.toLowerCase().includes('account') || detail.toLowerCase().includes('found')) {
-            newErrors.username = detail;
-          } else {
-            newErrors.general = detail;
+      else if (err.response?.status === 400) {
+        if (errorData?.detail) {
+          const detail = errorData.detail;
+          const detailStr = Array.isArray(detail) ? detail[0] : detail;
+          
+          if (detailStr && detailStr.toLowerCase().includes("password") && detailStr.toLowerCase().includes("incorrect")) {
+            newErrors.password = "Incorrect password. Please try again.";
+          }
+          else if (detailStr && (detailStr.toLowerCase().includes("no account") || detailStr.toLowerCase().includes("not found"))) {
+            newErrors.username = "No account found with this email address.";
+          }
+          else if (detailStr && detailStr.toLowerCase().includes("jobseeker")) {
+            newErrors.username = "Invalid credentials. This login is only for Employer users.";
+          }
+          else {
+            newErrors.general = detailStr;
           }
         }
+        else if (errorData?.non_field_errors) {
+          const errorMsg = Array.isArray(errorData.non_field_errors) ? errorData.non_field_errors[0] : errorData.non_field_errors;
+          if (errorMsg && errorMsg.toLowerCase().includes("password")) {
+            newErrors.password = "Incorrect password. Please try again.";
+          } else if (errorMsg && (errorMsg.toLowerCase().includes("account") || errorMsg.toLowerCase().includes("found"))) {
+            newErrors.username = "No account found with this email address.";
+          } else {
+            newErrors.general = errorMsg;
+          }
+        }
+        else if (errorData?.email) {
+          const emailError = Array.isArray(errorData.email) ? errorData.email[0] : errorData.email;
+          newErrors.username = emailError;
+        }
+        else if (errorData?.password) {
+          const passwordError = Array.isArray(errorData.password) ? errorData.password[0] : errorData.password;
+          newErrors.password = passwordError;
+        }
+        else {
+          newErrors.general = "Invalid email or password";
+        }
       }
-
-      if (err.response?.data?.email) {
-        newErrors.username = Array.isArray(err.response.data.email) ? err.response.data.email[0] : err.response.data.email;
+      // Handle 404 - User not found
+      else if (err.response?.status === 404) {
+        newErrors.username = "No account found with this email address.";
       }
-
-      if (err.response?.data?.username) {
-        newErrors.username = Array.isArray(err.response.data.username) ? err.response.data.username[0] : err.response.data.username;
-      }
-
-      if (err.response?.data?.password) {
-        newErrors.password = Array.isArray(err.response.data.password) ? err.response.data.password[0] : err.response.data.password;
-      }
-
-      if (err.response?.data?.non_field_errors) {
-        const nonFieldError = Array.isArray(err.response.data.non_field_errors) ? err.response.data.non_field_errors[0] : err.response.data.non_field_errors;
-        newErrors.general = nonFieldError;
-      }
-
-      if (Object.keys(newErrors).length === 0) {
-        newErrors.general = "Invalid email or password";
+      else {
+        newErrors.general = "Something went wrong. Please try again.";
       }
 
       setErrors(newErrors);
@@ -296,14 +314,14 @@ export const Elogin = () => {
           {errors.password && <span className="error-msg">{errors.password}</span>}
 
           <div className="form-options">
-            <label>
+            <label className="remember-me-label">
               <input
                 type="checkbox"
                 checked={rememberMe}
                 onChange={handleRememberMeChange}
                 disabled={loading}
               />
-              Remember me
+              <span>Remember me</span>
             </label>
             <Link to="/Job-portal/employer/login/forgotpassword" className="forgot-password">
               Forgot Password?

@@ -8,6 +8,50 @@ import './Membership.css';
 import { useJobs } from '../JobContext';
 import api from '../api/axios';
 
+
+// Simple Watermark Tooltip Component
+const WatermarkTooltip = ({ text, children }) => {
+  const [show, setShow] = useState(false);
+
+  return (
+    <div
+      style={{ position: 'relative', display: 'inline-block' }}
+      onMouseEnter={() => setShow(true)}
+      onMouseLeave={() => setShow(false)}
+    >
+      {children}
+      {show && (
+        <div style={{
+          position: 'absolute',
+          bottom: '100%',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          marginBottom: '8px',
+          background: '#1e293b',
+          color: '#fff',
+          padding: '6px 12px',
+          borderRadius: '6px',
+          fontSize: '12px',
+          whiteSpace: 'nowrap',
+          zIndex: 1000,
+          pointerEvents: 'none',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
+        }}>
+          {text}
+          <div style={{
+            position: 'absolute',
+            top: '100%',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            border: '5px solid transparent',
+            borderTopColor: '#1e293b'
+          }}></div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 export const PublishedPlans = () => {
   const [selectedPlanId, setSelectedPlanId] = useState(null);
   const [editPlan, setEditPlan] = useState(null);
@@ -21,7 +65,7 @@ export const PublishedPlans = () => {
 
   const getAdminToken = () => {
     return (
-      sessionStorage.getItem("access") || 
+      sessionStorage.getItem("access") ||
       sessionStorage.getItem("token") ||
       sessionStorage.getItem("admin_token") ||
       localStorage.getItem("access_token") ||
@@ -84,7 +128,7 @@ export const PublishedPlans = () => {
 
   const calculateTotalPayable = (basePrice, tax) => {
     let price = parseFloat(basePrice) || 0;
-    if (price === 0) return "0.00"; 
+    if (price === 0) return "0.00";
     const taxAmt = price * (tax / 100);
     const finalTotal = price + taxAmt;
     return finalTotal.toFixed(2);
@@ -145,11 +189,11 @@ export const PublishedPlans = () => {
 
   const handleSavePlan = async () => {
     if (isSaving) return;
-    
+
     setIsSaving(true);
     try {
       const token = getAdminToken();
-      
+
       // Prepare data for API - for Starter Plan, force price fields to 0
       const planData = {
         name: editPlan?.name,
@@ -170,27 +214,27 @@ export const PublishedPlans = () => {
         Account_Manager: editPlan?.Account_Manager ?? false,
         features: editPlan?.features
       };
-      
+
       console.log("Saving plan data:", planData);
-      
+
       const response = await api.patch(`plans/${selectedPlanId}/`, planData, {
         headers: {
           Authorization: token ? `Bearer ${token}` : undefined,
           'Content-Type': 'application/json'
         }
       });
-      
+
       console.log('Plan updated successfully:', response.data);
-      
+
       setAllPlans(prevPlans =>
         prevPlans.map(plan => plan.id === selectedPlanId ? response.data : plan)
       );
       alert("Plan changes saved successfully");
-      
+
       // Refresh the current plan data
       await fetchSelectedPlanDetails(selectedPlanId);
       await fetchAllPlans();
-      
+
     } catch (error) {
       console.error('Error saving plan:', error);
       if (error.response) {
@@ -285,7 +329,7 @@ export const PublishedPlans = () => {
                     />
                   </div>
                 </div>
-                
+
                 <div className="membership-cr-row" style={{ marginTop: '15px' }}>
                   <div className="membership-cr-input-group" style={{ width: '50%' }}>
                     <label>Card Color / Badge Visual Theme Code</label>
@@ -386,10 +430,37 @@ export const PublishedPlans = () => {
                   </thead>
                   <tbody style={{ border: "1px solid #f0f0ff" }}>
                     {editPlan?.features?.map((item, i) => {
+                      // if (item.text === 'Jobs Posting') {
+                      //   return (
+                      //     <tr key={i}>
+                      //       <td style={{ padding: '20px' }}>Max Job Posts</td>
+                      //       <td style={{ textAlign: 'center', padding: '10px' }}>
+                      //         <input
+                      //           type="number"
+                      //           value={item.value ? (parseInt(item.value) || 0) : 0}
+                      //           onChange={(e) => {
+                      //             const intValue = parseInt(e.target.value) || 0;
+                      //             handleFeatureValueChange(i, intValue);
+                      //           }}
+                      //           disabled={false}
+                      //           min="0"
+                      //           step="1"
+                      //           style={{ width: '80px', padding: '5px', textAlign: 'center', border: '1px solid #ddd', borderRadius: '4px' }}
+                      //         />
+                      //       </td>
+                      //     </tr>
+                      //   );
+                      // }
+
                       if (item.text === 'Jobs Posting') {
                         return (
                           <tr key={i}>
-                            <td style={{ padding: '20px' }}>Max Job Posts</td>
+                            <td
+                              style={{ padding: '20px' }}
+                              title="Maximum number of job posts allowed for this plan."
+                            >
+                              Max Job Posts ⓘ
+                            </td>
                             <td style={{ textAlign: 'center', padding: '10px' }}>
                               <input
                                 type="number"
@@ -402,16 +473,45 @@ export const PublishedPlans = () => {
                                 min="0"
                                 step="1"
                                 style={{ width: '80px', padding: '5px', textAlign: 'center', border: '1px solid #ddd', borderRadius: '4px' }}
+                                title="Enter the number of job posts (0 = unlimited)"
                               />
                             </td>
                           </tr>
                         );
                       }
+
+                      // if (item.text === 'Highlight Your Job Listing') {
+                      //   return (
+                      //     <tr key={i}>
+                      //       <td style={{ padding: '20px' }}>{item.text}</td>
+                      //       <td style={{ textAlign: 'center', padding: '10px' }}>
+                      //         <input
+                      //           type="number"
+                      //           value={item.value ? (parseInt(item.value) || 0) : 0}
+                      //           onChange={(e) => {
+                      //             const intValue = parseInt(e.target.value) || 0;
+                      //             handleFeatureValueChange(i, intValue);
+                      //           }}
+                      //           disabled={false}
+                      //           min="0"
+                      //           step="1"
+                      //           style={{ width: '80px', padding: '5px', textAlign: 'center', border: '1px solid #ddd', borderRadius: '4px' }}
+                      //         />
+                      //       </td>
+                      //     </tr>
+                      //   );
+                      // }
+
 
                       if (item.text === 'Highlight Your Job Listing') {
                         return (
                           <tr key={i}>
-                            <td style={{ padding: '20px' }}>{item.text}</td>
+                            <td
+                              style={{ padding: '20px' }}
+                              title="Number of job highlights available per billing cycle. Highlighted jobs appear at top of search results."
+                            >
+                              {item.text} ⓘ
+                            </td>
                             <td style={{ textAlign: 'center', padding: '10px' }}>
                               <input
                                 type="number"
@@ -424,17 +524,47 @@ export const PublishedPlans = () => {
                                 min="0"
                                 step="1"
                                 style={{ width: '80px', padding: '5px', textAlign: 'center', border: '1px solid #ddd', borderRadius: '4px' }}
+                                title="Set how many job posts can be highlighted (0 = no highlights)"
                               />
                             </td>
                           </tr>
                         );
                       }
 
+                      // return (
+                      //   <tr key={i}>
+                      //     <td style={{ padding: '20px' }}>{item.text}</td>
+                      //     <td style={{ textAlign: 'center', padding: '10px' }}>
+                      //       <div style={{ display: 'flex', justifyContent: 'center' }}>
+                      //         <div
+                      //           className={`membership-cr-toggle-switch ${item.value === "true" || item.value === true ? "membership-cr-active" : ""}`}
+                      //           onClick={() => handleToggleFeature(i)}
+                      //           style={{ cursor: 'pointer' }}
+                      //         ></div>
+                      //       </div>
+                      //     </td>
+                      //   </tr>
+                      // );
+                      const featureHints = {
+                        'Analytics ': 'Access to detailed job performance analytics and reports',
+                        'Candidate Search': 'Ability to search and filter  candidate in findtalent only',
+                        'Premium Support': 'Priority customer support with faster response times',
+                        'Account Manager': 'Dedicated account manager for personalized assistance'
+                      };
+
                       return (
                         <tr key={i}>
-                          <td style={{ padding: '20px' }}>{item.text}</td>
+                          <td
+                            style={{ padding: '20px' }}
+                            title={featureHints[item.text] || `Enable or disable ${item.text} feature`}
+                          >
+                            {item.text} ⓘ
+                          </td>
                           <td style={{ textAlign: 'center', padding: '10px' }}>
-                            <div style={{ display: 'flex', justifyContent: 'center' }}>
+                            <div
+                              style={{ display: 'flex', justifyContent: 'center' }}
+                              title={`Click to ${item.value === "true" || item.value === true ? 'disable' : 'enable'} ${item.text}`}
+                            >
                               <div
                                 className={`membership-cr-toggle-switch ${item.value === "true" || item.value === true ? "membership-cr-active" : ""}`}
                                 onClick={() => handleToggleFeature(i)}
@@ -442,14 +572,15 @@ export const PublishedPlans = () => {
                               ></div>
                             </div>
                           </td>
-                         </tr>
+                        </tr>
                       );
+
                     })}
                   </tbody>
-                 </table>
+                </table>
               </div>
 
-              <div className="membership-cr-form-card membership-cr-mini-section">
+              {/* <div className="membership-cr-form-card membership-cr-mini-section">
                 <div className="membership-cr-section-title"><span className="membership-cr-step-num">4</span> Trial Settings</div>
                 <div className="membership-cr-row membership-cr-align-center">
                   <div className="membership-cr-toggle-group" style={{ pointerEvents: 'auto' }}>
@@ -467,9 +598,56 @@ export const PublishedPlans = () => {
                     />
                   </div>
                 </div>
+              </div> */}
+
+
+              <div className="membership-cr-form-card membership-cr-mini-section">
+                <div className="membership-cr-section-title">
+                  <span className="membership-cr-step-num">4</span> Trial Settings
+                  <span
+                    style={{
+                      marginLeft: '10px',
+                      fontSize: '12px',
+                      color: '#ff9800',
+                      backgroundColor: '#fff3e0',
+                      padding: '2px 8px',
+                      borderRadius: '4px'
+                    }}
+                    title="Will be implemented after Razorpay gateway integration"
+                  >
+
+                  </span>
+                </div>
+                <div className="membership-cr-row membership-cr-align-center">
+                  <div
+                    className="membership-cr-toggle-group"
+                    style={{ pointerEvents: 'auto', opacity: '0.5', cursor: 'not-allowed' }}
+                    title="Will be implemented after Razorpay gateway integration"
+                  >
+                    <span>Free trial option</span>
+                    <div
+                      className="membership-cr-toggle-switch"
+                      style={{ cursor: 'not-allowed', opacity: '0.5' }}
+                    ></div>
+                  </div>
+                  <div
+                    className="membership-cr-input-group"
+                    title="Will be implemented after Razorpay gateway integration"
+                  >
+                    <label>Total Duration (Days)</label>
+                    <input
+                      type="number"
+                      name="TrailDuration"
+                      value={editPlan?.trial_duration ?? 0}
+                      disabled={true}
+                      style={{ backgroundColor: '#e9ecef', cursor: 'not-allowed' }}
+                      title="Will be implemented after Razorpay gateway integration"
+                    />
+                  </div>
+                </div>
               </div>
 
-              <div className="membership-cr-form-card">
+              {/* <div className="membership-cr-form-card">
                 <div className="membership-cr-section-title"><span className="membership-cr-step-num">5</span> Advanced Settings</div>
                 <div className="membership-cr-row membership-cr-align-center">
                   <div className="membership-cr-toggle-group" style={{ pointerEvents: 'auto' }}>
@@ -484,6 +662,39 @@ export const PublishedPlans = () => {
                       value={editPlan?.grace_time ?? 0}
                       onChange={(e) => handleInputChange('grace_time', parseInt(e.target.value) || 0)}
                       disabled={!editPlan?.is_auto_renewal}
+                    />
+                  </div>
+                </div>
+              </div> */}
+
+              <div className="membership-cr-form-card">
+                <div className="membership-cr-section-title">
+                  <span className="membership-cr-step-num">5</span> Advanced Settings
+                </div>
+                <div className="membership-cr-row membership-cr-align-center">
+                  <div
+                    className="membership-cr-toggle-group"
+                    style={{ pointerEvents: 'auto', opacity: '0.5', cursor: 'not-allowed' }}
+                    title="Will be implemented after Razorpay gateway integration"
+                  >
+                    <span>Auto Renewal</span>
+                    <div
+                      className="membership-cr-toggle-switch"
+                      style={{ cursor: 'not-allowed', opacity: '0.5' }}
+                    ></div>
+                  </div>
+                  <div
+                    className="membership-cr-input-group"
+                    title="Will be implemented after Razorpay gateway integration"
+                  >
+                    <label>Grace Period (Days)</label>
+                    <input
+                      type="number"
+                      name="GraceTime"
+                      value={editPlan?.grace_time ?? 0}
+                      disabled={true}
+                      style={{ backgroundColor: '#e9ecef', cursor: 'not-allowed' }}
+                      title="Will be implemented after Razorpay gateway integration"
                     />
                   </div>
                 </div>
@@ -544,12 +755,12 @@ export const PublishedPlans = () => {
                               <span className="published-plan-icon">
                                 <img src={Tick} alt="yes" width={15} />
                               </span>
-                              Max Job Posts: {feature.value ?? 0}
+                              Max Job Posts  : {feature.value ?? 0}
                             </li>
                           );
                         }
 
-                        if (feature.text === 'Highlight Your Job Listing') {
+                        if (feature.text === 'Highlight Your Job Listing ') {
                           const numericValue = parseInt(feature.value) || 0;
                           if (numericValue > 0) {
                             return (

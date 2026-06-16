@@ -12,11 +12,15 @@ def send_password_reset_email(user, token, request):
     """Send password reset email with different links based on user type"""
    
     frontend_url = settings.FRONTEND_URL
+    # Remove trailing slash if present
+    frontend_url = frontend_url.rstrip('/')
    
     if user.user_type == 'employer':
         reset_page = f"{frontend_url}/Job-portal/employer/login/forgotpassword/createpassword?token={token}"
     elif user.user_type == 'jobseeker':
         reset_page = f"{frontend_url}/Job-portal/jobseeker/login/forgotpassword/createpassword?token={token}"
+    elif user.user_type == 'admin':
+        reset_page = f"{frontend_url}/Job-portal/admin/login/forgotpassword/createpassword?token={token}"
     else:
         reset_page = f"{frontend_url}/Job-portal/login/forgotpassword/createpassword?token={token}"
    
@@ -26,13 +30,10 @@ Hello {user.username},
  
 We received a request to reset your password for your {user.get_user_type_display()} account: {user.email}
  
-Please visit this link:
+Please click the link below to reset your password:
 {reset_page}
  
-And enter this token on the page:
- 
- 
-This token will expire in 24 hours.
+This link will expire in 24 hours.
  
 If you didn't request this, please ignore this email.
 """

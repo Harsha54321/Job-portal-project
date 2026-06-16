@@ -2173,40 +2173,8 @@ class EmployerPlatformSettings(models.Model):
         choices=User.AccountStatus.choices,
  
         default=User.AccountStatus.HOLD
-    )
- 
-    employer_registration = models.BooleanField(
-        default=True
-    )
- 
-    email_verification = models.BooleanField(
-        default=True
-    )
- 
-    mobile_verification = models.BooleanField(
-        default=False
-    )
- 
-    # ─────────────────────────────
-    # APPROVAL SETTINGS
-    # ─────────────────────────────
- 
-    APPROVAL_CHOICES = [
- 
-        ('Manual Type', 'Manual Type'),
- 
-        ('Automatic', 'Automatic'),
-    ]
- 
-    approval_type = models.CharField(
- 
-        max_length=20,
- 
-        choices=APPROVAL_CHOICES,
- 
-        default='Manual Type'
-    )
- 
+    )  
+
     # ─────────────────────────────
     # REQUIRED DOCUMENTS
     # ─────────────────────────────
@@ -2320,6 +2288,38 @@ class EmployerPlatformSettings(models.Model):
  
             f"{self.account_status}"
         )
+    
+
+ 
+class EmployerRegistrationSettings(models.Model):
+ 
+    employer_registration = models.BooleanField(
+        default=True
+    )
+ 
+    email_verification = models.BooleanField(
+        default=True
+    )
+ 
+    mobile_verification = models.BooleanField(
+        default=False
+    )
+ 
+    APPROVAL_CHOICES = [
+        ('Manual Type', 'Manual Type'),
+        ('Automatic', 'Automatic'),
+    ]
+ 
+    approval_type = models.CharField(
+        max_length=20,
+        choices=APPROVAL_CHOICES,
+        default='Manual Type'
+    )
+ 
+    updated_at = models.DateTimeField(
+        auto_now=True
+    )
+ 
 
 class NotificationDeliveryLog(models.Model):
 
@@ -2340,7 +2340,9 @@ class NotificationDeliveryLog(models.Model):
     notification = models.ForeignKey(
         'Notification',
         on_delete=models.CASCADE,
-        related_name='delivery_logs'
+        related_name='delivery_logs' ,
+        null=True,
+        blank=True
     )
 
     user = models.ForeignKey(

@@ -37,6 +37,8 @@ import { LogoutModal } from '../Components-Jobseeker/LogoutModal'
 import { AnalyticsPage } from './AnalyticsPage'
 import { PlansBilling } from './PlansBilling'
 import api from "../api/axios";
+import AdminManager from '../assets/Employer/User.png'
+import { AddManagerSupport } from './AddManagerSupport'
 
 export const EmployerDashboard = () => {
     const { currentEmployer, getJobStats, refreshEmployerData } = useJobs();
@@ -189,8 +191,6 @@ export const EmployerDashboard = () => {
         }
     }, [location.state]);
 
-    // ============ HANDLE TARGET TAB FROM FOOTER ============
-// ============ HANDLE TARGET TAB FROM FOOTER ============
     useEffect(() => {
         // 1. Define the handler at the top level of the useEffect so cleanup can see it
         const handleStateRefresh = () => {
@@ -208,10 +208,10 @@ export const EmployerDashboard = () => {
         // 3. Process the state values
         if (location.state?.targetTab) {
             const targetTab = location.state.targetTab;
-            
+
             setActiveTab(targetTab);
             sessionStorage.setItem("employerActiveTab", targetTab);
-            
+
             window.history.replaceState({ ...window.history.state, targetTab: undefined }, document.title);
         } else {
             handleStateRefresh();
@@ -404,6 +404,15 @@ export const EmployerDashboard = () => {
                                     {activetab === 'My Profile' ? <img src={ProfileAct} height={15} width={15} alt="My Profile" /> : <img src={Profile} height={15} width={15} alt="My Profile" />}
                                     <div className='Enav-item'>My Profile</div>
                                 </div>
+                                <div onClick={() => setActiveTab('AccountManager')}
+                                    className={activetab === 'AccountManager' ? "Active" : 'Navbox'}>
+                                    {activetab === 'AccountManager' ? (
+                                        <img src={AdminManager} height={15} width={15} alt="Account Manager" />
+                                    ) : (
+                                        <img src={AdminManager} height={15} width={15} alt="Account Manager" />
+                                    )}
+                                    <div className='Enav-item'>Account Manager</div>
+                                </div>
                                 <div onClick={() => setShowLogoutModal(true)} className={activetab === 'Logout' ? "Active" : 'Navbox'} >
                                     {activetab === 'Logout' ? <img src={LogoutAct} height={15} width={15} alt="Logout" /> : <img src={Logout} height={15} width={15} alt="Logout" />}
                                     <div className='Enav-item'>Logout</div>
@@ -439,6 +448,15 @@ export const EmployerDashboard = () => {
                                 </div>
                                 <div onClick={() => setActiveTab('My Profile')} className={activetab === 'My Profile' ? "Active1" : 'Navbox1'} title="View and edit your profile">
                                     {activetab === 'My Profile' ? <img src={ProfileAct} height={15} width={15} alt="My Profile" /> : <img src={Profile} height={15} width={15} alt="My Profile" />}
+                                </div>
+                                <div onClick={() => setActiveTab('AccountManager')}
+                                    className={activetab === 'AccountManager' ? "Active1" : 'Navbox1'}
+                                    title="Account Manager">
+                                    {activetab === 'AccountManager' ? (
+                                        <img src={AdminManager} height={15} width={15} alt="Account Manager" />
+                                    ) : (
+                                        <img src={AdminManager} height={15} width={15} alt="Account Manager" />
+                                    )}
                                 </div>
                                 <div onClick={() => setShowLogoutModal(true)} className={activetab === 'Logout' ? "Active1" : 'Navbox1'} style={{ cursor: 'pointer' }} title="Logout from your account">
                                     {activetab === 'Logout' ? <img src={LogoutAct} height={15} width={15} alt="Logout" /> : <img src={Logout} height={15} width={15} alt="Logout" />}
@@ -636,6 +654,7 @@ export const EmployerDashboard = () => {
                     {activetab === 'My Profile' && (
                         <AboutYourCompany hideNavigation={true} setActiveTab={setActiveTab} />
                     )}
+                    {activetab === 'AccountManager' && <AddManagerSupport />}
                 </div>
             </div>
             <LogoutModal show={showLogoutModal} onClose={() => setShowLogoutModal(false)} onConfirm={handleLogoutConfirm} />

@@ -19,23 +19,23 @@ from .models import Notification, Message, Plan, PlanFeature, EmployerPlatformSe
 
 
 # Signal for creating notification when a new message is sent
-@receiver(post_save, sender=Message)
-def create_message_notification(sender, instance, created, **kwargs):
-    """
-    Automatically create a notification when a new message is sent
-    """
-    if created and instance.sender != instance.receiver:
-        # Create notification for the message receiver
-        Notification.objects.create(
-            user=instance.receiver,
-            title=f"New message from {instance.sender.username}",
-            message=f"You have a new message from {instance.sender.username}",
-            notification_type='message',
-            category='message',  
-            event_type='new_message',  
-            related_object_id=instance.conversation.id,
-            is_read=False
-        )  
+# @receiver(post_save, sender=Message)
+# def create_message_notification(sender, instance, created, **kwargs):
+#     """
+#     Automatically create a notification when a new message is sent
+#     """
+#     if created and instance.sender != instance.receiver:
+#         # Create notification for the message receiver
+#         Notification.objects.create(
+#             user=instance.receiver,
+#             title=f"New message from {instance.sender.username}",
+#             message=f"You have a new message from {instance.sender.username}",
+#             notification_type='message',
+#             category='message',  
+#             event_type='new_message',  
+#             related_object_id=instance.conversation.id,
+#             is_read=False
+#         )  
 
 # ============================================================
 # SIGNALS (AUTOMATED ONBOARDING MAPPING GENERATOR)

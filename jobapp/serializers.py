@@ -4,7 +4,7 @@ from drf_writable_nested.serializers import WritableNestedModelSerializer
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from .models import (
-    PlanFeature, User, JobSeekerProfile, EmployerProfile, AdminProfile,
+    EmployerRegistrationSettings, PlanFeature, User, JobSeekerProfile, EmployerProfile, AdminProfile,
     EducationEntry, WorkExperienceEntry, Skill, LanguageKnown, Certification,
     PostAJob, JobApplication, SavedJob,
     NewsletterSubscriber, Notification, Conversation, Message, ContactMessage, 
@@ -3399,13 +3399,6 @@ class EmployerPlatformSettingsSerializer(
  
             'plan',
  
-            'employer_registration',
-
-            'email_verification',
-
-            'mobile_verification',
-
-            'approval_type',
 
             
  
@@ -3728,13 +3721,7 @@ class EmployerPlatformSettingsSerializer(
  
         normal_fields = [
  
-            'employer_registration',
- 
-            'email_verification',
- 
-            'mobile_verification',
- 
-            'approval_type',
+            
  
             'account_status',
  
@@ -3817,6 +3804,25 @@ class EmployerPlatformSettingsSerializer(
     #     return data
 
 
+
+class EmployerRegistrationSettingsSerializer(
+    serializers.ModelSerializer
+):
+ 
+    class Meta:
+ 
+        model = EmployerRegistrationSettings
+ 
+        fields = [
+ 
+            'employer_registration',
+ 
+            'email_verification',
+ 
+            'mobile_verification',
+ 
+            'approval_type',
+        ]
  
 
 #for jobseekersetting

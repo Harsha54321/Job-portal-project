@@ -52,6 +52,8 @@ import Blogpost from '../assets/AdminAssets/blog_white_admin.png'
 import BlogpostAct from '../assets/AdminAssets/blog_yellow_admin.png'
 import { AdminCreateBlog } from './AdminCreateBlog'
 import { AdminBlogPost } from './AdminBlogpost'
+import { AddManagerContact } from './AddManagerContact'
+import AdminManager from '../assets/Employer/User.png'
 
 export const AdminDashboard = () => {
     const { jobs, Alluser, currentEmployer } = useJobs();
@@ -286,7 +288,17 @@ export const AdminDashboard = () => {
                                     <div className='Enav-item'>Support Hub</div>
                                 </div>
                             </div>
-
+                            <div onClick={() => setActiveTab('AccountManager')}
+                                className={activetab === "AccountManager" ? "Admin-Active" : 'Admin-Navbar'}>
+                                <div className='Admin-Navbox'>
+                                    {activetab === "AccountManager" ? (
+                                        <img src={AdminManager} width={15} height={15} alt="account manager" />
+                                    ) : (
+                                        <img src={AdminManager} width={15} height={15} alt="account manager" />
+                                    )}
+                                    <div className='Enav-item'>Account Manager</div>
+                                </div>
+                            </div>
                             <div onClick={() => setActiveTab('Blog Post')} className={activetab === "Blog Post" ? "Admin-Active" : 'Admin-Navbar'}>
                                 <div className='Admin-Navbox'>
                                     {activetab === "Blog Post" ? <img src={BlogpostAct} width={15} height={15} alt="blog" />
@@ -408,6 +420,17 @@ export const AdminDashboard = () => {
                                 {activetab === "SupportHub" ? <img src={TicketsACT} width={15} height={15} alt="dashboard" />
                                     : <img src={Tickets} width={15} height={15} alt="Tickets" />}
                                 <div className='Enav-item'>Support Hub</div>
+                            </div>
+                        </div>
+                        <div onClick={() => setActiveTab('AccountManager')}
+                            className={activetab === "AccountManager" ? "Admin-Active" : 'Admin-Navbar'}>
+                            <div className='Admin-Navbox'>
+                                {activetab === "AccountManager" ? (
+                                    <img src={AdminManager} width={15} height={15} alt="account manager" />
+                                ) : (
+                                    <img src={AdminManager} width={15} height={15} alt="account manager" />
+                                )}
+                                <div className='Enav-item'>Account Manager</div>
                             </div>
                         </div>
                         <div onClick={() => setActiveTab('Blog Post')} className={activetab === "Blog Post" ? "Admin-Active" : 'Admin-Navbar'}>
@@ -617,6 +640,7 @@ export const AdminDashboard = () => {
                     {activetab === 'User Management' && (<UserManagement />)}
                     {activetab === 'Membership' && (<PublishedPlans />)}
                     {activetab === 'SupportHub' && (<SupportHub />)}
+                    {activetab === 'AccountManager' && <AddManagerContact />}
                     {activetab === 'settings' && (<AdminSettings />)}
                     {activetab === 'Blog Post' && (<AdminBlogPost />)}
                     {activetab === 'Highlighted Jobs' && (

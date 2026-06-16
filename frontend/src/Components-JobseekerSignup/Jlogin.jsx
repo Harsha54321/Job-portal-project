@@ -9,6 +9,7 @@ import mobile from '../assets/icon_mobile_otp.png';
 import './Jlogin.css';
 import api from '../api/axios';
 import { useJobs } from '../JobContext';
+import { requestAndRegisterNotificationPermission } from "../firebaseTokenHandler";
 
 export const Jlogin = () => {
   const navigate = useNavigate();
@@ -60,15 +61,15 @@ export const Jlogin = () => {
     // Check for redirect from sessionStorage (from footer before login)
     const redirectPath = sessionStorage.getItem("redirectAfterLogin");
     const redirectTab = sessionStorage.getItem("redirectTab");
-    
+    requestAndRegisterNotificationPermission();
     if (redirectPath && redirectTab) {
       // Store in location state for after login
       window.history.replaceState(
-        { 
-          ...location.state, 
-          intendedPath: redirectPath, 
-          targetTab: redirectTab 
-        }, 
+        {
+          ...location.state,
+          intendedPath: redirectPath,
+          targetTab: redirectTab
+        },
         ''
       );
     }
@@ -242,16 +243,16 @@ export const Jlogin = () => {
         targetTab: location.state.targetTab || "saved"
       };
     }
-    
+
     // Second priority: Check sessionStorage (from footer before login)
     const redirectPath = sessionStorage.getItem("redirectAfterLogin");
     const redirectTab = sessionStorage.getItem("redirectTab");
-    
+
     if (redirectPath) {
       // Clear sessionStorage after reading
       sessionStorage.removeItem("redirectAfterLogin");
       sessionStorage.removeItem("redirectTab");
-      
+
       return {
         type: "redirect",
         path: redirectPath,
@@ -278,29 +279,59 @@ export const Jlogin = () => {
       targetTab: "Profile"
     };
   };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!validateForm()) {
+    // Email validation before API call
+    const isEmail = formValues.username.includes('@');
+
+    // Frontend validations
+    if (!formValues.username.trim()) {
+      setErrors({ username: "Username or Email is required" });
+      setLoading(false);
+      return;
+    }
+
+    if (isEmail) {
+      const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+      if (!emailRegex.test(formValues.username)) {
+        setErrors({ username: "Please enter a valid email address" });
+        setLoading(false);
+        return;
+      }
+    }
+
+    if (!formValues.password.trim()) {
+      setErrors({ password: "Password is required" });
+      setLoading(false);
+      return;
+    }
+
+    if (formValues.password.trim().length < 6) {
+      setErrors({ password: "Password must be at least 6 characters" });
+      setLoading(false);
       return;
     }
 
     setLoading(true);
 
     try {
-      const isEmail = formValues.username.includes('@');
-
       const loginData = isEmail
         ? { email: formValues.username, password: formValues.password }
         : { username: formValues.username, password: formValues.password };
 
       const response = await api.post('login/', loginData);
 
+      // Check if user type is jobseeker
       if (response.data.user.user_type !== 'jobseeker') {
-        setErrors({ general: "Only jobseeker credentials should be used here" });
+        setErrors({
+          username: "Invalid credentials. This login is only for Jobseeker users."
+        });
         setLoading(false);
         return;
       }
+
       if (response.data.access && response.data.refresh) {
         sessionStorage.setItem('access', response.data.access);
         sessionStorage.setItem('refresh', response.data.refresh);
@@ -340,10 +371,9 @@ export const Jlogin = () => {
             }
           });
         } else {
-          // Clear sessionStorage for redirect only
           sessionStorage.removeItem("redirectAfterLogin");
           sessionStorage.removeItem("redirectTab");
-          
+
           navigate(nextStep.path, {
             replace: true,
             state: {
@@ -357,72 +387,71 @@ export const Jlogin = () => {
     } catch (error) {
       console.error('❌ Login Error:', error);
 
-      if (error.response) {
-        console.error('📡 Backend response:', error.response.status, error.response.data);
+      const newErrors = {};
+      const errorData = error.response?.data;
 
-        if (error.response.status === 400 || error.response.status === 401) {
-          const errorData = error.response.data;
+      // Handle incorrect password - primary priority
+      if (errorData?.detail) {
+        const detail = errorData.detail;
+        const detailStr = Array.isArray(detail) ? detail[0] : detail;
 
-          const getErrorMessage = (errorField) => {
-            if (!errorField) return null;
-            if (Array.isArray(errorField)) return errorField[0];
-            return errorField;
-          };
-
-          if (errorData.detail) {
-            const errorMessage = getErrorMessage(errorData.detail);
-
-            console.log('📝 Error message:', errorMessage);
-
-            if (errorMessage && typeof errorMessage === 'string') {
-              const lowerMsg = errorMessage.toLowerCase();
-
-              if (lowerMsg.includes('password') || lowerMsg.includes('incorrect')) {
-                setErrors({ password: errorMessage });
-              } else if (
-                lowerMsg.includes('account') ||
-                lowerMsg.includes('found') ||
-                lowerMsg.includes('email') ||
-                lowerMsg.includes('username')
-              ) {
-                setErrors({ username: errorMessage });
-              } else {
-                setErrors({ password: errorMessage });
-              }
-            } else {
-              setErrors({ password: "Invalid username/email or password" });
-            }
-          }
-          // Handle field-specific errors
-          else if (errorData.email) {
-            const errorMessage = getErrorMessage(errorData.email);
-            setErrors({ username: errorMessage });
-          }
-          else if (errorData.username) {
-            const errorMessage = getErrorMessage(errorData.username);
-            setErrors({ username: errorMessage });
-          }
-          else if (errorData.password) {
-            const errorMessage = getErrorMessage(errorData.password);
-            setErrors({ password: errorMessage });
-          }
-          else if (errorData.non_field_errors) {
-            const errorMessage = getErrorMessage(errorData.non_field_errors);
-            setErrors({ password: errorMessage });
-          }
-          else {
-            setErrors({ password: "Invalid username/email or password" });
-          }
-        } else {
-          setErrors({ password: error.response.data?.error || "Login failed. Please try again." });
+        if (detailStr && detailStr.toLowerCase().includes("password") && detailStr.toLowerCase().includes("incorrect")) {
+          newErrors.password = "Incorrect password. Please try again.";
         }
-      } else if (error.request) {
-        console.error('🌐 No response from server');
-        setErrors({ password: "No response from server. Please check your connection." });
-      } else {
-        console.error('❌ Error:', error.message);
-        setErrors({ password: "Login failed. Please try again." });
+        else if (detailStr && (detailStr.toLowerCase().includes("no account") || detailStr.toLowerCase().includes("not found"))) {
+          newErrors.username = "No account found with this email address.";
+        }
+        else if (detailStr && detailStr.toLowerCase().includes("employer")) {
+          newErrors.username = "Invalid credentials. This login is only for Jobseeker users.";
+        }
+        else {
+          newErrors.general = detailStr;
+        }
       }
+      // ✅ Handle non_field_errors
+      else if (errorData?.non_field_errors) {
+        const errorMsg = Array.isArray(errorData.non_field_errors) ? errorData.non_field_errors[0] : errorData.non_field_errors;
+        if (errorMsg && errorMsg.toLowerCase().includes("password")) {
+          newErrors.password = "Incorrect password. Please try again.";
+        } else if (errorMsg && (errorMsg.toLowerCase().includes("account") || errorMsg.toLowerCase().includes("found"))) {
+          newErrors.username = "No account found with this email address.";
+        } else {
+          newErrors.general = errorMsg;
+        }
+      }
+      // ✅ Handle field-specific errors
+      else if (errorData?.email) {
+        const emailError = Array.isArray(errorData.email) ? errorData.email[0] : errorData.email;
+        if (emailError && emailError.toLowerCase().includes("no account")) {
+          newErrors.username = "No account found with this email address.";
+        } else {
+          newErrors.username = emailError;
+        }
+      }
+      else if (errorData?.username) {
+        const usernameError = Array.isArray(errorData.username) ? errorData.username[0] : errorData.username;
+        if (usernameError && usernameError.toLowerCase().includes("no account")) {
+          newErrors.username = "No account found with this email address.";
+        } else {
+          newErrors.username = usernameError;
+        }
+      }
+      else if (errorData?.password) {
+        const passwordError = Array.isArray(errorData.password) ? errorData.password[0] : errorData.password;
+        newErrors.password = passwordError;
+      }
+      // ✅ Handle HTTP status codes
+      else if (error.response?.status === 401) {
+        newErrors.password = "Incorrect password. Please try again.";
+      }
+      else if (error.response?.status === 404) {
+        newErrors.username = "No account found with this email address.";
+      }
+      else {
+        newErrors.general = "Invalid email or password";
+      }
+
+      setErrors(newErrors);
     } finally {
       setLoading(false);
     }

@@ -179,7 +179,7 @@ export const JobProvider = ({ children }) => {
         try {
             await api.post("/jobs/save/", { job_id: jobId });
             await fetchAllJobs();
-            addNotification("Job saved successfully!");
+            // addNotification("Job saved successfully!");
         } catch (err) {
             console.error(err);
         }

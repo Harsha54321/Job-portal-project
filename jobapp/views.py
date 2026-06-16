@@ -13,6 +13,7 @@ from django.shortcuts import get_object_or_404
 from django.db import IntegrityError
 from django.db.models import Q, Count
 from datetime import timedelta
+from math import ceil
 import random
 import logging
 from django.db.models.functions import Coalesce
@@ -246,6 +247,25 @@ class EmployerRegistrationView(APIView):
             account_status=default_status
         ).first()
 
+        #for  global setting
+        registration_settings = (
+                                EmployerRegistrationSettings.objects.first()
+                            )
+        if not registration_settings:
+ 
+            registration_settings = (
+                EmployerRegistrationSettings.objects.create(
+ 
+                    employer_registration=True,
+ 
+                    email_verification=True,
+ 
+                    mobile_verification=False,
+ 
+                    approval_type="Manual Type"
+                )
+            )
+
         # CREATE DEFAULT SETTINGS
         if not platform:
             platform = EmployerPlatformSettings.objects.create(
@@ -276,14 +296,14 @@ class EmployerRegistrationView(APIView):
             )
 
         # EMPLOYER REGISTRATION ENABLED
-        if not platform.employer_registration:
+        if not registration_settings.employer_registration:
             return Response(
                 {"error": "Employer registration is disabled."},
                 status=status.HTTP_403_FORBIDDEN
             )
 
         # EMAIL VERIFICATION
-        if platform.email_verification:
+        if registration_settings.email_verification:
             email = request.data.get("email")
             email_verified = EmailOTP.objects.filter(
                 email=email,
@@ -344,7 +364,7 @@ class EmployerRegistrationView(APIView):
         user = serializer.save()
 
         # APPROVAL FLOW
-        if platform.approval_type == "Automatic":
+        if registration_settings.approval_type == "Automatic":
             user.status = User.AccountStatus.ACTIVE
             user.is_active = True
         else:
@@ -3150,8 +3170,149 @@ class AdminCreatePasswordTokenView(APIView):
         except User.DoesNotExist:
             return Response({
                 "error": "User not found."
-            }, status=status.HTTP_404_NOT_FOUND)    
-       
+            }, status=status.HTTP_404_NOT_FOUND)     
+
+# Admin Forgot Password View
+class AdminForgotPasswordView(APIView):
+    permission_classes = [AllowAny]
+ 
+    def post(self, request):
+        serializer = ForgotPasswordSerializer(
+            data=request.data,
+            context={'request': request}
+        )
+ 
+        if serializer.is_valid():
+            user = serializer.context['user']
+            
+            # ADMIN - Normal flow
+            if user.user_type == User.UserType.ADMIN:
+                PasswordResetToken.objects.filter(
+                    user=user,
+                    is_used=False
+                ).delete()
+ 
+                token = generate_token()
+ 
+                reset_token = PasswordResetToken.objects.create(
+                    user=user,
+                    token=token,
+                    expires_at=timezone.now() + timedelta(hours=24)
+                )
+ 
+                send_password_reset_email(user, token, request)
+ 
+                return Response(
+                    {
+                        "message": "Password reset instructions have been sent to your email."
+                    },
+                    status=status.HTTP_200_OK
+                )
+            
+            # Not Admin - Show error
+            return Response(
+                {
+                    "error": "Invalid admin credentials. This email is not registered as an Admin."
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # If user not found - Invalid email
+        if 'email' in serializer.errors:
+            return Response(
+                {
+                    "error": "No admin account found with this email address."
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+ 
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+# Admin Reset Password Confirm View
+class AdminResetPasswordConfirmView(APIView):
+    permission_classes = [AllowAny]
+ 
+    def post(self, request):
+        serializer = ResetPasswordConfirmSerializer(data=request.data)
+ 
+        if not serializer.is_valid():
+            return Response(
+                serializer.errors,
+                status=status.HTTP_400_BAD_REQUEST
+            )
+ 
+        token = serializer.validated_data["token"]
+        new_password = serializer.validated_data["new_password"]
+ 
+        try:
+            reset_token = PasswordResetToken.objects.get(
+                token=token,
+                is_used=False
+            )
+ 
+            # Check token validity
+            if not reset_token.is_valid():
+                return Response(
+                    {
+                        "error": "Token has expired."
+                    },
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+ 
+            user = reset_token.user
+ 
+            # ALLOW ONLY ADMINS
+            if user.user_type != User.UserType.ADMIN:
+                return Response(
+                    {
+                        "error": "Password reset is not available for this account type."
+                    },
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+ 
+            # Update password
+            user.set_password(new_password)
+            user.password_changed_at = timezone.now()
+            user.save(
+                update_fields=[
+                    "password",
+                    "password_changed_at"
+                ]
+            )
+ 
+            # Mark token used
+            reset_token.is_used = True
+            reset_token.save(update_fields=["is_used"])
+ 
+            # Generate new JWT tokens
+            refresh = RefreshToken.for_user(user)
+ 
+            return Response(
+                {
+                    "message": "Admin password has been reset successfully.",
+                    "access": str(refresh.access_token),
+                    "refresh": str(refresh),
+                    "user_type": user.user_type
+                },
+                status=status.HTTP_200_OK
+            )
+ 
+        except PasswordResetToken.DoesNotExist:
+            return Response(
+                {
+                    "error": "Invalid or expired token."
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+ 
+        except Exception as e:
+            return Response(
+                {
+                    "error": str(e)
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 # ============ CONTACT US ============
 
@@ -3508,6 +3669,20 @@ class CompanyProfileCreateView(APIView):
                 )
                 request.user.employer_profile.save()
 
+            NotificationService.create_notification(
+                recipient=request.user,
+                title="Company Profile Created",
+                message=(
+                    f"Your company profile "
+                    f"'{company.company_name}' "
+                    f"has been created successfully."
+                ),
+                category="company",
+                event_type="company_profile_created",
+                notification_type="system",
+                related_object_id=company.id
+            )
+
             return Response(
                 {
                     "message": (
@@ -3522,19 +3697,7 @@ class CompanyProfileCreateView(APIView):
                 },
                 status=201
             )
-        NotificationService.create_notification(
-            recipient=request.user,
-            title="Company Profile Created",
-            message=(
-                f"Your company profile "
-                f"'{company.company_name}' "
-                f"has been created successfully."
-            ),
-            category="company",
-            event_type="company_profile_created",
-            notification_type="system",
-            related_object_id=company.id
-        )
+       
         return Response(
             serializer.errors,
             status=400
@@ -4288,26 +4451,20 @@ class CurrentSubscriptionView(APIView):
     permission_classes = [IsAuthenticated]
  
     def get(self, request):
- 
+        # ✅ Get any subscription (active or cancelled)
         sub = Subscription.objects.filter(
-            user=request.user,
-            status='active'
+            user=request.user
         ).order_by('-start_date').first()
- 
-        if not sub:
-            sub = Subscription.objects.filter(
-                user=request.user,
-                status='cancelled'
-            ).order_by('-start_date').first()
  
         if not sub:
             return Response({})
  
         data = SubscriptionSerializer(sub).data
  
+        # FIX: Check expiry for ANY status (active or cancelled)
+        # A plan is expired if end_date is in the past, regardless of status
         data["is_expired"] = (
-            sub.status == "cancelled"
-            and sub.end_date
+            sub.end_date
             and sub.end_date < timezone.now()
         )
  
@@ -4460,6 +4617,24 @@ class PaymentMethodView(APIView):
         serializer = PaymentMethodSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save(user=request.user)
+            NotificationService.create_notification(
+ 
+                recipient=request.user,
+    
+                title="Payment Method Added",
+    
+                message=(
+                    "A new payment method "
+                    "was added to your account."
+                ),
+    
+                category="billing",
+    
+                event_type="payment_method_added",
+    
+                notification_type="system"
+            )
+
             return Response(serializer.data, status=201)
         return Response(serializer.errors, status=400)
    
@@ -4751,7 +4926,7 @@ class VerifyPaymentView(APIView):
 # ============ COMPANY EMAIL OTP VIEWS ============
 
 class SendCompanyEmailOTPView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
     
     def post(self, request):
         email = request.data.get("email")
@@ -4811,7 +4986,7 @@ class SendCompanyEmailOTPView(APIView):
 
 
 class VerifyCompanyEmailOTPView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
     
     def post(self, request):
         email = request.data.get("email")
@@ -5627,6 +5802,19 @@ class UpdateCompanyStatusView(APIView):
         previous = obj.status
         obj.status = new_status
         obj.save()
+        NotificationService.create_notification(
+            recipient=obj.employer,
+            title="Company Verification Updated",
+            message=(
+                f"Your company verification "
+                f"status has been changed from "
+                f"'{previous}' to '{new_status}'."
+            ),
+            category="verification",
+            event_type="company_verification_updated",
+            notification_type="system",
+            related_object_id=obj.id
+        )
  
         return Response({
             "message": "Updated successfully",
@@ -6333,7 +6521,13 @@ class JobHighlightLimitView(APIView):
                 "message": "No active subscription plan"
             })
  
-        total_limit = subscription.plan.highlight_limit
+        # total_limit = subscription.plan.highlight_limit
+        platform = EmployerPlatformSettings.objects.filter(
+            plan=subscription.plan,
+            account_status=user.status,
+        ).first()
+
+        total_limit = platform.featured_job_limit if platform else 0
  
         used_highlights = PostAJob.objects.filter(
             employer=user,
@@ -8231,10 +8425,7 @@ class EmployerPlatformSettingsView(APIView):
         account_status
     ):
  
-        # ─────────────────────────────
-        # PLAN CHECK
-        # ─────────────────────────────
- 
+  
         plan = (
             Plan.objects.filter(
                 id=plan_id
@@ -8389,9 +8580,104 @@ class EmployerPlatformSettingsView(APIView):
  
             status=status.HTTP_200_OK
         )
+    
+class EmployerRegistrationSettingsView(APIView):
+ 
+    def get(
+        self,
+        request
+    ):
+ 
+        settings_obj = (
+            EmployerRegistrationSettings.objects.first()
+        )
+ 
+        if not settings_obj:
+ 
+            settings_obj = (
+                EmployerRegistrationSettings.objects.create(
+ 
+                    employer_registration=True,
+ 
+                    email_verification=True,
+ 
+                    mobile_verification=False,
+ 
+                    approval_type="Manual Type"
+                )
+            )
+ 
+        serializer = (
+            EmployerRegistrationSettingsSerializer(
+                settings_obj
+            )
+        )
+ 
+        return Response(
+            serializer.data,
+            status=status.HTTP_200_OK
+        )
+ 
+    def patch(
+        self,
+        request
+    ):
+ 
+        settings_obj = (
+            EmployerRegistrationSettings.objects.first()
+        )
+ 
+        if not settings_obj:
+ 
+            settings_obj = (
+                EmployerRegistrationSettings.objects.create(
+ 
+                    employer_registration=True,
+ 
+                    email_verification=True,
+ 
+                    mobile_verification=False,
+ 
+                    approval_type="Manual Type"
+                )
+            )
+ 
+        serializer = (
+            EmployerRegistrationSettingsSerializer(
+ 
+                settings_obj,
+ 
+                data=request.data,
+ 
+                partial=True
+            )
+        )
+ 
+        serializer.is_valid(
+            raise_exception=True
+        )
+ 
+        serializer.save()
+ 
+        return Response(
+            {
+                "message": (
+                    "Employer registration settings "
+                    "updated successfully"
+                ),
+ 
+                "data": serializer.data
+            },
+            status=status.HTTP_200_OK
+        )
+    
+
+
         
 from django.db.models import Q
 from django.utils import timezone
+
+from math import ceil  # ✅ Make sure this import exists at top
 
 class CheckPlanExpiryView(APIView):
     permission_classes = [IsAuthenticated]
@@ -8402,50 +8688,94 @@ class CheckPlanExpiryView(APIView):
         if user.user_type != 'employer':
             return Response({"error": "Only employers can access this"}, status=403)
         
+        # ✅ Get the user's subscription (any status)
         subscription = Subscription.objects.filter(
-            user=user,
-            status='active'
-        ).select_related('plan').first()
+            user=user
+        ).order_by('-start_date').first()
         
         if not subscription:
             return Response({
                 "has_active_plan": False,
-                "is_expired": True,
-                "message": "You don't have an active subscription plan."
+                "is_expired": False,
+                "is_cancelled": False,
+                "status": None,
+                "plan_name": "N/A",
+                "plan_type": "Free",
+                "end_date": None,
+                "days_until_expiry": None,
+                "time_remaining": None,
+                "time_remaining_text": None,
+                "message": "No subscription found."
             })
         
-        # Check if plan is expired
-        is_expired = subscription.end_date and subscription.end_date < timezone.now()
+        now = timezone.now()
         
-        # Check if plan is expiring soon (within 7 days)
+        plan_name = subscription.plan.name if subscription.plan else "N/A"
+        plan_type = "Paid" if subscription.plan and subscription.plan.monthly_price > 0 else "Free"
+        
+        is_cancelled = subscription.status == 'cancelled'
+        is_active = subscription.status == 'active'
+        
+        is_expired = False
         days_until_expiry = None
-        if subscription.end_date and not is_expired:
-            days_until_expiry = (subscription.end_date - timezone.now()).days
+        time_remaining = None
+        time_remaining_text = None
+        
+        if is_active and subscription.end_date:
+            # ✅ Check if expired
+            is_expired = subscription.end_date < now
             
-            # If expiring within 7 days, create notification
-            if days_until_expiry <= 7 and days_until_expiry > 0:
-                NotificationService.create_notification(
-                    recipient=user,
-                    title="Plan Expiring Soon",
-                    message=f"Your {subscription.plan.name} plan will expire in {days_until_expiry} days. Please renew to continue enjoying premium features.",
-                    category="alert",
-                    event_type="plan_expiring_soon",
-                    notification_type="system",
-                    related_object_id=subscription.id
-                )
+            # ✅ Calculate time remaining (only if not expired)
+            if not is_expired:
+                diff = subscription.end_date - now
+                total_seconds = int(diff.total_seconds())
+                
+                # Store raw seconds for frontend
+                time_remaining = total_seconds
+                
+                # ✅ Generate human-readable text
+                days = total_seconds // 86400
+                hours = (total_seconds % 86400) // 3600
+                minutes = (total_seconds % 3600) // 60
+                
+                if days > 0:
+                    time_remaining_text = f"{days} day{'s' if days > 1 else ''} {hours} hour{'s' if hours != 1 else ''} {minutes} minute{'s' if minutes != 1 else ''}"
+                    days_until_expiry = days
+                elif hours > 0:
+                    time_remaining_text = f"{hours} hour{'s' if hours > 1 else ''} {minutes} minute{'s' if minutes != 1 else ''}"
+                    days_until_expiry = 0
+                else:
+                    time_remaining_text = f"{minutes} minute{'s' if minutes != 1 else ''}"
+                    days_until_expiry = 0
+        
+        # Determine status
+        if is_cancelled:
+            status_text = 'cancelled'
+            message = "Your plan has been cancelled. Reactivate to continue using premium features."
+        elif is_active and is_expired:
+            status_text = 'expired'
+            message = "Your plan has expired. Please renew to continue using premium features."
+        elif is_active and not is_expired and days_until_expiry is not None and days_until_expiry <= 7:
+            status_text = 'expiring_soon'
+            message = f"Your plan will expire in {time_remaining_text}. Renew now to avoid service interruption."
+        else:
+            status_text = 'active'
+            message = None
         
         return Response({
-            "has_active_plan": True,
+            "has_active_plan": is_active,
             "is_expired": is_expired,
-            "plan_name": subscription.plan.name,
-            "plan_type": "Free" if subscription.plan.monthly_price == 0 else "Paid",
+            "is_cancelled": is_cancelled,
+            "status": status_text,
+            "plan_name": plan_name,
+            "plan_type": plan_type,
             "start_date": subscription.start_date,
             "end_date": subscription.end_date,
             "days_until_expiry": days_until_expiry,
-            "message": "Your plan has expired. Please upgrade to continue." if is_expired else None
+            "time_remaining": time_remaining,
+            "time_remaining_text": time_remaining_text,
+            "message": message
         })
- 
- 
 class EmployerWeeklySummaryView(APIView):
  
     permission_classes = [IsAuthenticated]

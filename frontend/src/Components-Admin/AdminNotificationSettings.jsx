@@ -175,7 +175,7 @@ export const AdminNotificationSettings = () => {
   // added this on  29-05-26
   const handleTableChange = (typeId, channelName) => {
     // Add this if condition at the very beginning
-    if (channelName === 'SMS' || channelName === 'Push') {
+    if (channelName === 'SMS') {
       return;
     }
 
@@ -193,13 +193,13 @@ export const AdminNotificationSettings = () => {
   //     [channelId]: !prev[channelId]
   //   }));
   // };
-  
 
-    // added this on  29-05-26
+
+  // added this on  29-05-26
 
   const handleQuickChange = (channelId) => {
     // Disable SMS and Push toggling
-    if (channelId === 'sms_notif' || channelId === 'push_notif') {
+    if (channelId === 'sms_notif') {
       return;
     }
 
@@ -290,7 +290,7 @@ export const AdminNotificationSettings = () => {
 
                   {mainChannels.map(channel => {
                     // Add this line to check if disabled
-                    const isDisabled = channel === 'SMS' || channel === 'Push';
+                    const isDisabled = channel === 'SMS';
 
                     return (
                       <td key={channel} className="Adm-Not-td-switch">
@@ -344,10 +344,10 @@ export const AdminNotificationSettings = () => {
               ))} */}
 
 
-              
+
               {quickChannels.map(channel => {
                 // Check if this channel should be disabled
-                const isDisabled = channel.id === 'sms_notif' || channel.id === 'push_notif';
+                const isDisabled = channel.id === 'sms_notif';
 
                 return (
                   <div key={channel.id} className="Adm-Not-channel-item">
@@ -376,7 +376,8 @@ export const AdminNotificationSettings = () => {
           </div>
 
           {/* Quiet Hours panel */}
-          <div className="Adm-Not-panel Adm-Not-quiet-hours-panel">
+          {/* added this on 29-05-26: entire panel disabled - Under Implementation */}
+          <div className="Adm-Not-panel Adm-Not-quiet-hours-panel" title="Under Implementation" style={{ opacity: 0.5 }}>
             <h2 className="Adm-Not-panel-title">Quiet Hours</h2>
             <p className="Adm-Not-panel-subtitle">Set quiet hours to avoid notification at certain times</p>
 
@@ -390,6 +391,7 @@ export const AdminNotificationSettings = () => {
                     type="time"
                     onChange={(e) => setStartTime(e.target.value)}
                     value={startTime}
+                    disabled
                   />
                 </div>
               </div>
@@ -402,6 +404,7 @@ export const AdminNotificationSettings = () => {
                     type="time"
                     onChange={(e) => setEndTime(e.target.value)}
                     value={endTime}
+                    disabled
                   />
                 </div>
               </div>
@@ -413,6 +416,7 @@ export const AdminNotificationSettings = () => {
                   key={day}
                   className={activeDays.includes(day) ? "day-btn active" : "day-btn"}
                   onClick={() => toggleDay(day)}
+                  disabled
                 >
                   {day}
                 </button>
@@ -424,6 +428,7 @@ export const AdminNotificationSettings = () => {
                 className="Adm-Not-timezone-select"
                 value={timezone}
                 onChange={(e) => setTimezone(e.target.value)}
+                disabled
               >
                 {timezoneOptions.map(opt => (
                   <option key={opt.value} value={opt.value}>
@@ -433,7 +438,6 @@ export const AdminNotificationSettings = () => {
               </select>
             </div>
           </div>
-
         </div>
       </div>
     </div>

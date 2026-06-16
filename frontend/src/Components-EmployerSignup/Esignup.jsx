@@ -28,10 +28,10 @@ export const Esignup = () => {
 
 
   // Add these after your existing state declarations 05/06/26
-const [isEmailOtpSending, setIsEmailOtpSending] = useState(false)
-const [isMobileOtpSending, setIsMobileOtpSending] = useState(false)
-const [isEmailVerifying, setIsEmailVerifying] = useState(false)
-const [isMobileVerifying, setIsMobileVerifying] = useState(false)
+  const [isEmailOtpSending, setIsEmailOtpSending] = useState(false)
+  const [isMobileOtpSending, setIsMobileOtpSending] = useState(false)
+  const [isEmailVerifying, setIsEmailVerifying] = useState(false)
+  const [isMobileVerifying, setIsMobileVerifying] = useState(false)
 
   // --- TIMER LOGIC ---
   useEffect(() => {
@@ -94,7 +94,7 @@ const [isMobileVerifying, setIsMobileVerifying] = useState(false)
       return;
     }
 
-  setIsEmailOtpSending(true);  // ← CHANGE THIS
+    setIsEmailOtpSending(true);  // ← CHANGE THIS
 
     try {
       const response = await api.post('send-email-otp/', {
@@ -130,7 +130,7 @@ const [isMobileVerifying, setIsMobileVerifying] = useState(false)
         alert('Failed to send OTP. Please check your connection.');
       }
     } finally {
-    setIsEmailOtpSending(false);  // ← CHANGE THIS
+      setIsEmailOtpSending(false);  // ← CHANGE THIS
     }
   }
 
@@ -148,7 +148,7 @@ const [isMobileVerifying, setIsMobileVerifying] = useState(false)
       return;
     }
 
-  setIsEmailVerifying(true);  // ← CHANGE THIS
+    setIsEmailVerifying(true);  // ← CHANGE THIS
 
     try {
       const response = await api.post('/verify-email-otp/', {
@@ -174,7 +174,7 @@ const [isMobileVerifying, setIsMobileVerifying] = useState(false)
       const errorMsg = err.response?.data?.error || err.response?.data?.message || "Verification failed. Please try again.";
       alert(errorMsg);
     } finally {
-    setIsEmailVerifying(false);  // ← CHANGE THIS
+      setIsEmailVerifying(false);  // ← CHANGE THIS
     }
   }
 
@@ -198,7 +198,7 @@ const [isMobileVerifying, setIsMobileVerifying] = useState(false)
       return;
     }
 
-  setIsMobileOtpSending(true);  // ← CHANGE THIS
+    setIsMobileOtpSending(true);  // ← CHANGE THIS
 
     try {
       // If you have a mobile OTP endpoint, use it
@@ -219,7 +219,7 @@ const [isMobileVerifying, setIsMobileVerifying] = useState(false)
     } catch (err) {
       console.error("Send Mobile OTP error:", err);
       alert('Failed to send OTP. Please try again.');
-    setIsMobileOtpSending(false);  // ← CHANGE THIS
+      setIsMobileOtpSending(false);  // ← CHANGE THIS
     }
   }
 
@@ -237,7 +237,7 @@ const [isMobileVerifying, setIsMobileVerifying] = useState(false)
       return;
     }
 
-  setIsMobileVerifying(true);  // ← CHANGE THIS
+    setIsMobileVerifying(true);  // ← CHANGE THIS
 
     try {
       // For demo purposes, accept 123456 as valid OTP
@@ -258,7 +258,7 @@ const [isMobileVerifying, setIsMobileVerifying] = useState(false)
       console.error("Verify Mobile OTP error:", err);
       alert("Verification failed. Please try again.");
     } finally {
-    setIsMobileVerifying(false);  // ← CHANGE THIS
+      setIsMobileVerifying(false);  // ← CHANGE THIS
     }
   }
 
@@ -688,10 +688,10 @@ const [isMobileVerifying, setIsMobileVerifying] = useState(false)
                 type="button"
                 className="jsignup-small-verify-btn"
                 onClick={(e) => sendEmailOtp(e)}
-  disabled={isEmailOtpSending || isEmailVerified}  // ← CHANGE THIS
+                disabled={isEmailOtpSending || isEmailVerified}  // ← CHANGE THIS
               >
 
-                  {isEmailOtpSending ? "Sending..." : "Verify"}
+                {isEmailOtpSending ? "Sending..." : "Verify"}
 
               </button>
             )}
@@ -763,7 +763,7 @@ const [isMobileVerifying, setIsMobileVerifying] = useState(false)
                 type="button"
                 className="jsignup-small-verify-btn"
                 onClick={(e) => sendMobileOtp(e)}
-  disabled={isMobileOtpSending || isMobileVerified}  // ← CHANGE THIS
+                disabled={isMobileOtpSending || isMobileVerified}  // ← CHANGE THIS
               >
 
                 {isMobileOtpSending ? "Sending..." : "Verify"}
@@ -777,8 +777,7 @@ const [isMobileVerifying, setIsMobileVerifying] = useState(false)
           <button
             type="submit"
             className="j-sign-up-submit"
-            disabled={!isEmailVerified || !isMobileVerified || isLoading} 
-            disabled={isLoading}
+            disabled={!isEmailVerified || !isMobileVerified || isLoading}
           >
             {isLoading ? "Creating Account..." : "Create Account"}
           </button>

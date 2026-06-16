@@ -289,6 +289,7 @@ RAZORPAY_WEBHOOK_SECRET = ''
 import os
  
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://54.183.89.14")
+# FRONTEND_URL = FRONTEND_URL = "http://localhost:5173"
  
 GOOGLE_CLIENT_ID = "105293618059-al95762js6gc2o9umchkb3la0mnirhs1.apps.googleusercontent.com"
 #GOOGLE_CLIENT_ID = "146646258104-184rcr7uv1mpttpi8bjf9tjq2r2ijg1i.apps.googleusercontent.com"
