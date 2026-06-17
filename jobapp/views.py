@@ -8831,38 +8831,57 @@ class EmployerWeeklySummaryView(APIView):
 # for push notification
 class RegisterDeviceTokenView(APIView):
     permission_classes = [IsAuthenticated]
-
+ 
     def post(self, request):
         serializer = SaveDeviceTokenSerializer(
             data=request.data
         )
         serializer.is_valid(raise_exception=True)
+ 
         token = serializer.validated_data["fcm_token"]
         platform = serializer.validated_data.get(
             "platform",
             "web"
         )
-
-        device, created = UserDevice.objects.update_or_create(
-            fcm_token=token,
-            defaults={
-                "user": request.user,
-                "platform": platform,
-                "is_active": True,
-            },
-        )
+ 
+        # One active web token per user
+        if platform == "web":
+ 
+            device, created = UserDevice.objects.update_or_create(
+                user=request.user,
+                platform="web",
+                defaults={
+                    "fcm_token": token,
+                    "is_active": True,
+                }
+            )
+ 
+        else:
+ 
+            device, created = UserDevice.objects.update_or_create(
+                fcm_token=token,
+                defaults={
+                    "user": request.user,
+                    "platform": platform,
+                    "is_active": True,
+                }
+            )
+ 
         logger.info(
             "FCM TOKEN REGISTERED | user=%s | device_id=%s | created=%s",
             request.user.id,
             device.id,
             created
         )
+ 
         return Response(
             {
                 "status": "token registered",
                 "device_id": device.id,
                 "created": created,
-            }
+                "platform": platform,
+            },
+            status=status.HTTP_200_OK
         )
    
 

@@ -104,13 +104,13 @@ CELERY_BEAT_SCHEDULE = {
             'send_weekly_summary_notifications'
         ),
 
-        'schedule': timedelta(seconds=1),
+        # 'schedule': timedelta(seconds=1),
  
-        # 'schedule': crontab(
-        #     hour=9,
-        #     minute=0,
-        #     day_of_week='monday'
-        # ),
+        'schedule': crontab(
+            hour=9,
+            minute=0,
+            day_of_week='monday'
+        ),
     },
  
     # ─────────────────────────────
