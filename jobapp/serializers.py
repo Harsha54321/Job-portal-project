@@ -11,7 +11,7 @@ from .models import (
     CompanyVerification, Complaint, CompanyProfile, UserSettings, 
     HelpTopic, RaiseTicket, PasswordResetToken, EmailOTP, ChatMessage, Plan, Subscription,
     Invoice, PaymentMethod,AdminAccessLog, AdminTrustedDevice, CompanyReview, UserDevice,
-    EmployerPlatformSettings,
+    EmployerPlatformSettings, AccountManager, EmployerAccountManagerAssignment,
 )
 from .services import Admin2FAService , AdminSecurityService
  
@@ -4299,3 +4299,62 @@ class BlogCategorySerializer(serializers.ModelSerializer):
     class Meta:
         model  = BlogCategory
         fields = ['id', 'name', 'blog_count', 'blogs', 'created_at']
+
+# ============================================================
+# ACCOUNT MANAGER SERIALIZERS
+# ============================================================
+
+class AccountManagerSerializer(serializers.ModelSerializer):
+    department_display = serializers.CharField(source='get_department_display', read_only=True)
+    profile_photo_url = serializers.SerializerMethodField()
+    assigned_employers_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = AccountManager
+        fields = [
+            'id', 'full_name', 'email', 'phone',
+            'department', 'department_display',
+            'title', 'description', 'profile_photo', 'profile_photo_url',
+            'is_active', 'order', 'assigned_employers_count',
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+    def get_profile_photo_url(self, obj):
+        if obj.profile_photo:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.profile_photo.url)
+            return obj.profile_photo.url
+        return None
+
+    def get_assigned_employers_count(self, obj):
+        return obj.assigned_employers.count()
+
+
+class EmployerAccountManagerAssignmentSerializer(serializers.ModelSerializer):
+    account_manager_details = AccountManagerSerializer(source='account_manager', read_only=True)
+    employer_name = serializers.CharField(source='employer.username', read_only=True)
+    employer_email = serializers.CharField(source='employer.email', read_only=True)
+    department_display = serializers.CharField(source='account_manager.get_department_display', read_only=True)
+
+    class Meta:
+        model = EmployerAccountManagerAssignment
+        fields = [
+            'id', 'employer', 'employer_name', 'employer_email',
+            'account_manager', 'account_manager_details',
+            'department_display',
+            'is_primary', 'assigned_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'assigned_at', 'updated_at']
+
+
+class EmployerManagerResponseSerializer(serializers.Serializer):
+    """
+    Employer side response serializer
+    """
+    has_access = serializers.BooleanField()
+    message = serializers.CharField()
+    action_required = serializers.CharField(required=False, allow_null=True)
+    action_button = serializers.CharField(required=False, allow_null=True)
+    contacts = serializers.ListField(required=False)

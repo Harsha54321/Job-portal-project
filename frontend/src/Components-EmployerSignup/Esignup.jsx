@@ -52,6 +52,29 @@ export const Esignup = () => {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
+  const [regSettings, setRegSettings] = useState({
+    emailVerification: true,
+    mobileVerification: false,
+  });
+
+  useEffect(() => {
+    const fetchRegSettings = async () => {
+      try {
+        const res = await api.get("employer-registration-settings/");
+        setRegSettings({
+          emailVerification: res.data.email_verification,
+          mobileVerification: res.data.mobile_verification,
+        });
+        // If email verification disabled, mark as already verified
+        if (!res.data.email_verification) setIsEmailVerified(true);
+        if (!res.data.mobile_verification) setIsMobileVerified(true);
+      } catch (err) {
+        console.error("Failed to fetch registration settings:", err);
+      }
+    };
+    fetchRegSettings();
+  }, []);
+
   const togglePasswordView = () => {
     setPasswordShow((prev) => !prev)
   }
@@ -297,7 +320,7 @@ export const Esignup = () => {
       newErrors.email = "Email must start with a letter";
     } else if (!regexOfMail.test(formValues.email)) {
       newErrors.email = "Invalid email format";
-    } else if (!isEmailVerified) {
+    } else if (regSettings.emailVerification && !isEmailVerified) {
       newErrors.email = "Please verify your email via OTP";
     }
 
@@ -325,7 +348,7 @@ export const Esignup = () => {
       newErrors.phone = "Mobile number is required";
     } else if (!regexofMobile.test(formValues.phone)) {
       newErrors.phone = "Invalid mobile number format (10 digits required)";
-    } else if (!isMobileVerified) {
+    } else if (regSettings.mobileVerification && !isMobileVerified) {
       newErrors.phone = "Please verify your mobile number via OTP";
     }
 
@@ -674,9 +697,9 @@ export const Esignup = () => {
               onChange={handleForm}
               placeholder="Enter Company Email"
               className={errors.email ? "input-error" : ""}
-              disabled={isEmailVerified || isLoading}
+              disabled={(regSettings.emailVerification && isEmailVerified) || isLoading}
             />
-            {!isEmailVerified && formValues.email.length > 0 && (
+            {regSettings.emailVerification && !isEmailVerified && formValues.email.length > 0 && (
               // <button 05/06/26
               //   type="button"
               //   className="jsignup-small-verify-btn"
@@ -695,7 +718,7 @@ export const Esignup = () => {
 
               </button>
             )}
-            {isEmailVerified && <span className="verified-badge">✓ Verified</span>}
+            {regSettings.emailVerification && isEmailVerified && (<span className="verified-badge">✓ Verified</span>)}
           </div>
           {errors.email && <span className="error-msg">{errors.email}</span>}
 
@@ -748,10 +771,10 @@ export const Esignup = () => {
               }}
               placeholder="Enter mobile number"
               className={errors.phone ? "input-error" : ""}
-              disabled={isMobileVerified || isLoading}
+              disabled={(regSettings.mobileVerification && isMobileVerified) || isLoading}
             />
 
-            {!isMobileVerified && formValues.phone.length === 10 && (
+            {regSettings.mobileVerification && !isMobileVerified && formValues.phone.length === 10 && (
               // <button 05/06/26
               //   type="button"
               //   className="jsignup-small-verify-btn"
@@ -770,14 +793,21 @@ export const Esignup = () => {
               </button>
             )}
 
-            {isMobileVerified && <span className="verified-badge">✓ Verified</span>}
+            {regSettings.mobileVerification && isMobileVerified && (
+              <span className="verified-badge">✓ Verified</span>
+            )}
           </div>
           {errors.phone && <span className="error-msg">{errors.phone}</span>}
 
           <button
             type="submit"
             className="j-sign-up-submit"
-            disabled={!isEmailVerified || !isMobileVerified || isLoading}
+            disabled={
+              (regSettings.emailVerification && !isEmailVerified) ||
+              (regSettings.mobileVerification && !isMobileVerified) ||
+              isLoading
+            }
+          // disabled={isLoading}
           >
             {isLoading ? "Creating Account..." : "Create Account"}
           </button>

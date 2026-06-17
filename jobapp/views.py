@@ -33,6 +33,7 @@ from django.db.models.functions import (
     Coalesce
 )
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
+from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
 
 from .serializers import (
     JobSeekerRegistrationSerializer,
@@ -77,6 +78,8 @@ from .serializers import (
     AdminCompanySerializer,
     AdminCompanyDetailSerializer,
     SaveDeviceTokenSerializer,
+    AccountManagerSerializer,
+    EmployerAccountManagerAssignmentSerializer,
 
 )
 
@@ -87,7 +90,7 @@ from .models import (
     PasswordResetToken, EmailOTP, NewsletterSubscriber,
     CompanyVerification, CompanyProfile, Complaint, Plan, Subscription,
     Invoice, PaymentMethod, CompanyEmailOTP, NotificationConfig,
-    NotificationChannelSettings, UserDevice,
+    NotificationChannelSettings, UserDevice, AccountManager, EmployerAccountManagerAssignment,
 )
 from .permissions import IsAdminOrEmployer, IsEmployerOrAdmin, IsJobSeeker, IsAdminUserType
 from .utils import generate_otp, generate_4digit_otp, send_email_otp, generate_token, send_password_reset_email,generate_company_otp, send_company_email_otp,run_application_flag_checks
@@ -1223,7 +1226,7 @@ class CreateJobPreviewView(generics.CreateAPIView):
                 raise ValidationError(
                     {
                         "is_highlighted": (
-                            "Highlighted jobs are not allowed for your plan."
+                            "Highlighted jobs are not allowed for your plan. Please contact admin."
                         )
                     }
                 )
@@ -5247,43 +5250,30 @@ from .models import (
 
 )
  
-from .services import AdminSecurityService
- 
- 
+from .services import Admin2FAService, AdminSecurityService
 logger = logging.getLogger(__name__)
- 
- 
 class AdminLoginView(APIView):
- 
     permission_classes = [AllowAny]
- 
+   
     def post(self, request):
- 
         print("REQUEST DATA:", request.data)
         email = (
-
             request.data.get("email")
             or request.data.get("username")
             or ""
-
         ).strip()
         password = (
             request.data.get("password", "")
         ).strip()
+       
         print("EMAIL:", email)
-        # =================================================
-        # FIELD VALIDATION
-        # =================================================
+       
         errors = {}
  
         if not email:
-            errors["email"] = (
-                "Email is required."
-            )
+            errors["email"] = "Email is required."
         if not password:
-            errors["password"] = (
-                "Password is required."
-            )
+            errors["password"] = "Password is required."
         if errors:
             return Response(
                 {
@@ -5293,21 +5283,9 @@ class AdminLoginView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
  
-        # =================================================
-        # FIND USER
-        # =================================================
- 
         try:
-            user = User.objects.get(
-                email__iexact=email
-            )
+            user = User.objects.get(email__iexact=email)
         except User.DoesNotExist:
- 
-            # =============================================
-            # ADMIN SECURITY LOG
-            # LOGIN FAILED
-            # =============================================
- 
             try:
                 AdminSecurityService.log_event(
                     request=request,
@@ -5320,28 +5298,17 @@ class AdminLoginView(APIView):
                     }
                 )
             except Exception as exc:
-                logger.exception(
-                    "ADMIN LOGIN LOG FAILED: %s",
-                    str(exc)
-                )
-
+                logger.exception("ADMIN LOGIN LOG FAILED: %s", str(exc))
+ 
             return Response(
                 {
                     "success": False,
                     "errors": {
-                        "email": (
-                            "No account found "
-                            "with this email."
-                        )
+                        "email": "No account found with this email."
                     }
                 },
                 status=status.HTTP_401_UNAUTHORIZED
-
             )
- 
-        # =================================================
-        # CHECK ADMIN ACCESS
-        # =================================================
  
         if user.user_type != "admin":
             try:
@@ -5351,35 +5318,22 @@ class AdminLoginView(APIView):
                     action="LOGIN_FAILED",
                     status="FAILED",
                     extra_data={
-                        "reason": (
-                            "Non-admin login attempt"
-                        )
+                        "reason": "Non-admin login attempt"
                     }
                 )
             except Exception as exc:
-                logger.exception(
-                    "ADMIN ACCESS LOG FAILED: %s",
-                    str(exc)
-                )
+                logger.exception("ADMIN ACCESS LOG FAILED: %s", str(exc))
             return Response(
                 {
                     "success": False,
                     "errors": {
-                        "email": (
-                            "This account does not "
-                            "have admin access."
-                        )
+                        "email": "This account does not have admin access."
                     }
                 },
                 status=status.HTTP_403_FORBIDDEN
             )
  
-        # =================================================
-        # PASSWORD CHECK
-        # =================================================
- 
         if not user.check_password(password):
-
             try:
                 AdminSecurityService.log_event(
                     request=request,
@@ -5387,32 +5341,20 @@ class AdminLoginView(APIView):
                     action="LOGIN_FAILED",
                     status="FAILED",
                     extra_data={
-                        "reason": (
-                            "Incorrect password"
-                        )
+                        "reason": "Incorrect password"
                     }
                 )
             except Exception as exc:
-                logger.exception(
-                    "PASSWORD FAILURE LOG FAILED: %s",
-                    str(exc)
-                )
+                logger.exception("PASSWORD FAILURE LOG FAILED: %s", str(exc))
             return Response(
                 {
                     "success": False,
                     "errors": {
-                        "password": (
-                            "Incorrect password."
-                        )
+                        "password": "Incorrect password."
                     }
                 },
                 status=status.HTTP_401_UNAUTHORIZED
-
             )
- 
-        # =================================================
-        # ACTIVE CHECK
-        # =================================================
  
         if not user.is_active:
             try:
@@ -5422,106 +5364,103 @@ class AdminLoginView(APIView):
                     action="LOGIN_FAILED",
                     status="FAILED",
                     extra_data={
-                        "reason": (
-                            "Account disabled"
-                        )
+                        "reason": "Account disabled"
                     }
                 )
             except Exception as exc:
-                logger.exception(
-                    "DISABLED ACCOUNT LOG FAILED: %s",
-                    str(exc)
-                )
+                logger.exception("DISABLED ACCOUNT LOG FAILED: %s", str(exc))
             return Response(
                 {
                     "success": False,
                     "errors": {
-                        "email": (
-                            "This account "
-                            "is disabled."
-                        )
+                        "email": "This account is disabled."
                     }
                 },
                 status=status.HTTP_403_FORBIDDEN
-
             )
  
         # =================================================
-
         # UPDATE LOGIN TIME
-
         # =================================================
- 
         user.login_time = timezone.now()
-        user.save(
-            update_fields=["login_time"]
-        )
+        user.save(update_fields=["login_time"])
  
         # =================================================
-
-        # GENERATE JWT TOKENS
-
+        # 2FA CHECK - CRITICAL PART
         # =================================================
+        # Check if admin has 2FA enabled
+        profile = getattr(user, 'admin_profile', None)
+       
+        if profile and profile.two_factor_enabled:
+            # Determine available methods
+            available_methods = []
+            if profile.email_verified:
+                available_methods.append("email")
+            if profile.sms_verified:
+                available_methods.append("sms")
+           
+            if available_methods:
+               
+                default_method = available_methods[0]
+                # success, message = Admin2FAService.send_2fa_otp(user, default_method)
+               
+                if default_method:
+               
+                    temp_token = Admin2FAService.generate_temp_token(user.id)
+                 
+                    AdminSecurityService.log_event(
+                        request=request,
+                        user=user,
+                        action="2FA_CHALLENGE",
+                        status="PENDING",
+                        extra_data={
+                            "available_methods": available_methods,
+                            "default_method": default_method
+                        }
+                    )
+                   
+                    return Response({
+                        "success": True,
+                        "requires_2fa": True,
+                        "temp_token": temp_token,
+                        "user_id": user.id,
+                        "available_methods": available_methods,
+                        "default_method": default_method,
+                        "message": f"OTP sent to your {default_method}"
+                    }, status=status.HTTP_200_OK)
+                else:
+                    return Response({
+                        "success": False,
+                        "requires_2fa": True,
+                        "error": f"Failed to send OTP: {message}"
+                    }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
  
+        # =================================================
+        # NO 2FA - GENERATE JWT TOKENS DIRECTLY
+        # =================================================
         refresh = RefreshToken.for_user(user)
- 
-        # =================================================
-
-        # DEVICE TRACKING
-
-        # =================================================
- 
-        user_agent = request.META.get(
-            "HTTP_USER_AGENT",
-            ""
-        )
-        device_fingerprint = hashlib.md5(
-            user_agent.encode()
-        ).hexdigest()
-        refresh_jti = refresh.payload.get(
-            "jti",
-            ""
-        )
-        device, created = (
-            AdminTrustedDevice.objects.get_or_create(
-                user=user,
-                device_fingerprint=device_fingerprint,
-                defaults={
-                    "device_name": (
-                        user_agent[:200]
-                    ),
-                    "platform": "web",
-                    "is_trusted": True,
-                    "refresh_token_jti": (
-                        refresh_jti
-                    ),
-                }
-            )
+       
+        # Device tracking
+        user_agent = request.META.get("HTTP_USER_AGENT", "")
+        device_fingerprint = hashlib.md5(user_agent.encode()).hexdigest()
+        refresh_jti = refresh.payload.get("jti", "")
+       
+        device, created = AdminTrustedDevice.objects.get_or_create(
+            user=user,
+            device_fingerprint=device_fingerprint,
+            defaults={
+                "device_name": user_agent[:200],
+                "platform": "web",
+                "is_trusted": True,
+                "refresh_token_jti": refresh_jti,
+            }
         )
         if not created:
-            device.last_used_at = (
-                timezone.now()
-            )
-            device.refresh_token_jti = (
-                refresh_jti
-            )
+            device.last_used_at = timezone.now()
+            device.refresh_token_jti = refresh_jti
             device.save()
-            print(
-                f"UPDATED DEVICE: "
-                f"{device.device_name}"
-            )
-        else:
-            print(
-                f"NEW DEVICE: "
-                f"{device.device_name}"
-            )
  
-        # =================================================
-
-        # ADMIN SECURITY SUCCESS LOG
-
-        # =================================================
- 
+        # Security log
         try:
             AdminSecurityService.log_event(
                 request=request,
@@ -5529,51 +5468,34 @@ class AdminLoginView(APIView):
                 action="LOGIN_SUCCESS",
                 status="SUCCESS",
                 extra_data={
-                    "login_method": (
-                        "email/password"
-                    ),
-                    "device_fingerprint": (
-                        device_fingerprint
-                    ),
-                    "user_agent": (
-                        user_agent[:300]
-                    )
+                    "login_method": "email/password",
+                    "device_fingerprint": device_fingerprint,
+                    "user_agent": user_agent[:300],
+                    "two_factor_used": False
                 }
             )
             print(
                 "ADMIN LOGIN LOG SAVED"
             )
         except Exception as exc:
-            logger.exception(
-                "ADMIN SUCCESS LOG FAILED: %s",
-                str(exc)
-            )
+            logger.exception("ADMIN SUCCESS LOG FAILED: %s", str(exc))
  
-        # =================================================
+        return Response({
+            "success": True,
+            "message": (
+                "Admin login successful."
+            ),
+            "requires_2fa": False,
+            "access": str(refresh.access_token),
+            "refresh": str(refresh),
+            "user": {
+                "id": user.id,
+                "email": user.email,
+                "username": user.username,
+                "user_type": user.user_type,
+            }
+        }, status=status.HTTP_200_OK)
 
-        # RESPONSE
-
-        # =================================================
- 
-        return Response(
-            {
-                "success": True,
-                "message": (
-                    "Admin login successful."
-                ),
-                "access": str(
-                    refresh.access_token
-                ),
-                "refresh": str(refresh),
-                "user": {
-                    "id": user.id,
-                    "email": user.email,
-                    "username": user.username,
-                    "user_type": user.user_type,
-                }
-            },
-            status=status.HTTP_200_OK
-        )
 
 
 from rest_framework.permissions import BasePermission
@@ -7752,6 +7674,7 @@ class AdminChangePasswordView(APIView):  # new 11/05
  
 # status for 2fa
  
+ 
 class Admin2FAStatusView(APIView):
     permission_classes = [IsAuthenticated, IsAdminUserType]
  
@@ -7769,23 +7692,22 @@ class Admin2FAStatusView(APIView):
  
                     "method": profile.two_factor_method,
  
-                    "email_verified": (
-                        profile.two_factor_enabled
-                        and
-                        profile.two_factor_method == "email"
-                    ),
- 
-                    "sms_verified": (
-                        profile.two_factor_enabled
-                        and
-                        profile.two_factor_method == "sms"
-                    ),
+                    # "email_verified": (
+                    #     profile.two_factor_enabled
+                    #     and
+                    #     profile.two_factor_method == "email"
+                    # ),
+                    "email_verified": profile.email_verified,  # ← ADD THIS
+                    "sms_verified": profile.sms_verified,      # ← ADD THIS
+                    # "sms_verified": (
+                    #     profile.two_factor_enabled
+                    #     and
+                    #     profile.two_factor_method == "sms"
+                    # ),
                 },
-                status=status.HTTP_200_OK
-)
-class SendAdmin2FAOTPView(APIView):
-    #permission_classes = [IsAuthenticated, IsAdminUserType]
- 
+                status=status.HTTP_200_OK)
+   
+   
     def post(self, request):
  
         if not request.user or not request.user.is_authenticated:
@@ -7918,332 +7840,269 @@ class SendAdmin2FAOTPView(APIView):
             },
             status=status.HTTP_200_OK
         )
+
+class SendAdmin2FAOTPView(APIView):
+    permission_classes = [IsAuthenticated, IsAdminUserType]
+ 
+    def post(self, request):
+        method = str(request.data.get("method", "")).strip().lower()
+ 
+        if method not in ["email", "sms"]:
+            return Response({
+                "success": False,
+                "message": "Invalid method. Choose 'email' or 'sms'."
+            }, status=status.HTTP_400_BAD_REQUEST)
+ 
+        user = request.user
+        profile = getattr(user, 'admin_profile', None)
+ 
+        if not profile:
+            return Response({
+                "success": False,
+                "message": "Admin profile not found"
+            }, status=status.HTTP_404_NOT_FOUND)
+ 
+        # Check if the method is verified
+        if method == "email" and not profile.email_verified:
+            return Response({
+                "success": False,
+                "message": "Email 2FA not verified yet. Please verify your email first."
+            }, status=status.HTTP_400_BAD_REQUEST)
+ 
+        if method == "sms" and not profile.sms_verified:
+            return Response({
+                "success": False,
+                "message": "SMS 2FA not verified yet. Please verify your mobile number first."
+            }, status=status.HTTP_400_BAD_REQUEST)
+ 
+        # Send OTP
+        success, message = Admin2FAService.send_2fa_otp(user, method)
+ 
+        if success:
+            return Response({
+                "success": True,
+                "message": message,
+                "method": method
+            }, status=status.HTTP_200_OK)
+        else:
+            return Response({
+                "success": False,
+                "message": message
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
    
 class VerifyAdmin2FAOTPView(APIView):
     permission_classes = [IsAuthenticated, IsAdminUserType]
  
     def post(self, request):
- 
         otp = request.data.get("otp")
         method = request.data.get("method")
  
         if not otp:
-            return Response(
-                {
-                    "success": False,
-                    "message": "OTP is required"
-                },
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response({
+                "success": False,
+                "message": "OTP is required"
+            }, status=status.HTTP_400_BAD_REQUEST)
  
         if method not in ["email", "sms"]:
-            return Response(
-                {
-                    "success": False,
-                    "message": "Invalid method"
-                },
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response({
+                "success": False,
+                "message": "Invalid method"
+            }, status=status.HTTP_400_BAD_REQUEST)
  
-        # EMAIL VERIFY
-        if method == "email":
- 
-            otp_obj = EmailOTP.objects.filter(
-                email=request.user.email,
-                otp=otp,
-                purpose="admin_2fa",
-                is_verified=False
-            ).last()
- 
-        # SMS VERIFY
-        else:
-            if otp == "123456":
- 
-                otp_obj = True
-            #otp_obj = SMSOTP.objects.filter(
-                #phone=request.user.phone,
-               # otp=otp,
-               # purpose="admin_2fa",
-               # is_verified=False
-            #).last()
- 
-        if not otp_obj:
-            return Response(
-                {
-                    "success": False,
-                    "message": "Invalid OTP"
-                },
-                status=status.HTTP_400_BAD_REQUEST
-            )
- 
-        if not otp_obj.is_valid():
-            return Response(
-                {
-                    "success": False,
-                    "message": "OTP expired"
-                },
-                status=status.HTTP_400_BAD_REQUEST
-            )
- 
-        otp_obj.is_verified = True
-        otp_obj.save()
- 
-        profile, _ = AdminProfile.objects.get_or_create(
-            user=request.user
-        )
- 
-        profile.two_factor_enabled = True
-        profile.two_factor_method = method
+        user = request.user
        
-        # Set verified flag based on method
+        # Verify OTP
+        from .services import Admin2FAService
+        success, message = Admin2FAService.verify_2fa_otp(user, otp, method)
+ 
+        if not success:
+            AdminSecurityService.log_event(
+                request=request,
+                user=user,
+                action="2FA_ENABLE_FAILED",
+                status="FAILED",
+                extra_data={"method": method, "reason": message}
+            )
+            return Response({
+                "success": False,
+                "message": message
+            }, status=status.HTTP_400_BAD_REQUEST)
+ 
+        # Update admin profile
+        profile, _ = AdminProfile.objects.get_or_create(user=user)
+ 
         if method == "email":
             profile.email_verified = True
+            profile.two_factor_method = "email"
         else:
             profile.sms_verified = True
+            profile.two_factor_method = "sms"
  
-        # ADMIN 2FA ENABLE LOG
-       
- 
-        AdminSecurityService.log_event(
-            request=request,
-            user=request.user,
-            action="2FA_ENABLED",
-            status="SUCCESS",
-            extra_data={
-                "method": method
-            }
-        )
- 
+        # Enable 2FA if not already enabled
+        profile.two_factor_enabled = True
         profile.save()
  
-        return Response(
-            {
-                "success": True,
-                "message": "2FA enabled successfully",
-                "two_factor_enabled": True,
-                "method": profile.two_factor_method
-            },
-            status=status.HTTP_200_OK
+        # Security log
+        AdminSecurityService.log_event(
+            request=request,
+            user=user,
+            action="2FA_ENABLED",
+            status="SUCCESS",
+            extra_data={"method": method}
         )
+ 
+        return Response({
+            "success": True,
+            "message": f"{method.capitalize()} 2FA enabled successfully",
+            "two_factor_enabled": True,
+            "method": method,
+            "email_verified": profile.email_verified,
+            "sms_verified": profile.sms_verified
+        }, status=status.HTTP_200_OK)
  
  
 class DisableAdmin2FAView(APIView):
     permission_classes = [IsAuthenticated, IsAdminUserType]
  
     def patch(self, request):
- 
-        profile, _ = AdminProfile.objects.get_or_create(
-            user=request.user
-        )
+        profile, _ = AdminProfile.objects.get_or_create(user=request.user)
  
         profile.two_factor_enabled = False
         profile.two_factor_method = None
+        profile.email_verified = False
+        profile.sms_verified = False
+ 
         AdminSecurityService.log_event(
-                request=request,
-                user=request.user,
-                action="2FA_DISABLED",
-                status="SUCCESS",
-            )
+            request=request,
+            user=request.user,
+            action="2FA_DISABLED",
+            status="SUCCESS",
+        )
  
         profile.save()
  
-        return Response(
-            {
-                "success": True,
-                "message": "2FA disabled successfully",
-                "two_factor_enabled": False
-            },
-            status=status.HTTP_200_OK
-        )
+        return Response({
+            "success": True,
+            "message": "2FA disabled successfully",
+            "two_factor_enabled": False
+        }, status=status.HTTP_200_OK)
    
 #if admin enble 2step verification then use this as verified otp
  
 class VerifyAdminLoginOTPView(APIView):
- 
     permission_classes = [AllowAny]
  
     def post(self, request):
- 
-        user_id = request.data.get("user_id")
+        temp_token = request.data.get("temp_token")
         otp = request.data.get("otp")
         method = request.data.get("method")
  
         # VALIDATION
-       
- 
-        if not user_id:
-            return Response(
-                {
-                    "success": False,
-                    "message": "user_id is required"
-                },
-                status=status.HTTP_400_BAD_REQUEST
-            )
+        if not temp_token:
+            return Response({
+                "success": False,
+                "message": "temp_token is required"
+            }, status=status.HTTP_400_BAD_REQUEST)
  
         if not otp:
-            return Response(
-                {
-                    "success": False,
-                    "message": "OTP is required"
-                },
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response({
+                "success": False,
+                "message": "OTP is required"
+            }, status=status.HTTP_400_BAD_REQUEST)
  
         if method not in ["email", "sms"]:
-            return Response(
-                {
-                    "success": False,
-                    "message": "Invalid method"
-                },
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response({
+                "success": False,
+                "message": "Invalid method"
+            }, status=status.HTTP_400_BAD_REQUEST)
  
-       
-        # GET USER
-       
+        # Validate temp token and get user
+        from .services import Admin2FAService
+        user_id = Admin2FAService.validate_temp_token(temp_token)
+ 
+        if not user_id:
+            return Response({
+                "success": False,
+                "message": "Invalid or expired temporary token. Please login again."
+            }, status=status.HTTP_400_BAD_REQUEST)
  
         try:
- 
-            user = User.objects.get(
-                id=user_id,
-                user_type="admin"
-            )
- 
+            user = User.objects.get(id=user_id, user_type="admin")
         except User.DoesNotExist:
+            return Response({
+                "success": False,
+                "message": "Admin user not found"
+            }, status=status.HTTP_404_NOT_FOUND)
  
-            return Response(
-                {
-                    "success": False,
-                    "message": "Admin user not found"
-                },
-                status=status.HTTP_404_NOT_FOUND
-            )
+        # Verify OTP
+        success, message = Admin2FAService.verify_2fa_otp(user, otp, method)
  
-        # VERIFY EMAIL OTP
-     
- 
-        if method == "email":
- 
-            otp_obj = EmailOTP.objects.filter(
-                email=user.email,
-                otp=otp,
-                purpose="admin_login_2fa",
-                is_verified=False
-            ).last()
- 
-   
-        # VERIFY SMS OTP
- 
- 
-        else:
-            if otp == "123456":
- 
-                otp_obj = True
- 
-            #otp_obj = SMSOTP.objects.filter(
-               # phone=user.phone,
-               # otp=otp,
-               # purpose="admin_login_2fa",
-               # is_verified=False
-            #).last()
-             
- 
-   
-        # INVALID OTP
- 
- 
-        if not otp_obj:
- 
+        if not success:
             AdminSecurityService.log_event(
                 request=request,
                 user=user,
                 action="LOGIN_2FA_VERIFY",
                 status="FAILED",
-                extra_data={
-                    "reason": "Invalid OTP"
-                }
+                extra_data={"method": method, "reason": message}
             )
+            return Response({
+                "success": False,
+                "message": message
+            }, status=status.HTTP_400_BAD_REQUEST)
  
-            return Response(
-                {
-                    "success": False,
-                    "message": "Invalid OTP"
-                },
-                status=status.HTTP_400_BAD_REQUEST
-            )
- 
-        # EXPIRED OTP
- 
- 
-        if not otp_obj.is_valid():
- 
-            return Response(
-                {
-                    "success": False,
-                    "message": "OTP expired"
-                },
-                status=status.HTTP_400_BAD_REQUEST
-            )
- 
-       
-        # MARK VERIFIED
-       
- 
-        otp_obj.is_verified = True
-        otp_obj.save()
- 
-       
-        # UPDATE LOGIN TIME
-     
+        # Update login time
         user.login_time = timezone.now()
         user.save(update_fields=["login_time"])
  
-       
-        # GENERATE TOKENS
-   
- 
+        # Generate JWT tokens
         refresh = RefreshToken.for_user(user)
  
-       
-        # SECURITY LOG
-       
+        # Device tracking
+        user_agent = request.META.get("HTTP_USER_AGENT", "")
+        device_fingerprint = hashlib.md5(user_agent.encode()).hexdigest()
+        refresh_jti = refresh.payload.get("jti", "")
  
+        device, created = AdminTrustedDevice.objects.get_or_create(
+            user=user,
+            device_fingerprint=device_fingerprint,
+            defaults={
+                "device_name": user_agent[:200],
+                "platform": "web",
+                "is_trusted": True,
+                "refresh_token_jti": refresh_jti,
+            }
+        )
+        if not created:
+            device.last_used_at = timezone.now()
+            device.refresh_token_jti = refresh_jti
+            device.save()
+ 
+        # Security log
         AdminSecurityService.log_event(
             request=request,
             user=user,
             action="LOGIN_2FA_VERIFY",
             status="SUCCESS",
             extra_data={
-                "method": method
+                "method": method,
+                "device_fingerprint": device_fingerprint
             }
         )
  
-   
-        # SUCCESS RESPONSE
-       
- 
-        return Response(
-            {
-                "success": True,
-                "message": "Admin login successful",
- 
-                "access": str(
-                    refresh.access_token
-                ),
- 
-                "refresh": str(
-                    refresh
-                ),
- 
-                "user": {
-                    "id": user.id,
-                    "email": user.email,
-                    "username": user.username,
-                    "user_type": user.user_type,
-                }
-            },
-            status=status.HTTP_200_OK
-        )  
+        # Return JWT tokens
+        return Response({
+            "success": True,
+            "message": "Login successful",
+            "access": str(refresh.access_token),
+            "refresh": str(refresh),
+            "user": {
+                "id": user.id,
+                "email": user.email,
+                "username": user.username,
+                "user_type": user.user_type,
+            }
+        }, status=status.HTTP_200_OK)
+
 # for device log  and activity
  
 class AdminTrustedDeviceListView(APIView):
@@ -10421,3 +10280,344 @@ class LogoutView(APIView):
                 {"error": str(e)},
                 status=status.HTTP_400_BAD_REQUEST
             )
+
+class AdminLogin2FAOTPView(APIView):
+    permission_classes = [AllowAny]
+ 
+    def post(self, request):
+ 
+        temp_token = request.data.get("temp_token")
+        method = request.data.get("method", "").lower()
+ 
+        if not temp_token:
+            return Response({
+                "success": False,
+                "message": "Temp token is required"
+            }, status=status.HTTP_400_BAD_REQUEST)
+ 
+        user_id = Admin2FAService.validate_temp_token(temp_token)
+ 
+        if not user_id:
+            return Response({
+                "success": False,
+                "message": "Invalid or expired token"
+            }, status=status.HTTP_401_UNAUTHORIZED)
+ 
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response({
+                "success": False,
+                "message": "User not found"
+            }, status=status.HTTP_404_NOT_FOUND)
+ 
+        profile = getattr(user, "admin_profile", None)
+ 
+        if not profile:
+            return Response({
+                "success": False,
+                "message": "Admin profile not found"
+            }, status=status.HTTP_404_NOT_FOUND)
+ 
+        if method not in ["email", "sms"]:
+            return Response({
+                "success": False,
+                "message": "Invalid method"
+            }, status=status.HTTP_400_BAD_REQUEST)
+ 
+        if method == "email" and not profile.email_verified:
+            return Response({
+                "success": False,
+                "message": "Email verification not completed"
+            }, status=status.HTTP_400_BAD_REQUEST)
+ 
+        if method == "sms" and not profile.sms_verified:
+            return Response({
+                "success": False,
+                "message": "SMS verification not completed"
+            }, status=status.HTTP_400_BAD_REQUEST)
+ 
+        success, message = Admin2FAService.send_2fa_otp(user, method)
+ 
+        return Response({
+            "success": success,
+            "message": message,
+            "method": method
+        })
+
+# ──────────────────────────────────────────────
+# ADMIN - ACCOUNT MANAGER CRUD
+# ──────────────────────────────────────────────
+
+class AdminAccountManagerListView(ListCreateAPIView):
+    """
+    GET /api/admin/account-managers/ - List all account managers
+    POST /api/admin/account-managers/ - Create new account manager
+    """
+    permission_classes = [IsAdminUser]
+    queryset = AccountManager.objects.all()
+    serializer_class = AccountManagerSerializer
+
+    def perform_create(self, serializer):
+        serializer.save(created_by=self.request.user)
+
+
+class AdminAccountManagerDetailView(RetrieveUpdateDestroyAPIView):
+    """
+    GET /api/admin/account-managers/<id>/
+    PUT /api/admin/account-managers/<id>/
+    DELETE /api/admin/account-managers/<id>/
+    """
+    permission_classes = [IsAdminUser]
+    queryset = AccountManager.objects.all()
+    serializer_class = AccountManagerSerializer
+
+
+# ──────────────────────────────────────────────
+# ADMIN - ASSIGN TO EMPLOYER
+# ──────────────────────────────────────────────
+
+class AdminAssignAccountManagerView(APIView):
+    """
+    POST /api/admin/assign-account-manager/
+    Body: { "employer_id": 1, "account_manager_id": 1, "is_primary": true }
+    """
+    permission_classes = [IsAdminUser]
+
+    def post(self, request):
+        employer_id = request.data.get('employer_id')
+        account_manager_id = request.data.get('account_manager_id')
+        is_primary = request.data.get('is_primary', False)
+
+        if not employer_id or not account_manager_id:
+            return Response(
+                {"error": "employer_id and account_manager_id are required"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            employer = User.objects.get(id=employer_id, user_type='employer')
+        except User.DoesNotExist:
+            return Response(
+                {"error": "Employer not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        try:
+            manager = AccountManager.objects.get(id=account_manager_id, is_active=True)
+        except AccountManager.DoesNotExist:
+            return Response(
+                {"error": "Account Manager not found or inactive"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # If this is primary, remove primary from others
+        if is_primary:
+            EmployerAccountManagerAssignment.objects.filter(
+                employer=employer,
+                is_primary=True
+            ).update(is_primary=False)
+
+        assignment, created = EmployerAccountManagerAssignment.objects.update_or_create(
+            employer=employer,
+            account_manager=manager,
+            defaults={'is_primary': is_primary}
+        )
+
+        # Send notification to employer
+        NotificationService.create_notification(
+            recipient=employer,
+            title="Account Manager Assigned",
+            message=f"'{manager.full_name}' from {manager.get_department_display()} department has been assigned to your account.",
+            category="alert",
+            event_type="account_manager_assigned",
+            notification_type="system",
+            related_object_id=manager.id
+        )
+
+        return Response({
+            "message": "Account Manager assigned successfully",
+            "employer": employer.email,
+            "account_manager": manager.full_name,
+            "department": manager.get_department_display(),
+            "is_primary": is_primary,
+            "created": created
+        })
+
+
+class AdminEmployerAssignmentsView(APIView):
+    """
+    GET /api/admin/employer-assignments/
+    Get all employers with their assigned managers
+    """
+    permission_classes = [IsAdminUser]
+
+    def get(self, request):
+        employers = User.objects.filter(user_type='employer')
+        result = []
+
+        for employer in employers:
+            assignments = EmployerAccountManagerAssignment.objects.filter(
+                employer=employer
+            ).select_related('account_manager')
+
+            manager_list = []
+            for assignment in assignments:
+                manager = assignment.account_manager
+                manager_list.append({
+                    "id": manager.id,
+                    "name": manager.full_name,
+                    "email": manager.email,
+                    "phone": manager.phone,
+                    "department": manager.get_department_display(),
+                    "is_primary": assignment.is_primary
+                })
+
+            subscription = Subscription.objects.filter(
+                user=employer
+            ).order_by('-start_date').first()
+
+            result.append({
+                "employer_id": employer.id,
+                "employer_name": employer.username,
+                "employer_email": employer.email,
+                "plan": subscription.plan.name if subscription else "No Plan",
+                "has_feature": subscription.plan.Account_Manager if subscription else False,
+                "assigned_managers": manager_list
+            })
+
+        return Response(result, status=status.HTTP_200_OK)
+
+
+# ──────────────────────────────────────────────
+# EMPLOYER - VIEW ASSIGNED MANAGERS
+# ──────────────────────────────────────────────
+
+class EmployerAccountManagersView(APIView):
+    """
+    GET /api/employer/account-managers/
+    Returns assigned account managers with plan eligibility check
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        if request.user.user_type != 'employer':
+            return Response(
+                {"error": "Only employers can access this endpoint"},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        user = request.user
+        
+        # ──────────────────────────────────────────
+        # 1. CHECK PLAN ELIGIBILITY
+        # ──────────────────────────────────────────
+
+        subscription = Subscription.objects.filter(
+            user=user
+        ).order_by('-start_date').first()
+
+        if not subscription:
+            return Response({
+                "has_access": False,
+                "message": "You need to subscribe to a plan to access account managers.",
+                "action_required": "upgrade",
+                "action_button": "View Plans",
+                "contacts": []
+            })
+
+        is_expired = subscription.end_date and subscription.end_date < timezone.now()
+        is_cancelled = subscription.status == 'cancelled'
+        has_feature = subscription.plan.Account_Manager
+
+        if is_cancelled:
+            return Response({
+                "has_access": False,
+                "message": "Your plan has been cancelled. Reactivate to access account managers.",
+                "action_required": "reactivate",
+                "action_button": "Reactivate Plan",
+                "contacts": []
+            })
+
+        if is_expired:
+            return Response({
+                "has_access": False,
+                "message": "Your plan has expired. Please renew to access account managers.",
+                "action_required": "renew",
+                "action_button": "Renew Plan",
+                "contacts": []
+            })
+
+        if not has_feature:
+            return Response({
+                "has_access": False,
+                "message": "Account Manager feature is not available in your current plan. Upgrade to get dedicated support.",
+                "action_required": "upgrade",
+                "action_button": "Upgrade Plan",
+                "contacts": []
+            })
+
+        # ──────────────────────────────────────────
+        # 2. GET ASSIGNED MANAGERS
+        # ──────────────────────────────────────────
+
+        assignments = EmployerAccountManagerAssignment.objects.filter(
+            employer=user,
+            account_manager__is_active=True
+        ).select_related('account_manager').order_by('-is_primary')
+
+        if not assignments.exists():
+            # Try to auto-assign first available manager
+            manager = AccountManager.objects.filter(is_active=True).first()
+            if manager:
+                assignment = EmployerAccountManagerAssignment.objects.create(
+                    employer=user,
+                    account_manager=manager,
+                    is_primary=True
+                )
+                assignments = [assignment]
+
+        if not assignments.exists():
+            return Response({
+                "has_access": True,
+                "message": "Account Manager feature is included in your plan, but no manager is available. Please contact support.",
+                "action_required": "contact_support",
+                "action_button": "Contact Support",
+                "contacts": []
+            })
+
+        # ──────────────────────────────────────────
+        # 3. BUILD RESPONSE
+        # ──────────────────────────────────────────
+
+        contacts = []
+        for assignment in assignments:
+            manager = assignment.account_manager
+            contacts.append({
+                "id": manager.id,
+                "full_name": manager.full_name,
+                "email": manager.email,
+                "phone": manager.phone,
+                "department": manager.get_department_display(),
+                "department_key": manager.department,
+                "title": manager.title,
+                "description": manager.description,
+                "profile_photo": self.get_photo_url(manager),
+                "is_primary": assignment.is_primary
+            })
+
+        return Response({
+            "has_access": True,
+            "message": f"{len(contacts)} account manager(s) available",
+            "action_required": None,
+            "action_button": None,
+            "contacts": contacts
+        })
+
+    def get_photo_url(self, manager):
+        if manager.profile_photo:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(manager.profile_photo.url)
+            return manager.profile_photo.url
+        return None

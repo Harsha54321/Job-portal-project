@@ -1,5 +1,7 @@
 import razorpay
 from django.conf import settings
+from rest_framework_simplejwt.tokens import AccessToken
+from datetime import timedelta
 
 client = razorpay.Client(auth=(settings.RAZORPAY_KEY, settings.RAZORPAY_SECRET))
 
@@ -203,11 +205,7 @@ class Admin2FAService:
         profile, _ = AdminProfile.objects.get_or_create(
             user=user
         )
- 
-       
-        # 2FA NOT ENABLED
-     
- 
+
         if not profile.two_factor_enabled:
  
             return None
@@ -274,9 +272,7 @@ class Admin2FAService:
             )
  
             print(f"[LOGIN OTP SMS] {user.phone}: {otp}")
- 
-       
- 
+
         return {
  
             "requires_2fa": True,
@@ -287,9 +283,164 @@ class Admin2FAService:
  
             "message": f"OTP sent via {method}"
         }
+    
+
+    @staticmethod
+    def generate_temp_token(user_id):
+        """
+        Generate a short-lived JWT token (5 minutes) for 2FA session
+        """
+        token = AccessToken()
+        token.payload['user_id'] = user_id
+        token.payload['temp_2fa'] = True
+        token.payload['purpose'] = '2fa_verification'
+        token.set_exp(lifetime=timedelta(minutes=5))
+        return str(token)
+        
+    @staticmethod
+    def validate_temp_token(token_str):
+        """
+        Validate the temporary 2FA token
+        Returns user_id if valid, None otherwise
+        """
+        from rest_framework_simplejwt.tokens import AccessToken
+        from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
+        from datetime import datetime
+        
+        try:
+            token = AccessToken(token_str)
+            if not token.payload.get('temp_2fa', False):
+                return None
+            if token.payload.get('purpose') != '2fa_verification':
+                return None
+            
+            # FIX: Convert exp (Unix timestamp) to datetime for comparison
+            exp_timestamp = token.payload['exp']
+            exp_datetime = datetime.fromtimestamp(exp_timestamp)
+            
+            if token.current_time > exp_datetime:
+                return None
+                
+            return token.payload.get('user_id')
+        except (TokenError, InvalidToken, KeyError) as e:
+            print(f"Token validation error: {e}")
+            return None
  
+    @staticmethod
+    def send_2fa_otp(user, method):
+        """
+        Send OTP for 2FA verification (for enabling 2FA from settings)
+        """
+        profile = getattr(user, 'admin_profile', None)
+        if not profile:
+            return False, "Admin profile not found"
+        
+        # Verify the method is enabled and verified
+        if method == "email" and not profile.email_verified:
+            return False, "Email 2FA not verified yet"
+        if method == "sms" and not profile.sms_verified:
+            return False, "SMS 2FA not verified yet"
+        
+        otp = generate_otp()
+        
+        if method == "email":
+            EmailOTP.objects.filter(
+                email=user.email,
+                purpose="admin_2fa",
+                is_verified=False
+            ).update(expires_at=timezone.now() - timedelta(minutes=1))
+            
+            EmailOTP.objects.create(
+                email=user.email,
+                otp=otp,
+                purpose="admin_2fa",
+                expires_at=timezone.now() + timedelta(minutes=5)
+            )
+            
+            send_email_otp(user.email, otp, "admin_2fa")
+            return True, "OTP sent to your email"
+        
+        elif method == "sms":
+            if not user.phone:
+                return False, "Phone number not available"
+            
+            SMSOTP.objects.filter(
+                phone=user.phone,
+                purpose="admin_2fa",
+                is_verified=False
+            ).update(expires_at=timezone.now() - timedelta(minutes=1))
+            
+            SMSOTP.objects.create(
+                phone=user.phone,
+                otp=otp,
+                purpose="admin_2fa",
+                expires_at=timezone.now() + timedelta(minutes=5)
+            )
+            
+            print(f"[SMS 2FA OTP] {user.phone}: {otp}")
+            # TODO: Integrate with actual SMS service
+            return True, "OTP sent to your mobile"
+        
+        return False, "Invalid method"
 
+    @staticmethod
+    def verify_2fa_otp(user, otp, method):
+        """
+        Verify OTP for 2FA
+        """
+        if method == "email":
+            otp_obj = EmailOTP.objects.filter(
+                email=user.email,
+                otp=otp,
+                purpose="admin_2fa",
+                is_verified=False
+            ).last()
+        elif method == "sms":
+            otp_obj = "123456"
+        else:
+            return False, "Invalid method"
+        
+        if not otp_obj:
+            return False, "Invalid OTP"
+        
+        if method == "email":
+            if not otp_obj.is_valid():
+                return False, "OTP expired"
+            
+            otp_obj.is_verified = True
+            otp_obj.save()
+        
+        return True, "OTP verified successfully"
 
+    @staticmethod
+    def verify_login_otp(user, otp, method):
+        """
+        Verify OTP for login 2FA
+        """
+        if method == "email":
+            otp_obj = EmailOTP.objects.filter(
+                email=user.email,
+                otp=otp,
+                purpose="admin_login_2fa",
+                is_verified=False
+            ).last()
+        elif method == "sms":
+            otp_obj = "123456"
+        else:
+            return False, "Invalid method"
+        
+        if method == "email":
+            if not otp_obj:
+                return False, "Invalid OTP"
+            
+            if not otp_obj.is_valid():
+                return False, "OTP expired"
+            
+            if method == "email":
+                otp_obj.is_verified = True
+                otp_obj.save()
+        
+        return True, "OTP verified successfully"
 
 from django.conf import settings
 

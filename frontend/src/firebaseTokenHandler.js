@@ -23,23 +23,23 @@ const messaging = getMessaging(app);
 export const requestAndRegisterNotificationPermission = async () => {
   try {
     const permission = await Notification.requestPermission();
-    
+
     if (permission === "granted") {
       // Fetch FCM client registration token
       // VAPID Key: Generate this in your Firebase Console -> Project Settings -> Cloud Messaging -> Web Configuration
-      const currentToken = await getToken(messaging, { 
-        vapidKey: "BEDIc1q-hu8INIG9jmK3_YINX9CMiPIq4A7idO_Gfs6FqwFP2sXdhKT9iV4qIK91ACDX3JwYg_e-dVhiYt0EkvI" 
+      const currentToken = await getToken(messaging, {
+        vapidKey: "BEDIc1q-hu8INIG9jmK3_YINX9CMiPIq4A7idO_Gfs6FqwFP2sXdhKT9iV4qIK91ACDX3JwYg_e-dVhiYt0EkvI"
       });
-      
+
       if (currentToken) {
         console.log("FCM Token Generated successfully:", currentToken);
-        
+
         // Dispatch payload structure updating your backend's UserDevice instances
         await api.post("devices/register/", {
           fcm_token: currentToken,
           platform: "web"
         });
-        
+
         console.log("FCM registration token synchronized successfully with backend.");
       } else {
         console.warn("No registration token available. Verify console setup permissions.");
@@ -56,9 +56,11 @@ export const requestAndRegisterNotificationPermission = async () => {
  * Sets up listening context hooks for foreground message event captures
  */
 export const listenForForegroundMessages = () => {
+  // onMessage(messaging, (payload) => {
+  //   console.log("Foreground Message Captured live:", payload);
   onMessage(messaging, (payload) => {
-    console.log("Foreground Message Captured live:", payload);
-    
+    console.log("NEW PUSH RECEIVED", payload);
+
     // Display a custom browser alert fallback or use a toast UI framework package integration here
     alert(`${payload.notification.title}\n\n${payload.notification.body}`);
   });

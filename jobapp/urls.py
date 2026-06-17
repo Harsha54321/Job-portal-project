@@ -138,7 +138,12 @@ from .views import (
     AdminForgotPasswordView,
     AdminResetPasswordConfirmView,
     EmployerRegistrationSettingsView,
-    
+    AdminAccountManagerListView,
+    AdminAccountManagerDetailView,
+    AdminAssignAccountManagerView,
+    AdminEmployerAssignmentsView,
+    EmployerAccountManagersView,
+    AdminLogin2FAOTPView,
 
     # REMOVED: Company-related view imports (CompanyListView, CompanyDetailView, etc.)
 )
@@ -320,6 +325,7 @@ urlpatterns = [
     path("google-login/", GoogleLoginView.as_view()),
     # admin login
     path('admin-login/', AdminLoginView.as_view(), name='admin-login'),
+    path("admin/login/send-otp/",AdminLogin2FAOTPView.as_view(),name="admin-login-send-otp"),
     #ActivityMonitor
     path('dashboard/', DashboardView.as_view(), name='dashboard'),
     path('company/', AdminCompanyListView.as_view(), name='dashboardlist'),
@@ -422,5 +428,18 @@ urlpatterns = [
 
     #Sessiontimout
     path('logout/', LogoutView.as_view(), name='logout'),
+
+    # ============================================================
+    # ACCOUNT MANAGER URLS
+    # ============================================================
+
+    # Admin URLs
+    path('admin/account-managers/', AdminAccountManagerListView.as_view(), name='admin-account-managers'),
+    path('admin/account-managers/<int:pk>/', AdminAccountManagerDetailView.as_view(), name='admin-account-manager-detail'),
+    path('admin/assign-account-manager/', AdminAssignAccountManagerView.as_view(), name='admin-assign-account-manager'),
+    path('admin/employer-assignments/', AdminEmployerAssignmentsView.as_view(), name='admin-employer-assignments'),
+
+    # Employer URLs
+    path('employer/account-managers/', EmployerAccountManagersView.as_view(), name='employer-account-managers'),
 
 ]

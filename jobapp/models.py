@@ -269,6 +269,8 @@ class AdminProfile(models.Model):
         null=True,
         blank=True
     )
+    email_verified = models.BooleanField(default=False)
+    sms_verified = models.BooleanField(default=False)
 
     class Meta:
         db_table = 'AdminProfile'
@@ -2639,3 +2641,81 @@ class PointContent(models.Model):
 
     def __str__(self):
         return f"Content[{self.order}] for Point {self.point.id}"
+
+# ============================================================
+# ACCOUNT MANAGER MODELS (Add at the end of models.py)
+# ============================================================
+
+class AccountManager(models.Model):
+    """
+    Account Manager profile - Contact management (No login required)
+    """
+    class Department(models.TextChoices):
+        SUPPORT = 'support', 'Support'
+        SALES = 'sales', 'Sales'
+        BILLING = 'billing', 'Billing'
+        TECHNICAL = 'technical', 'Technical'
+        GENERAL = 'general', 'General'
+
+    full_name = models.CharField(max_length=255)
+    email = models.EmailField()
+    phone = models.CharField(max_length=20)
+    
+    department = models.CharField(
+        max_length=20,
+        choices=Department.choices,
+        default=Department.GENERAL
+    )
+    title = models.CharField(max_length=200, default='Account Manager')
+    description = models.TextField(blank=True)
+    
+    profile_photo = models.ImageField(
+        upload_to='account_managers/',
+        null=True,
+        blank=True
+    )
+    
+    is_active = models.BooleanField(default=True)
+    order = models.PositiveIntegerField(default=0)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    created_by = models.ForeignKey(
+        'User',
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='created_account_managers'
+    )
+
+    class Meta:
+        db_table = 'AccountManager'
+        ordering = ['order', 'department']
+
+    def __str__(self):
+        return f"{self.full_name} - {self.get_department_display()}"
+
+
+class EmployerAccountManagerAssignment(models.Model):
+    """
+    Assign account managers to employers
+    """
+    employer = models.ForeignKey(
+        'User',
+        on_delete=models.CASCADE,
+        related_name='account_manager_assignments'
+    )
+    account_manager = models.ForeignKey(
+        AccountManager,
+        on_delete=models.CASCADE,
+        related_name='assigned_employers'
+    )
+    is_primary = models.BooleanField(default=False)
+    assigned_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'EmployerAccountManagerAssignment'
+        unique_together = ['employer', 'account_manager']
+
+    def __str__(self):
+        return f"{self.employer.email} → {self.account_manager.full_name}"

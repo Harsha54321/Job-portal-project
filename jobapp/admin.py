@@ -26,7 +26,9 @@ from .models import (
     CompanyVerification,
     JobSeekerProfile,
     User,
-    CompanyProfile
+    CompanyProfile,
+    AccountManager,
+    EmployerAccountManagerAssignment
 )
 
 User = get_user_model()
@@ -405,4 +407,17 @@ class PaymentMethodAdmin(admin.ModelAdmin):
     list_filter = ['method_type', 'is_default']
     search_fields = ['user__email', 'card_holder_name']
     raw_id_fields = ['user']
- 
+
+@admin.register(AccountManager)
+class AccountManagerAdmin(admin.ModelAdmin):
+    list_display = ['full_name', 'email', 'phone', 'department', 'is_active', 'created_at']
+    list_filter = ['department', 'is_active']
+    search_fields = ['full_name', 'email', 'phone']
+    ordering = ['order', 'full_name']
+
+
+@admin.register(EmployerAccountManagerAssignment)
+class EmployerAccountManagerAssignmentAdmin(admin.ModelAdmin):
+    list_display = ['employer', 'account_manager', 'is_primary', 'assigned_at']
+    list_filter = ['is_primary']
+    search_fields = ['employer__email', 'account_manager__full_name']

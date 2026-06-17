@@ -10,18 +10,16 @@ export const EmployerSettings = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  // ─────────────────────────────────────────
-  // SINGLE SOURCE OF TRUTH
-  // selectedAccountStatus is ALWAYS in backend format (Hold / Active / Deactivated).
-  // It is NEVER written from inside fetchSettings — only from user interactions.
-  // ─────────────────────────────────────────
   const [selectedAccountStatus, setSelectedAccountStatus] = useState('Hold');
 
-  const [settings, setSettings] = useState({
+  const [registrationSettings, setRegistrationSettings] = useState({
     employerRegistration: false,
     emailVerification: false,
     mobileVerification: false,
     approvalType: 'Manual Type',
+  });
+
+  const [settings, setSettings] = useState({
     requiredDocs: {
       companyCert: false,
       gstCert: false,
@@ -50,15 +48,8 @@ export const EmployerSettings = () => {
     allowEditAfterApproval: false,
   });
 
-  // ─────────────────────────────────────────
-  // PREVIEW STATE
-  // ─────────────────────────────────────────
   const [showPreview, setShowPreview] = useState(false);
   const [previewData, setPreviewData] = useState(null);
-
-  // ─────────────────────────────────────────
-  // STATUS MAPPING HELPERS
-  // ─────────────────────────────────────────
 
   const mapToBackendStatus = (frontendStatus) => {
     const map = {
@@ -99,18 +90,86 @@ export const EmployerSettings = () => {
     fetchPlans();
   }, []);
 
-  // ─────────────────────────────────────────
-  // FETCH SETTINGS
-  // Runs whenever selectedPlanId or selectedAccountStatus changes.
-  // Uses AbortController to cancel stale in-flight requests — this
-  // prevents a slow "Hold" response from landing after the user has
-  // already switched to "Active", which was the root cause of the revert bug.
-  // ─────────────────────────────────────────
+  useEffect(() => {
+    const fetchRegistrationSettings = async () => {
+      try {
+        const res = await api.get("employer-registration-settings/");
+        const data = res.data;
+        setRegistrationSettings({
+          employerRegistration: data.employer_registration ?? false,
+          emailVerification: data.email_verification ?? false,
+          mobileVerification: data.mobile_verification ?? false,
+          approvalType: data.approval_type ?? 'Manual Type',
+        });
+      } catch (err) {
+        console.error("Failed to fetch employer registration settings:", err);
+      }
+    };
+    fetchRegistrationSettings();
+  }, []);
 
   useEffect(() => {
     if (!selectedPlanId) return;
 
     const controller = new AbortController();
+
+    // const fetchSettings = async () => {
+    //   setLoading(true);
+    //   try {
+    //     const url = `employer-settings/${selectedPlanId}/${selectedAccountStatus}/`;
+    //     const res = await api.get(url, { signal: controller.signal });
+    //     const data = res.data;
+
+    //     // KEY FIX: derive accountStatus display label from selectedAccountStatus
+    //     // (our source of truth), NOT from data.account_status returned by the backend.
+    //     // Previously, setSelectedAccountStatus(data.account_status) was called here,
+    //     // which re-triggered this useEffect and caused the revert loop.
+    //     setSettings({
+    //       employerRegistration: data.employer_registration ?? false,
+    //       emailVerification: data.email_verification ?? false,
+    //       mobileVerification: data.mobile_verification ?? false,
+    //       approvalType: data.approval_type ?? 'Manual Type',
+    //       requiredDocs: {
+    //         companyCert: data.req_company_cert ?? false,
+    //         gstCert: data.req_gst_cert ?? false,
+    //         businessEmail: data.req_business_email ?? false,
+    //         companyWebsite: data.req_company_website ?? false,
+    //       },
+    //       preferences: {
+    //         multipleCompany: data.allow_multiple_company ?? false,
+    //         multipleUsers: data.allow_multiple_users ?? false,
+    //         companyReviews: data.show_company_reviews ?? false,
+    //         companyBranding: data.enable_company_branding ?? false,
+    //         featuredEmployer: data.featured_employer_option ?? false,
+    //       },
+    //       notifications: {
+    //         email: data.notif_email ?? false,
+    //         newSignups: data.notif_new_signups ?? false,
+    //         alerts: data.notif_alerts ?? false,
+    //         announcements: data.notif_announcements ?? false,
+    //         weeklySummary: data.notif_weekly_summary ?? false,
+    //       },
+    //       defaultPlan: data.plan || 'Free plan',
+    //       // Derived from selectedAccountStatus — never from the API response
+    //       accountStatus: mapToFrontendStatus(selectedAccountStatus),
+    //       jobExpireDays: data.job_expire_days ?? 30,
+    //       maxJobPosts: data.max_job_posts ?? 10,
+    //       featuredJobLimit: data.featured_job_limit ?? 3,
+    //       allowEditAfterApproval: data.allow_edit_after_approval ?? false,
+    //     });
+
+    //   } catch (err) {
+    //     // Ignore AbortError — this is expected when the user changes
+    //     // selection before the previous fetch completes.
+    //     if (err.name === 'AbortError' || err.code === 'ERR_CANCELED') return;
+    //     console.error("Failed to fetch employer settings:", err);
+    //   } finally {
+    //     // Only clear loading if this request was not aborted
+    //     if (!controller.signal.aborted) {
+    //       setLoading(false);
+    //     }
+    //   }
+    // };
 
     const fetchSettings = async () => {
       setLoading(true);
@@ -119,37 +178,37 @@ export const EmployerSettings = () => {
         const res = await api.get(url, { signal: controller.signal });
         const data = res.data;
 
-        // KEY FIX: derive accountStatus display label from selectedAccountStatus
-        // (our source of truth), NOT from data.account_status returned by the backend.
-        // Previously, setSelectedAccountStatus(data.account_status) was called here,
-        // which re-triggered this useEffect and caused the revert loop.
+        console.log("[DEBUG] Fetched data:", data);
+
+        // FIX: Read from nested objects, not flat fields
         setSettings({
-          employerRegistration: data.employer_registration ?? false,
-          emailVerification: data.email_verification ?? false,
-          mobileVerification: data.mobile_verification ?? false,
-          approvalType: data.approval_type ?? 'Manual Type',
+          // Required Docs - Read from requiredDocs object
           requiredDocs: {
-            companyCert: data.req_company_cert ?? false,
-            gstCert: data.req_gst_cert ?? false,
-            businessEmail: data.req_business_email ?? false,
-            companyWebsite: data.req_company_website ?? false,
+            companyCert: data.requiredDocs?.companyCert ?? false,
+            gstCert: data.requiredDocs?.gstCert ?? false,
+            businessEmail: data.requiredDocs?.businessEmail ?? false,
+            companyWebsite: data.requiredDocs?.companyWebsite ?? false,
           },
+
+          // Preferences - Read from preferences object
           preferences: {
-            multipleCompany: data.allow_multiple_company ?? false,
-            multipleUsers: data.allow_multiple_users ?? false,
-            companyReviews: data.show_company_reviews ?? false,
-            companyBranding: data.enable_company_branding ?? false,
-            featuredEmployer: data.featured_employer_option ?? false,
+            multipleCompany: data.preferences?.multipleCompany ?? false,
+            multipleUsers: data.preferences?.multipleUsers ?? false,
+            companyReviews: data.preferences?.companyReviews ?? false,
+            companyBranding: data.preferences?.companyBranding ?? false,
+            featuredEmployer: data.preferences?.featuredEmployer ?? false,
           },
+
+          // Notifications - Read from notifications object
           notifications: {
-            email: data.notif_email ?? false,
-            newSignups: data.notif_new_signups ?? false,
-            alerts: data.notif_alerts ?? false,
-            announcements: data.notif_announcements ?? false,
-            weeklySummary: data.notif_weekly_summary ?? false,
+            email: data.notifications?.email ?? false,
+            newSignups: data.notifications?.newSignups ?? false,
+            alerts: data.notifications?.alerts ?? false,
+            announcements: data.notifications?.announcements ?? false,
+            weeklySummary: data.notifications?.weeklySummary ?? false,
           },
+
           defaultPlan: data.plan || 'Free plan',
-          // Derived from selectedAccountStatus — never from the API response
           accountStatus: mapToFrontendStatus(selectedAccountStatus),
           jobExpireDays: data.job_expire_days ?? 30,
           maxJobPosts: data.max_job_posts ?? 10,
@@ -158,12 +217,9 @@ export const EmployerSettings = () => {
         });
 
       } catch (err) {
-        // Ignore AbortError — this is expected when the user changes
-        // selection before the previous fetch completes.
         if (err.name === 'AbortError' || err.code === 'ERR_CANCELED') return;
         console.error("Failed to fetch employer settings:", err);
       } finally {
-        // Only clear loading if this request was not aborted
         if (!controller.signal.aborted) {
           setLoading(false);
         }
@@ -200,6 +256,7 @@ export const EmployerSettings = () => {
     // Create a copy of current settings for preview
     const preview = {
       ...settings,
+      ...registrationSettings,
       jobExpireDays: Number(settings.jobExpireDays),
       maxJobPosts: Number(settings.maxJobPosts),
       featuredJobLimit: Number(settings.featuredJobLimit),
@@ -212,68 +269,171 @@ export const EmployerSettings = () => {
   // SAVE SETTINGS
   // ─────────────────────────────────────────
 
+  // const handleSave = async () => {
+  //   if (!selectedPlanId) return;
+
+  //   setSaving(true);
+  //   try {
+  //     // selectedAccountStatus is already in backend format — no mapping needed
+  //     const url = `employer-settings/${selectedPlanId}/${selectedAccountStatus}/`;
+
+  //     const payload = {
+  //       employer_registration: settings.employerRegistration,
+  //       email_verification: settings.emailVerification,
+  //       mobile_verification: settings.mobileVerification,
+  //       approval_type: settings.approvalType,
+  //       account_status: selectedAccountStatus,
+  //       job_expire_days: Number(settings.jobExpireDays),
+  //       max_job_posts: Number(settings.maxJobPosts),
+  //       featured_job_limit: Number(settings.featuredJobLimit),
+  //       allow_edit_after_approval: settings.allowEditAfterApproval,
+  //       // Required Docs
+  //       req_company_cert: settings.requiredDocs.companyCert,
+  //       req_gst_cert: settings.requiredDocs.gstCert,
+  //       req_business_email: settings.requiredDocs.businessEmail,
+  //       req_company_website: settings.requiredDocs.companyWebsite,
+  //       // Preferences
+  //       allow_multiple_company: settings.preferences.multipleCompany,
+  //       allow_multiple_users: settings.preferences.multipleUsers,
+  //       show_company_reviews: settings.preferences.companyReviews,
+  //       enable_company_branding: settings.preferences.companyBranding,
+  //       featured_employer_option: settings.preferences.featuredEmployer,
+  //       // Notifications
+  //       notif_email: settings.notifications.email,
+  //       notif_new_signups: settings.notifications.newSignups,
+  //       notif_alerts: settings.notifications.alerts,
+  //       notif_announcements: settings.notifications.announcements,
+  //       notif_weekly_summary: settings.notifications.weeklySummary,
+  //     };
+
+  //     console.log("[DEBUG] Saving payload:", payload);
+
+  //     const response = await api.patch(url, payload);
+
+  //     if (response.status === 200) {
+  //       alert("Settings saved successfully!");
+  //       setShowPreview(false);
+
+  //       // Refresh data to confirm save
+  //       const refreshUrl = `employer-settings/${selectedPlanId}/${selectedAccountStatus}/`;
+  //       const refreshRes = await api.get(refreshUrl);
+  //       const data = refreshRes.data;
+
+  //       // Update settings with saved data
+  //       setSettings(prev => ({
+  //         ...prev,
+  //         jobExpireDays: data.job_expire_days ?? prev.jobExpireDays,
+  //         maxJobPosts: data.max_job_posts ?? prev.maxJobPosts,
+  //         featuredJobLimit: data.featured_job_limit ?? prev.featuredJobLimit,
+  //         allowEditAfterApproval: data.allow_edit_after_approval ?? prev.allowEditAfterApproval,
+  //       }));
+  //     }
+  //   } catch (err) {
+  //     console.error("Failed to save settings:", err);
+  //     alert("Failed to save settings. Please try again.");
+  //   } finally {
+  //     setSaving(false);
+  //   }
+  // };
+
   const handleSave = async () => {
     if (!selectedPlanId) return;
 
     setSaving(true);
     try {
-      // selectedAccountStatus is already in backend format — no mapping needed
+      // ── 1. Save Registration Settings (separate endpoint) ──
+      await api.patch("employer-registration-settings/", {
+        employer_registration: registrationSettings.employerRegistration,
+        email_verification: registrationSettings.emailVerification,
+        mobile_verification: registrationSettings.mobileVerification,
+        approval_type: registrationSettings.approvalType,
+      });
+
+      // ── 2. Save Platform Settings (plan+status specific) ──
       const url = `employer-settings/${selectedPlanId}/${selectedAccountStatus}/`;
 
+      // Send NESTED objects to match backend expectations
       const payload = {
-        employer_registration: settings.employerRegistration,
-        email_verification: settings.emailVerification,
-        mobile_verification: settings.mobileVerification,
-        approval_type: settings.approvalType,
         account_status: selectedAccountStatus,
+
+        // Job posting settings (flat is fine)
         job_expire_days: Number(settings.jobExpireDays),
         max_job_posts: Number(settings.maxJobPosts),
         featured_job_limit: Number(settings.featuredJobLimit),
         allow_edit_after_approval: settings.allowEditAfterApproval,
-        // Required Docs
-        req_company_cert: settings.requiredDocs.companyCert,
-        req_gst_cert: settings.requiredDocs.gstCert,
-        req_business_email: settings.requiredDocs.businessEmail,
-        req_company_website: settings.requiredDocs.companyWebsite,
-        // Preferences
-        allow_multiple_company: settings.preferences.multipleCompany,
-        allow_multiple_users: settings.preferences.multipleUsers,
-        show_company_reviews: settings.preferences.companyReviews,
-        enable_company_branding: settings.preferences.companyBranding,
-        featured_employer_option: settings.preferences.featuredEmployer,
-        // Notifications
-        notif_email: settings.notifications.email,
-        notif_new_signups: settings.notifications.newSignups,
-        notif_alerts: settings.notifications.alerts,
-        notif_announcements: settings.notifications.announcements,
-        notif_weekly_summary: settings.notifications.weeklySummary,
+
+        // Required Documents - NESTED (what backend expects)
+        requiredDocs: {
+          companyCert: settings.requiredDocs.companyCert,
+          gstCert: settings.requiredDocs.gstCert,
+          businessEmail: settings.requiredDocs.businessEmail,
+          companyWebsite: settings.requiredDocs.companyWebsite,
+        },
+
+        // Preferences - NESTED (what backend expects)
+        preferences: {
+          multipleCompany: settings.preferences.multipleCompany,
+          multipleUsers: settings.preferences.multipleUsers,
+          companyReviews: settings.preferences.companyReviews,
+          companyBranding: settings.preferences.companyBranding,
+          featuredEmployer: settings.preferences.featuredEmployer,
+        },
+
+        // Notifications - NESTED (what backend expects)
+        notifications: {
+          email: settings.notifications.email,
+          newSignups: settings.notifications.newSignups,
+          alerts: settings.notifications.alerts,
+          announcements: settings.notifications.announcements,
+          weeklySummary: settings.notifications.weeklySummary,
+        },
       };
 
-      console.log("[DEBUG] Saving payload:", payload);
+      console.log("[DEBUG] Saving payload (nested):", payload);
 
       const response = await api.patch(url, payload);
-      
+
       if (response.status === 200) {
         alert("Settings saved successfully!");
         setShowPreview(false);
-        
-        // Refresh data to confirm save
-        const refreshUrl = `employer-settings/${selectedPlanId}/${selectedAccountStatus}/`;
-        const refreshRes = await api.get(refreshUrl);
+
+        // Refresh platform settings data to confirm save
+        const refreshRes = await api.get(url);
         const data = refreshRes.data;
-        
-        // Update settings with saved data
-        setSettings(prev => ({
-          ...prev,
-          jobExpireDays: data.job_expire_days ?? prev.jobExpireDays,
-          maxJobPosts: data.max_job_posts ?? prev.maxJobPosts,
-          featuredJobLimit: data.featured_job_limit ?? prev.featuredJobLimit,
-          allowEditAfterApproval: data.allow_edit_after_approval ?? prev.allowEditAfterApproval,
-        }));
+
+        // Update settings with saved data (no registration fields here)
+        setSettings({
+          ...settings,
+          jobExpireDays: data.job_expire_days ?? settings.jobExpireDays,
+          maxJobPosts: data.max_job_posts ?? settings.maxJobPosts,
+          featuredJobLimit: data.featured_job_limit ?? settings.featuredJobLimit,
+          allowEditAfterApproval: data.allow_edit_after_approval ?? settings.allowEditAfterApproval,
+          requiredDocs: {
+            companyCert: data.requiredDocs?.companyCert ?? settings.requiredDocs.companyCert,
+            gstCert: data.requiredDocs?.gstCert ?? settings.requiredDocs.gstCert,
+            businessEmail: data.requiredDocs?.businessEmail ?? settings.requiredDocs.businessEmail,
+            companyWebsite: data.requiredDocs?.companyWebsite ?? settings.requiredDocs.companyWebsite,
+          },
+          preferences: {
+            multipleCompany: data.preferences?.multipleCompany ?? settings.preferences.multipleCompany,
+            multipleUsers: data.preferences?.multipleUsers ?? settings.preferences.multipleUsers,
+            companyReviews: data.preferences?.companyReviews ?? settings.preferences.companyReviews,
+            companyBranding: data.preferences?.companyBranding ?? settings.preferences.companyBranding,
+            featuredEmployer: data.preferences?.featuredEmployer ?? settings.preferences.featuredEmployer,
+          },
+          notifications: {
+            email: data.notifications?.email ?? settings.notifications.email,
+            newSignups: data.notifications?.newSignups ?? settings.notifications.newSignups,
+            alerts: data.notifications?.alerts ?? settings.notifications.alerts,
+            announcements: data.notifications?.announcements ?? settings.notifications.announcements,
+            weeklySummary: data.notifications?.weeklySummary ?? settings.notifications.weeklySummary,
+          },
+        });
       }
     } catch (err) {
       console.error("Failed to save settings:", err);
-      alert("Failed to save settings. Please try again.");
+      console.error("Error response:", err.response?.data);
+      alert(`Failed to save settings: ${err.response?.data?.error || err.message}`);
     } finally {
       setSaving(false);
     }
@@ -329,7 +489,7 @@ export const EmployerSettings = () => {
             <h3>📋 Preview Changes</h3>
             <button className="preview-close" onClick={() => setShowPreview(false)}>✕</button>
           </div>
-          
+
           <div className="preview-content">
             {/* Job Posting Settings */}
             <div className="preview-section">
@@ -511,8 +671,8 @@ export const EmployerSettings = () => {
               <label className="Jobseeker-Set-toggle-switch">
                 <input
                   type="checkbox"
-                  checked={settings[item.field]}
-                  onChange={(e) => handleChange(null, item.field, e.target.checked)}
+                  checked={registrationSettings[item.field]}
+                  onChange={(e) => setRegistrationSettings(prev => ({ ...prev, [item.field]: e.target.checked }))}
                 />
                 <span className="Jobseeker-Set-toggle-slider"></span>
               </label>
@@ -526,8 +686,8 @@ export const EmployerSettings = () => {
             </div>
             <select
               className="Jobseeker-Set-approval"
-              value={settings.approvalType}
-              onChange={(e) => handleChange(null, 'approvalType', e.target.value)}
+              value={registrationSettings.approvalType}
+              onChange={(e) => setRegistrationSettings(prev => ({ ...prev, approvalType: e.target.value }))}
             >
               <option>Manual Type</option>
               <option>Automatic</option>
@@ -537,7 +697,17 @@ export const EmployerSettings = () => {
 
         {/* ── Required Documents ── */}
         <div className="Jobseeker-Set-registration-right">
-          <h2>Required Documents</h2>
+          <h2>Required Documents <span
+            style={{
+              marginLeft: '8px',
+              cursor: 'help',
+              fontSize: '12px',
+              color: '#ff9800'
+            }}
+            title="Document verification feature is under implementation"
+          >
+            ⓘ
+          </span></h2>
           <p className="Jobseeker-Set-subtitle">
             Select documents required during registration
           </p>
@@ -554,6 +724,7 @@ export const EmployerSettings = () => {
                   checked={settings.requiredDocs[doc.id]}
                   onChange={(e) => handleChange('requiredDocs', doc.id, e.target.checked, true)}
                   disabled
+                  title="Under Implementation - Coming Soon"
                 />
                 <span>{doc.label}</span>
               </label>
@@ -567,19 +738,27 @@ export const EmployerSettings = () => {
 
         {/* Other Preferences */}
         <div className="Jobseeker-Set-preferences-column">
-          <h2>Other Preferences</h2>
+          <h2>Other Preferences
+            <span style={{ marginLeft: '8px', cursor: 'help', fontSize: '12px', color: '#ff9800' }}
+              title="Multiple Company, Multiple Users, Company Reviews, Company Branding are under implementation">
+              ⓘ
+            </span>
+          </h2>
+
           {[
-            { label: 'Allow Multiple Company', id: 'multipleCompany' },
-            { label: 'Allow Multiple Users', id: 'multipleUsers' },
-            { label: 'Show Company Reviews', id: 'companyReviews' },
-            { label: 'Enable Company Branding', id: 'companyBranding' },
-            { label: 'Feature Employer Option', id: 'featuredEmployer' },
+            { label: 'Allow Multiple Company', id: 'multipleCompany', disabled: true },
+            { label: 'Allow Multiple Users', id: 'multipleUsers', disabled: true },
+            { label: 'Show Company Reviews', id: 'companyReviews', disabled: true },
+            { label: 'Enable Company Branding', id: 'companyBranding', disabled: true },
+            { label: 'Allow Job Highlighting', id: 'featuredEmployer', disabled: false },
           ].map(pref => (
             <label className="Jobseeker-Set-checkbox-item" key={pref.id}>
               <input
                 type="checkbox"
                 checked={settings.preferences[pref.id]}
                 onChange={(e) => handleChange('preferences', pref.id, e.target.checked, true)}
+                disabled={pref.disabled}
+                title={pref.disabled ? "Under implementation" : ""}
               />
               <span>{pref.label}</span>
             </label>
@@ -682,7 +861,17 @@ export const EmployerSettings = () => {
           </div>
 
           <div className="Jobseeker-Set-job-setting-box">
-            <h3>Job Edit After Approval</h3>
+            <h3>Job Edit After Approval  <span
+              style={{
+                marginLeft: '8px',
+                cursor: 'help',
+                fontSize: '12px',
+                color: '#ff9800'
+              }}
+              title="Job edit after approval is under implementation"
+            >
+              ⓘ
+            </span></h3>
             <div className="Jobseeker-Set-allowed-toggle">
               <label className="Jobseeker-Set-toggle-switch">
                 <input
@@ -690,7 +879,10 @@ export const EmployerSettings = () => {
                   checked={settings.allowEditAfterApproval}
                   onChange={(e) =>
                     handleChange(null, 'allowEditAfterApproval', e.target.checked)
+
                   }
+                  disabled
+                  title="Job edit after approval is under implementation"
                 />
                 <span className="Jobseeker-Set-toggle-slider"></span>
               </label>
@@ -715,7 +907,7 @@ export const EmployerSettings = () => {
             className="Jobseeker-Set-preview-btn"
             onClick={handlePreviewChanges}
           >
-             Preview Changes
+            Preview Changes
           </button>
           <button
             className="Jobseeker-Set-save-btn"

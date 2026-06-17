@@ -75,3 +75,6 @@ google_auth
 celery
 PyPDF2==3.0.1
 python-docx
+django_celery_beat
+celery redis
+firebase-admin
