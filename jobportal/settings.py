@@ -92,11 +92,11 @@ CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
 from celery.schedules import crontab
  
 CELERY_BEAT_SCHEDULE = {
- 
+
     # ─────────────────────────────
     # WEEKLY EMPLOYER SUMMARY
     # ─────────────────────────────
- 
+
     'weekly-employer-summary': {
  
         'task': (
@@ -105,7 +105,7 @@ CELERY_BEAT_SCHEDULE = {
         ),
 
         # 'schedule': timedelta(seconds=1),
- 
+
         'schedule': crontab(
             hour=9,
             minute=0,

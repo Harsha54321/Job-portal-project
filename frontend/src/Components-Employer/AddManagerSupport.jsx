@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 import './AddManagerSupport.css';
+import ProfileIcon from "../assets/icon_profile.png";
 
 export const AddManagerSupport = () => {
   const [loading, setLoading] = useState(true);
@@ -35,7 +36,7 @@ export const AddManagerSupport = () => {
 
       if (data.has_access && data.contacts && data.contacts.length > 0) {
         setContacts(data.contacts);
-        // Select primary contact or first
+        // Prioritize selecting the primary contact first
         const primary = data.contacts.find(c => c.is_primary);
         setSelectedContact(primary || data.contacts[0]);
         setShowAllContacts(false);
@@ -56,8 +57,6 @@ export const AddManagerSupport = () => {
     switch (actionRequired) {
       case 'upgrade':
       case 'renew':
-        navigate('/Job-portal/Employer/Billing');
-        break;
       case 'reactivate':
         navigate('/Job-portal/Employer/Billing');
         break;
@@ -95,9 +94,9 @@ export const AddManagerSupport = () => {
   if (loading) {
     return (
       <div className="employer-manager-container">
-        <div className="employer-manager-card" style={{ textAlign: 'center', padding: '40px' }}>
+        <div className="employer-manager-card status-loading-center">
           <div className="spinner"></div>
-          <p style={{ marginTop: '16px', color: '#64748b' }}>Loading account managers...</p>
+          <p className="employer-loading-text">Loading account managers...</p>
         </div>
       </div>
     );
@@ -110,12 +109,11 @@ export const AddManagerSupport = () => {
           <div className="employer-manager-header">
             <h3 className="employer-manager-title">Account Manager</h3>
           </div>
-          <div style={{ textAlign: 'center', padding: '20px' }}>
-            <p style={{ color: '#dc2626' }}>{error}</p>
+          <div className="employer-error-fallback-view">
+            <p className="employer-error-message-text">{error}</p>
             <button
               onClick={fetchContacts}
-              className="employer-manager-btn employer-manager-btn-primary"
-              style={{ marginTop: '12px' }}
+              className="employer-manager-btn employer-manager-btn-primary margin-top-12"
             >
               Retry
             </button>
@@ -128,7 +126,6 @@ export const AddManagerSupport = () => {
   // ──────────────────────────────────────────────
   // NO ACCESS / PLAN ISSUE
   // ──────────────────────────────────────────────
-
   if (!hasAccess) {
     let icon = '📋';
     let title = 'No Access';
@@ -148,12 +145,8 @@ export const AddManagerSupport = () => {
       <div className="employer-manager-container">
         <div className="employer-manager-card">
           <div className="employer-manager-header">
-            <div className="employer-manager-badge" style={{
-              backgroundColor: '#fef3c7',
-              color: '#92400e',
-              borderColor: '#fcd34d'
-            }}>
-              <span className="badge-dot" style={{ backgroundColor: '#f59e0b' }}></span>
+            <div className="employer-manager-badge badge-warning-theme">
+              <span className="badge-dot dot-warning-active"></span>
               Action Required
             </div>
             <h3 className="employer-manager-title">Account Manager</h3>
@@ -170,8 +163,7 @@ export const AddManagerSupport = () => {
             {actionButton && (
               <button
                 onClick={handleActionButton}
-                className="employer-manager-btn employer-manager-btn-primary"
-                style={{ marginTop: '16px' }}
+                className="employer-manager-btn employer-manager-btn-primary margin-top-16"
               >
                 {actionButton}
               </button>
@@ -179,31 +171,18 @@ export const AddManagerSupport = () => {
 
             <button
               onClick={fetchContacts}
-              className="employer-manager-btn employer-manager-btn-secondary"
-              style={{ marginTop: '10px', fontSize: '12px' }}
+              className="employer-manager-btn employer-manager-btn-secondary btn-refresh-small"
             >
               Refresh
             </button>
           </div>
 
-          {/* Plan Status Indicator */}
-          <div style={{
-            marginTop: '16px',
-            padding: '10px 16px',
-            backgroundColor: '#f8fafc',
-            borderRadius: '8px',
-            border: '1px solid #e2e8f0',
-            fontSize: '12px',
-            color: '#64748b',
-            display: 'flex',
-            justifyContent: 'space-between'
-          }}>
+          <div className="employer-plan-status-footer">
             <span>Plan Status:</span>
-            <span style={{ fontWeight: '600' }}>
+            <span className="font-weight-600">
               {actionRequired === 'upgrade' ? '⬆️ Upgrade Needed' :
                 actionRequired === 'reactivate' ? '⏸️ Cancelled' :
-                  actionRequired === 'renew' ? '⏰ Expired' :
-                    '❓ Unknown'}
+                  actionRequired === 'renew' ? '⏰ Expired' : '❓ Unknown'}
             </span>
           </div>
         </div>
@@ -214,7 +193,6 @@ export const AddManagerSupport = () => {
   // ──────────────────────────────────────────────
   // NO CONTACTS AVAILABLE
   // ──────────────────────────────────────────────
-
   if (contacts.length === 0) {
     return (
       <div className="employer-manager-container">
@@ -228,13 +206,14 @@ export const AddManagerSupport = () => {
             <p className="employer-manager-subtitle">Your dedicated account managers are here to help</p>
           </div>
           <div className="employer-manager-empty">
-            <div className="empty-icon">👤</div>
+            <div className="empty-icon">
+              <img src={ProfileIcon} alt="No Manager" className="employer-empty-avatar-fallback" />
+            </div>
             <div className="empty-title">No Account Manager Assigned</div>
             <div className="empty-subtitle">{message || 'Please contact support to get your dedicated account manager.'}</div>
             <button
               onClick={() => navigate('/Job-portal/Employer/SupportHub')}
-              className="employer-manager-btn employer-manager-btn-primary"
-              style={{ marginTop: '16px' }}
+              className="employer-manager-btn employer-manager-btn-primary margin-top-16"
             >
               Contact Support
             </button>
@@ -247,61 +226,34 @@ export const AddManagerSupport = () => {
   // ──────────────────────────────────────────────
   // SHOW SINGLE CONTACT (Default View)
   // ──────────────────────────────────────────────
-
   if (!showAllContacts && selectedContact) {
     const contact = selectedContact;
     return (
       <div className="employer-manager-container">
         <div className="employer-manager-card">
-          <div className="employer-manager-header" style={{ position: 'relative' }}>
+          <div className="employer-manager-header heading-relative-container">
             {contacts.length > 1 && (
-              <button
-                onClick={handleBackToList}
-                style={{
-                  position: 'absolute',
-                  top: '0',
-                  right: '0',
-                  background: 'none',
-                  border: 'none',
-                  color: '#64748b',
-                  cursor: 'pointer',
-                  fontSize: '13px',
-                  padding: '4px 0'
-                }}
-              >
+              <button onClick={handleBackToList} className="employer-view-all-trigger">
                 View All Contacts →
               </button>
             )}
-            <div className="employer-manager-badge" style={{ marginTop: '0px' }}>
+            <div className="employer-manager-badge margin-top-0">
               <span className="badge-dot"></span>
-              {contact.department} Department
-              {contact.is_primary && (
-                <span style={{
-                  marginLeft: '8px',
-                  padding: '2px 10px',
-                  borderRadius: '12px',
-                  fontSize: '10px',
-                  backgroundColor: '#2563eb',
-                  color: 'white'
-                }}>
-                  PRIMARY
-                </span>
-              )}
+              <span className="text-transform-capitalize">{contact.department} Department</span>
+              {contact.is_primary && <span className="employer-inline-primary-badge">PRIMARY</span>}
             </div>
             <h3 className="employer-manager-title">{contact.full_name}</h3>
             <p className="employer-manager-subtitle">{contact.title}</p>
           </div>
 
           <div className="employer-manager-body">
-            {contact.profile_photo && (
-              <div style={{ textAlign: 'center', marginBottom: '16px' }}>
-                <img
-                  src={contact.profile_photo}
-                  alt={contact.full_name}
-                  style={{ width: '80px', height: '80px', borderRadius: '50%', objectFit: 'cover' }}
-                />
-              </div>
-            )}
+            <div className="employer-single-avatar-alignment">
+              <img
+                src={contact.profile_photo || ProfileIcon}
+                alt={contact.full_name}
+                className="employer-single-profile-image"
+              />
+            </div>
 
             <div className="employer-manager-row">
               <span className="label">📧 Email</span>
@@ -318,9 +270,9 @@ export const AddManagerSupport = () => {
             </div>
 
             {contact.description && (
-              <div className="employer-manager-row" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '4px' }}>
-                <span className="label">📝 About</span>
-                <span className="value" style={{ fontSize: '13px', fontWeight: '400', color: '#475569' }}>
+              <div className="employer-manager-row display-column-align-start">
+                <span className="label"> About</span>
+                <span className="value text-bio-description">
                   {contact.description}
                 </span>
               </div>
@@ -329,48 +281,27 @@ export const AddManagerSupport = () => {
 
           <div className="employer-manager-actions">
             {contacts.length > 1 && (
-              <button
-                className="employer-manager-btn employer-manager-btn-secondary"
-                onClick={handleBackToList}
-              >
+              <button className="employer-manager-btn employer-manager-btn-secondary" onClick={handleBackToList}>
                 All Contacts
               </button>
             )}
-            <button
-              className="employer-manager-btn employer-manager-btn-primary"
-              onClick={() => handleEmailClick(contact.email)}
-            >
-              ✉️ Send Message
+            <button className="employer-manager-btn employer-manager-btn-primary" onClick={() => handleEmailClick(contact.email)}>
+               Send Message
             </button>
           </div>
 
-          {/* Plan Status Indicator */}
-          <div style={{
-            marginTop: '16px',
-            padding: '8px 12px',
-            backgroundColor: '#f0fdf4',
-            borderRadius: '6px',
-            border: '1px solid #bbf7d0',
-            fontSize: '12px',
-            color: '#166534',
-            display: 'flex',
-            justifyContent: 'space-between'
-          }}>
+          <div className="employer-plan-status-footer active-plan-theme">
             <span>Plan Status:</span>
-            <span style={{ fontWeight: '600' }}>✅ Active</span>
+            <span className="font-weight-600"> Active</span>
           </div>
         </div>
       </div>
     );
   }
-
-  // ──────────────────────────────────────────────
-  // SHOW ALL CONTACTS LIST
-  // ──────────────────────────────────────────────
-
+  
   return (
     <div className="employer-manager-container">
-      <div className="employer-manager-card" style={{ maxWidth: '550px' }}>
+      <div className="employer-manager-card width-max-550">
         <div className="employer-manager-header">
           <div className="employer-manager-badge">
             <span className="badge-dot"></span>
@@ -382,97 +313,42 @@ export const AddManagerSupport = () => {
           </p>
         </div>
 
-        <div className="employer-manager-body" style={{ padding: '12px 0', backgroundColor: 'transparent', border: 'none' }}>
+        <div className="employer-manager-body body-list-wrapper">
           {contacts.map((contact, index) => (
             <div
               key={index}
               onClick={() => handleContactClick(contact)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-                padding: '14px 16px',
-                backgroundColor: contact.is_primary ? '#eff6ff' : '#f8fafc',
-                borderRadius: '10px',
-                border: contact.is_primary ? '2px solid #2563eb' : '1px solid #e2e8f0',
-                marginBottom: '10px',
-                cursor: 'pointer',
-                transition: 'all 0.2s'
-              }}
+              className={`employer-list-item-card ${contact.is_primary ? 'list-primary-border' : 'list-standard-border'}`}
             >
-              <div style={{
-                width: '48px',
-                height: '48px',
-                borderRadius: '50%',
-                backgroundColor: '#e2e8f0',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '24px',
-                flexShrink: 0,
-                overflow: 'hidden'
-              }}>
-                {contact.profile_photo ? (
-                  <img src={contact.profile_photo} alt={contact.full_name} style={{ width: '48px', height: '48px', borderRadius: '50%', objectFit: 'cover' }} />
-                ) : (
-                  <span>👤</span>
-                )}
+              <div className="employer-list-avatar-frame">
+                <img 
+                  src={contact.profile_photo || ProfileIcon} 
+                  alt={contact.full_name} 
+                  className="employer-list-avatar-img" 
+                />
               </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                  <strong>{contact.full_name}</strong>
-                  {contact.is_primary && (
-                    <span style={{
-                      fontSize: '10px',
-                      padding: '2px 10px',
-                      borderRadius: '12px',
-                      backgroundColor: '#2563eb',
-                      color: 'white',
-                      fontWeight: '600'
-                    }}>
-                      PRIMARY
-                    </span>
-                  )}
-                  <span style={{
-                    fontSize: '11px',
-                    padding: '2px 10px',
-                    borderRadius: '12px',
-                    backgroundColor: '#dbeafe',
-                    color: '#1d4ed8'
-                  }}>
-                    {contact.department}
-                  </span>
+              <div className="employer-list-meta-column">
+                <div className="employer-list-headline">
+                  <strong className="employer-list-name">{contact.full_name}</strong>
+                  {contact.is_primary && <span className="employer-inline-primary-badge">PRIMARY</span>}
+                  <span className="employer-list-badge-dept">{contact.department}</span>
                 </div>
-                <div style={{ fontSize: '13px', color: '#64748b' }}>
+                <div className="employer-list-subheading">
                   {contact.title}
                 </div>
               </div>
-              <div style={{ fontSize: '20px', color: '#94a3b8' }}>›</div>
+              <div className="employer-list-chevron-arrow">›</div>
             </div>
           ))}
         </div>
 
-        <button
-          onClick={fetchContacts}
-          className="employer-manager-btn employer-manager-btn-secondary"
-          style={{ width: '100%', marginTop: '12px' }}
-        >
-          🔄 Refresh
+        <button onClick={fetchContacts} className="employer-manager-btn employer-manager-btn-secondary width-100-percent">
+          Back to main view
         </button>
 
-        <div style={{
-          marginTop: '12px',
-          padding: '8px 12px',
-          backgroundColor: '#f0fdf4',
-          borderRadius: '6px',
-          border: '1px solid #bbf7d0',
-          fontSize: '12px',
-          color: '#166534',
-          display: 'flex',
-          justifyContent: 'space-between'
-        }}>
+        <div className="employer-plan-status-footer active-plan-theme">
           <span>Plan Status:</span>
-          <span style={{ fontWeight: '600' }}>✅ Active</span>
+          <span className="font-weight-600">✅ Active</span>
         </div>
       </div>
     </div>

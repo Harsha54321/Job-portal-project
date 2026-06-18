@@ -5,8 +5,8 @@ import Info from '../assets/AdminAssets/Circle-Info.png'
 import save from '../assets/AdminAssets/Save-White.png';
 import arrowDownImg from "../assets/AdminAssets/DownArrow.png";
 import api from '../api/axios'
- 
- 
+
+
 export const JobSeekerSettings = () => {
   const [formData, setFormData] = useState({
     registration: true,
@@ -30,45 +30,45 @@ export const JobSeekerSettings = () => {
     maxApps: 30,
     appExpiry: 60
   });
- 
+
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
- 
+
   const [domainInput, setDomainInput] = useState("");
- 
+
   useEffect(() => {
     fetchData();
   }, []);
- 
+
   // ✅ GET — fetch settings and populate formData
   const fetchData = async () => {
     setLoading(true);
     try {
       const response = await api.get('jobseeker/settings/');
       const data = response.data;
- 
+
       // Map API response into formData (excluding read-only fields)
       setFormData({
-        registration:       data.registration,
-        emailVer:           data.emailVer,
-        phoneVer:           data.phoneVer,
-        domainRest:         data.domainRest,
-        allowedDomains:     data.allowedDomains || [],
-        defaultRole:        data.defaultRole,
-        accountStatus:      data.accountStatus,
-        profileVisibility:  data.profileVisibility,
-        resumeVisibility:   data.resumeVisibility,
-        anonymous:          data.anonymous,
-        completionPercent:  data.completionPercent,
-        salary:             data.salary,
-        reviews:            data.reviews,
-        appStatus:          data.appStatus,
-        similarJobs:        data.similarJobs,
-        advice:             data.advice,
-        easyApply:          data.easyApply,
-        saveJobs:           data.saveJobs,
-        maxApps:            data.maxApps,
-        appExpiry:          data.appExpiry,
+        registration: data.registration,
+        emailVer: data.emailVer,
+        phoneVer: data.phoneVer,
+        domainRest: data.domainRest,
+        allowedDomains: data.allowedDomains || [],
+        defaultRole: data.defaultRole,
+        accountStatus: data.accountStatus,
+        profileVisibility: data.profileVisibility,
+        resumeVisibility: data.resumeVisibility,
+        anonymous: data.anonymous,
+        completionPercent: data.completionPercent,
+        salary: data.salary,
+        reviews: data.reviews,
+        appStatus: data.appStatus,
+        similarJobs: data.similarJobs,
+        advice: data.advice,
+        easyApply: data.easyApply,
+        saveJobs: data.saveJobs,
+        maxApps: data.maxApps,
+        appExpiry: data.appExpiry,
       });
     } catch (error) {
       console.error("Failed to fetch settings:", error);
@@ -76,16 +76,16 @@ export const JobSeekerSettings = () => {
       setLoading(false);
     }
   };
- 
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
- 
+
   const toggleSwitch = (key) => {
     setFormData(prev => ({ ...prev, [key]: !prev[key] }));
   };
- 
+
   const handleDomainKeyDown = (e) => {
     if (e.key === "Enter" && domainInput.trim()) {
       e.preventDefault();
@@ -99,50 +99,79 @@ export const JobSeekerSettings = () => {
       setDomainInput("");
     }
   };
- 
+
   const removeDomain = (domainToRemove) => {
     setFormData(prev => ({
       ...prev,
       allowedDomains: prev.allowedDomains.filter(d => d !== domainToRemove)
     }));
   };
- 
-  // ✅ PATCH — same URL as GET, no ID needed
+
   const handleSave = async () => {
     setSaving(true);
+
     try {
-      const response = await api.patch('jobseeker/settings/', formData);
-      console.log("Settings saved:", response.data);
-      alert(response?.data?.message || "oops something went wrong");
+      let payload = { ...formData };
+
+      if (domainInput.trim()) {
+        const newDomain = domainInput.trim().toLowerCase();
+
+        if (!payload.allowedDomains.includes(newDomain)) {
+          payload.allowedDomains = [
+            ...payload.allowedDomains,
+            newDomain
+          ];
+        }
+      }
+
+      console.log("Sending:", payload);
+
+      const response = await api.patch("jobseeker/settings/", payload);
+
+      console.log("Settings updated:", response.data);
+
+      alert(
+        response?.data?.message || "Settings updated successfully!"
+      );
+
+      setFormData(payload);
+      setDomainInput("");
+
     } catch (error) {
       console.error("Failed to save settings:", error);
-      alert(error?.data);
+
+      const errorMessage =
+        error?.response?.data?.message ||
+        error?.response?.data?.detail ||
+        "Failed to update settings. Please try again.";
+
+      alert(errorMessage);
+
     } finally {
       setSaving(false);
     }
   };
- 
-  /* --- Internal UI Components --- */
+
   const Switch = ({ active, onToggle }) => (
     <div className={`jobset-switch ${active ? "active" : ""}`} onClick={onToggle}>
       <div className="jobset-switch-handle"></div>
     </div>
   );
- 
+
   const ToggleRow = ({ label, desc, active, onToggle }) => (
     <div className="jobset-toggle-row">
       <div><h4>{label}</h4><p>{desc}</p></div>
       <Switch active={active} onToggle={onToggle} />
     </div>
   );
- 
+
   const PrefItem = ({ label, active, onToggle }) => (
     <div className="jobset-pref-item">
       <span>{label}</span>
       <Switch active={active} onToggle={onToggle} />
     </div>
   );
- 
+
   // ✅ Show a loading state while fetching
   if (loading) {
     return (
@@ -151,7 +180,7 @@ export const JobSeekerSettings = () => {
       </div>
     );
   }
- 
+
   return (
     <div className="Jobseeker-Set-main-wrapper">
       <div className="jobset-header-flex">
@@ -164,14 +193,14 @@ export const JobSeekerSettings = () => {
           Edit Settings
         </button> */}
       </div>
- 
+
       {/* SECTION 1: Registration & Access */}
       <div className="jobset-card">
         <div className="jobset-card-header">
           <h3>Registration & Access</h3>
           <p>Configure how job seekers can register and access the platform</p>
         </div>
- 
+
         <div className="jobset-grid-three">
           <div className="jobset-col">
             <ToggleRow label="Job Seeker Registration" desc="Allow new users to register" active={formData.registration} onToggle={() => toggleSwitch('registration')} />
@@ -179,7 +208,7 @@ export const JobSeekerSettings = () => {
             <ToggleRow label="Phone Verification" desc="Require mobile verification" active={formData.phoneVer} onToggle={() => toggleSwitch('phoneVer')} />
             <ToggleRow label="Email Domains Restriction" desc="Restrict specific domains" active={formData.domainRest} onToggle={() => toggleSwitch('domainRest')} />
           </div>
- 
+
           <div className="jobset-col">
             <div className="jobset-field">
               <label>Allowed Domains <span className="jobset-optional">(Optional)</span></label>
@@ -202,7 +231,7 @@ export const JobSeekerSettings = () => {
               </div>
             </div>
           </div>
- 
+
           {/* <div className="jobset-col">
             <div className="jobset-field">
               <label>Default Role</label>
@@ -225,7 +254,7 @@ export const JobSeekerSettings = () => {
           </div> */}
         </div>
       </div>
- 
+
       {/* SECTION 2: Profile Settings */}
       {/* <div className="jobset-card">
         <div className="jobset-card-header">
@@ -284,7 +313,7 @@ export const JobSeekerSettings = () => {
           </div>
         </div>
       </div> */}
- 
+
       {/* SECTION 3: Application Settings */}
       <div className="jobset-grid-four">
         <div className="jobset-field">
@@ -295,7 +324,7 @@ export const JobSeekerSettings = () => {
             <span className="status-label">{formData.easyApply ? "Enabled" : "Disabled"}</span>
           </div>
         </div>
- 
+
         <div className="jobset-field">
           <label>Allow Save Jobs</label>
           <p className="jobset-field-desc">Allow job seekers to save jobs</p>
@@ -304,7 +333,7 @@ export const JobSeekerSettings = () => {
             <span className="status-label">{formData.saveJobs ? "Enabled" : "Disabled"}</span>
           </div>
         </div>
- 
+
         <div className="jobset-field">
           <label>Max Applications Per Day</label>
           <p className="jobset-field-desc">Limit applications per day</p>
@@ -312,7 +341,7 @@ export const JobSeekerSettings = () => {
             <input type="number" name="maxApps" className="jobset-input" value={formData.maxApps} onChange={handleChange} />
           </div>
         </div>
- 
+
         <div className="jobset-field">
           <label>Application Expiry (Days)</label>
           <p className="jobset-field-desc">Auto close old applications</p>
@@ -321,7 +350,7 @@ export const JobSeekerSettings = () => {
           </div>
         </div>
       </div>
- 
+
       {/* Footer */}
       <div className="jobset-footer">
         <div className="jobset-alert">
@@ -336,4 +365,3 @@ export const JobSeekerSettings = () => {
     </div>
   );
 };
- 

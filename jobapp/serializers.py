@@ -3828,148 +3828,98 @@ class EmployerRegistrationSettingsSerializer(
 #for jobseekersetting
 from .models import JobseekerPlatformSettings
 
-
 class JobseekerPlatformSettingsSerializer(
     serializers.ModelSerializer
 ):
-
     emailVer = serializers.BooleanField(
         source="email_verification"
     )
-
     phoneVer = serializers.BooleanField(
         source="phone_verification"
     )
-
     domainRest = serializers.BooleanField(
         source="domain_restriction"
     )
-
     allowedDomains = serializers.ListField(
         source="allowed_domains",
         child=serializers.CharField(),
         required=False
     )
-
     defaultRole = serializers.CharField(
         source="default_role"
     )
-
     accountStatus = serializers.CharField(
         source="account_status"
     )
-
     profileVisibility = serializers.CharField(
         source="profile_visibility"
     )
-
     resumeVisibility = serializers.CharField(
         source="resume_visibility"
     )
-
     anonymous = serializers.BooleanField(
         source="anonymous_profile"
     )
-
     completionPercent = serializers.CharField(
         source="profile_completion_required"
     )
-
     salary = serializers.BooleanField(
         source="salary_visibility"
     )
-
     reviews = serializers.BooleanField(
         source="company_reviews"
     )
-
     appStatus = serializers.BooleanField(
         source="application_status_tracking"
     )
-
     similarJobs = serializers.BooleanField(
         source="similar_jobs"
     )
-
     advice = serializers.BooleanField(
         source="career_advice"
     )
-
     easyApply = serializers.BooleanField(
         source="easy_apply"
     )
-
     saveJobs = serializers.BooleanField(
         source="save_jobs"
     )
-
     maxApps = serializers.IntegerField(
         source="max_applications"
     )
-
     appExpiry = serializers.IntegerField(
         source="application_expiry_days"
     )
-
     class Meta:
-
         model = JobseekerPlatformSettings
-
         fields = [
-
             "id",
-
             "registration",
-
             "emailVer",
-
             "phoneVer",
-
             "domainRest",
-
             "allowedDomains",
-
             "defaultRole",
-
             "accountStatus",
-
             "profileVisibility",
-
             "resumeVisibility",
-
             "anonymous",
-
             "completionPercent",
-
             "salary",
-
             "reviews",
-
             "appStatus",
-
             "similarJobs",
-
             "advice",
-
             "easyApply",
-
             "saveJobs",
-
             "maxApps",
-
             "appExpiry",
-
             "updated_at"
         ]
-
-    def validate_allowed_domains(self, value):
-
+    def validate_allowedDomains(self, value):
         return [
-
             domain.lower().strip()
-
             for domain in value
-
             if domain.strip()
         ]
 
@@ -4358,3 +4308,13 @@ class EmployerManagerResponseSerializer(serializers.Serializer):
     action_required = serializers.CharField(required=False, allow_null=True)
     action_button = serializers.CharField(required=False, allow_null=True)
     contacts = serializers.ListField(required=False)
+
+class AllowedDomainsSerializer(serializers.Serializer):
+    """Serializer for allowed domains configuration"""
+    allowed_domains = serializers.ListField(
+        child=serializers.CharField(),
+        help_text="List of allowed email domains for jobseeker registration"
+    )
+    domain_restriction = serializers.BooleanField(
+        help_text="Whether domain restriction is enabled"
+    )

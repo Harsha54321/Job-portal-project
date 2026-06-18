@@ -144,6 +144,7 @@ from .views import (
     AdminEmployerAssignmentsView,
     EmployerAccountManagersView,
     AdminLogin2FAOTPView,
+    AllowedDomainsView,
 
     # REMOVED: Company-related view imports (CompanyListView, CompanyDetailView, etc.)
 )
@@ -441,5 +442,7 @@ urlpatterns = [
 
     # Employer URLs
     path('employer/account-managers/', EmployerAccountManagersView.as_view(), name='employer-account-managers'),
+
+    path('jobseeker/allowed-domains/', AllowedDomainsView.as_view(), name='jobseeker-allowed-domains'),
 
 ]

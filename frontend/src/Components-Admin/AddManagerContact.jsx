@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api/axios';
 import './AddManagerContact.css';
+import DeleteIcon from '../assets/Billing/Delete_icon.png';
+import ProfileIcon from "../assets/icon_profile.png";
 
 export const AddManagerContact = () => {
   const [loading, setLoading] = useState(false);
@@ -143,7 +145,10 @@ export const AddManagerContact = () => {
     <div className="admin-portal-container">
       <div className="admin-form-card">
         <div className="admin-form-header">
-          <h2 className="admin-form-title">👤 Account Manager Management</h2>
+          <h2 className="admin-form-title">
+            <img src={ProfileIcon} alt="Profile" className="admin-title-icon" />
+            Account Manager Management
+          </h2>
           <p className="admin-form-subtitle">
             Create account managers, assign them to employers, and manage contacts
           </p>
@@ -157,7 +162,7 @@ export const AddManagerContact = () => {
         )}
 
         {error && (
-          <div className="admin-status-alert" style={{ backgroundColor: '#fef2f2', color: '#991b1b', borderColor: '#fecaca' }}>
+          <div className="admin-status-alert admin-alert-danger">
             <span>❌ {error}</span>
           </div>
         )}
@@ -246,9 +251,9 @@ export const AddManagerContact = () => {
             />
           </div>
 
-          <div className="admin-form-group" style={{ flexDirection: 'row', alignItems: 'center', gap: '20px' }}>
-            <label className="admin-form-label" style={{ marginBottom: 0 }}>Status:</label>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', cursor: 'pointer' }}>
+          <div className="admin-toggle-row">
+            <label className="admin-form-label">Status:</label>
+            <label className="admin-clickable-checkbox">
               <input
                 type="checkbox"
                 name="is_active"
@@ -282,30 +287,30 @@ export const AddManagerContact = () => {
               </button>
             )}
             <button type="submit" className="admin-btn-submit" disabled={loading}>
-              {loading ? 'Saving...' : editingId ? '✏️ Update Manager' : '➕ Create Manager'}
+              {loading ? 'Saving...' : editingId ? ' Update Manager' : '+ Create Manager'}
             </button>
           </div>
         </form>
 
         {/* ─── Assign Section ─── */}
-        <div style={{ marginTop: '24px', borderTop: '1px solid #e2e8f0', paddingTop: '20px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h3 style={{ margin: 0 }}>Account Managers ({managers.length})</h3>
+        <div className="admin-assignment-container">
+          <div className="admin-assignment-top-row">
+            <h3 className="admin-list-title">Account Managers ({managers.length})</h3>
             <button
               onClick={() => setShowAssign(!showAssign)}
-              className="admin-btn-submit"
-              style={{ padding: '8px 20px', fontSize: '13px' }}
+              className="admin-btn-submit admin-btn-assign-toggle"
             >
-              {showAssign ? 'Hide Assign' : '🔗 Assign to Employer'}
+              {showAssign ? 'Hide Assign' : 'Assign to Employer'}
             </button>
           </div>
 
           {showAssign && (
-            <form onSubmit={handleAssign} style={{ marginTop: '16px', padding: '16px', backgroundColor: '#f8fafc', borderRadius: '10px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
+            <form onSubmit={handleAssign} className="admin-assignment-panel">
+              <div className="admin-assignment-inputs-grid">
                 <input
                   type="number"
                   placeholder="Employer ID *"
+                  title="open user management page to get employer id"
                   value={selectedEmployer}
                   onChange={(e) => setSelectedEmployer(e.target.value)}
                   className="admin-form-input"
@@ -324,8 +329,8 @@ export const AddManagerContact = () => {
                     </option>
                   ))}
                 </select>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                <div className="admin-assignment-inline-actions">
+                  <label className="admin-clickable-checkbox">
                     <input
                       type="checkbox"
                       checked={isPrimary}
@@ -333,7 +338,7 @@ export const AddManagerContact = () => {
                     />
                     Primary Contact
                   </label>
-                  <button type="submit" className="admin-btn-submit" style={{ padding: '10px 24px' }} disabled={loading}>
+                  <button type="submit" className="admin-btn-submit" disabled={loading}>
                     Assign
                   </button>
                 </div>
@@ -341,99 +346,50 @@ export const AddManagerContact = () => {
             </form>
           )}
 
-          {/* ─── Manager List ─── */}
-          <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {/* ─── Manager Card List Display ─── */}
+          <div className="admin-managers-card-list">
             {managers.length === 0 ? (
-              <p style={{ color: '#94a3b8', textAlign: 'center', padding: '20px' }}>
+              <p className="admin-no-data-placeholder">
                 No account managers created yet. Create one above!
               </p>
             ) : (
               managers.map(manager => (
-                <div key={manager.id} style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  padding: '12px 16px',
-                  backgroundColor: manager.is_active ? '#f8fafc' : '#fef2f2',
-                  borderRadius: '8px',
-                  borderLeft: `4px solid ${manager.is_active ? '#10b981' : '#ef4444'}`,
-                  flexWrap: 'wrap',
-                  gap: '8px'
-                }}>
-                  <div>
-                    <strong>{manager.full_name}</strong>
-                    <span style={{ color: '#64748b', marginLeft: '12px' }}>{manager.email}</span>
-                    <span style={{
-                      marginLeft: '12px',
-                      padding: '2px 10px',
-                      borderRadius: '12px',
-                      fontSize: '11px',
-                      fontWeight: '600',
-                      backgroundColor: '#dbeafe',
-                      color: '#1d4ed8'
-                    }}>
+                <div 
+                  key={manager.id} 
+                  className={`admin-manager-item-card ${manager.is_active ? 'status-active' : 'status-inactive'}`}
+                >
+                  <div className="admin-manager-meta-group">
+                    <strong className="admin-manager-display-name">{manager.full_name}</strong>
+                    <span className="admin-email-text-label">{manager.email}</span>
+                    
+                    <span className="admin-tag-badge-department">
                       {manager.department_display}
                     </span>
-                    <span style={{ fontSize: '12px', color: '#64748b', marginLeft: '12px' }}>
-                      👥 {manager.assigned_employers_count || 0}
-                    </span>
+                    
+                    <div className="admin-manager-count-inline">
+                      <img src={ProfileIcon} alt="Assigned Target Count" className="admin-inline-user-icon" title='users assigned count' />
+                      <span className="admin-count-numerical-text">{manager.assigned_employers_count || 0}</span>
+                    </div>
+
                     {!manager.is_active && (
-                      <span style={{
-                        marginLeft: '8px',
-                        padding: '2px 10px',
-                        borderRadius: '12px',
-                        fontSize: '11px',
-                        fontWeight: '600',
-                        backgroundColor: '#fef2f2',
-                        color: '#dc2626'
-                      }}>
+                      <span className="admin-tag-badge-inactive">
                         Inactive
                       </span>
                     )}
                   </div>
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <button onClick={() => handleEdit(manager)} className="admin-btn-cancel" style={{ padding: '4px 12px', fontSize: '12px' }}>
-                      ✏️ Edit
+
+                  <div className="admin-row-action-buttons">
+                    <button onClick={() => handleEdit(manager)} className="admin-btn-edit-row">
+                      Edit
                     </button>
-                    <button onClick={() => handleDelete(manager.id)} className="admin-btn-cancel" style={{ padding: '4px 12px', fontSize: '12px', color: '#dc2626' }}>
-                      🗑️ Delete
+                    <button onClick={() => handleDelete(manager.id)} className="admin-btn-remove-row">
+                      <img src={DeleteIcon} alt="Delete" title='Remove' />
                     </button>
                   </div>
                 </div>
               ))
             )}
           </div>
-
-          {/* ─── Assignments List ─── */}
-          {assignments.length > 0 && (
-            <div style={{ marginTop: '20px', borderTop: '1px solid #e2e8f0', paddingTop: '16px' }}>
-              <h4 style={{ fontSize: '14px', color: '#64748b' }}>📋 Recent Assignments</h4>
-              <div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                {assignments.slice(0, 10).map(assignment => (
-                  <div key={assignment.employer_id} style={{
-                    fontSize: '13px',
-                    color: '#475569',
-                    padding: '6px 12px',
-                    backgroundColor: '#f8fafc',
-                    borderRadius: '6px',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    flexWrap: 'wrap'
-                  }}>
-                    <span>{assignment.employer_name}</span>
-                    <span>
-                      {assignment.assigned_managers.map((m, idx) => (
-                        <span key={m.id} style={{ marginLeft: '8px' }}>
-                          {m.name} {m.is_primary && '⭐'}
-                          {idx < assignment.assigned_managers.length - 1 ? ', ' : ''}
-                        </span>
-                      ))}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       </div>
     </div>

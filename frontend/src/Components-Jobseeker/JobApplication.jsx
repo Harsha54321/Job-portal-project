@@ -14,19 +14,16 @@ import { useJobs } from "../JobContext";
 import application_success from "../assets/application_success.png";
 import { LocationDisplay } from './LocationDisplay';
 
-
 export const JobApplication = () => {
 
   const { id: jobId } = useParams();
   const [job, setJob] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [easyApplyEnabled, setEasyApplyEnabled] = useState(false);
   const { setAppliedJobs } = useJobs();
 
   const navigate = useNavigate();
-  // const { id } = useParams();
   const fileInputRef = useRef(null);
-
-  // const job = jobs.find(singleJob => singleJob.id === id);
 
   const [editableField, setEditableField] = useState(null);
 
@@ -44,36 +41,67 @@ export const JobApplication = () => {
     coverLetter: "",
     resume: null,
   });
+
+  // Fetch Easy Apply status and profile data on component load
   useEffect(() => {
-    api.get("profile/jobseeker/")
-      .then(res => {
-        console.log("PROFILE DATA:", res.data);
-        setFormData(prev => ({
-          ...prev,
-          name: res.data.full_name || "",
-          dob: res.data.dob || "",
-          email: res.data.email || "",
-          mobile: res.data.phone || "",
-          marital: res.data.marital_status || "",
-          street: res.data.street || "",
-          city: res.data.city || "",
-          state: res.data.state || "",
-          zip: res.data.pincode || "",
-          country: res.data.country || "",
-          resume: res.data.resume_file
-            ? {
-              name: res.data.resume_file.split("/").pop(),
-              url: res.data.resume_file,
-              isExisting: true
-            }
-            : null
-        }));
-      })
-      .catch(err => {
-        console.error("Failed to preload profile data", err);
-      });
+    const fetchEasyApplyStatus = async () => {
+      try {
+        const response = await api.get("/jobs/apply/");
+
+        if (response.data.status === true && response.data.data) {
+          // Easy Apply is enabled, pre-fill form with profile data
+          setEasyApplyEnabled(true);
+          const profileData = response.data.data;
+
+          setFormData(prev => ({
+            ...prev,
+            name: profileData.full_name || "",
+            dob: profileData.date_of_birth || "",
+            email: profileData.email || "",
+            mobile: profileData.phone_number || "",
+            marital: profileData.marital_status || "",
+            street: profileData.street || "",
+            city: profileData.city || "",
+            state: profileData.state || "",
+            zip: profileData.pincode || "",
+            country: profileData.country || "",
+            resume: profileData.resume
+              ? {
+                name: profileData.resume.split("/").pop(),
+                url: profileData.resume,
+                isExisting: true
+              }
+              : null
+          }));
+        } else {
+          // Easy Apply is disabled, user must manually enter data
+          setEasyApplyEnabled(false);
+          // Reset form to empty values
+          setFormData({
+            name: "",
+            dob: "",
+            marital: "",
+            mobile: "",
+            email: "",
+            street: "",
+            city: "",
+            state: "",
+            zip: "",
+            country: "",
+            coverLetter: "",
+            resume: null,
+          });
+        }
+      } catch (err) {
+        console.error("Failed to fetch Easy Apply status", err);
+        setEasyApplyEnabled(false);
+      }
+    };
+
+    fetchEasyApplyStatus();
   }, []);
 
+  // Fetch job details
   useEffect(() => {
     api.get(`/jobs/${jobId}/`)
       .then(res => {
@@ -101,7 +129,7 @@ export const JobApplication = () => {
         break;
       case "email":
         const emailRegex = /^[a-zA-Z][a-zA-Z0-9]*@(gmail|yahoo|outlook|hotmail)\.[a-zA-Z]{2,}$/;
-        if (!value) error = " Email is Required";
+        if (!value) error = "Email is Required";
         else if (!emailRegex.test(value)) error = "Format: name@domain.com";
         break;
       case "mobile":
@@ -109,7 +137,7 @@ export const JobApplication = () => {
         else if (!/^[6-9]\d{9}$/.test(value)) error = "Must be 10 digits starting with 6-9";
         break;
       case "zip":
-        if (!value) error = "zip code is Required";
+        if (!value) error = "Zip code is Required";
         else if (!/^\d{6}$/.test(value)) error = "Must be exactly 6 digits";
         break;
       case "coverLetter":
@@ -130,11 +158,9 @@ export const JobApplication = () => {
           const selectedDate = new Date(value);
           const today = new Date();
 
-          // Calculate Age
           let age = today.getFullYear() - selectedDate.getFullYear();
           const monthDiff = today.getMonth() - selectedDate.getMonth();
 
-          // Adjust age if birthday hasn't happened yet this year
           if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < selectedDate.getDate())) {
             age--;
           }
@@ -166,8 +192,6 @@ export const JobApplication = () => {
       val = value.slice(0, 2000);
     }
 
-
-    // existing logic...
     if (name === "mobile" || name === "zip") {
       val = value.replace(/\D/g, "");
       if (name === "mobile") val = val.slice(0, 10);
@@ -183,19 +207,6 @@ export const JobApplication = () => {
     setErrors(prev => ({ ...prev, [name]: errorMsg }));
   };
 
-
-
-  // const handleChange = (e) => {
-  //   const { name, value } = e.target;
-  //   setFormData((prev) => ({ ...prev, [name]: value }));
-  // };
-
-  // const handleMobileChange = (e) => {
-  //   let value = e.target.value.replace(/\D/g, "");
-  //   if (value.length > 10) value = value.slice(0, 10);
-  //   setFormData((prev) => ({ ...prev, mobile: value }));
-  // };
-
   const handleResumeUpload = (e) => {
     const file = e.target.files[0];
     if (file && file.type === "application/pdf") {
@@ -206,18 +217,6 @@ export const JobApplication = () => {
       fileInputRef.current.value = "";
     }
   };
-
-  // const removeResume = () => {
-  //   setFormData({
-  //     ...formData,
-  //     resume: null,
-  //     resumeName: "",
-  //   });
-
-  //   if (fileInputRef.current) {
-  //     fileInputRef.current.value = "";
-  //   }
-  // };
 
   const removeResume = () => {
     setFormData(prev => ({ ...prev, resume: null }));
@@ -256,7 +255,6 @@ export const JobApplication = () => {
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
-      // Auto-focus the first error field
       setEditableField(["street", "city", "state", "zip", "country"].includes(firstError) ? "address" : firstError);
       alert("Please fill all required fields.");
       return false;
@@ -269,8 +267,6 @@ export const JobApplication = () => {
     }
     return true;
   };
-
-  console.log("JOB ID FROM URL:", jobId);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -290,7 +286,7 @@ export const JobApplication = () => {
       payload.append("country", formData.country);
 
       if (formData.resume && !formData.resume.isExisting) {
-        payload.append("resume", formData.resume); // only new file
+        payload.append("resume", formData.resume);
       }
 
       const res = await api.post("/jobs/apply/", payload);
@@ -299,20 +295,39 @@ export const JobApplication = () => {
         const filtered = prev.filter(app =>
           !(app.job?.id === job.id && app.status === "withdrawn")
         );
-
         return [...filtered, res.data];
       });
 
       navigate(`/Job-portal/jobseeker/submitted/${job.id}`);
     } catch (error) {
-      console.error(error);
-      if (error.response?.status === 400 || error.response?.status === 409) {
-        alert("You have already applied for this job");
-      } else {
-        alert("Failed to apply for job");
+      console.error("Full error object:", error);
+      console.error("Response data:", error.response?.data);
+
+      let errorMessage = "Application failed. Please try again.";
+
+      if (error.response?.data) {
+        if (typeof error.response.data === 'string') {
+          errorMessage = error.response.data;
+        } else if (error.response.data.error) {
+          errorMessage = error.response.data.error;
+        } else if (error.response.data.detail) {
+          errorMessage = error.response.data.detail;
+        } else if (error.response.data.message) {
+          errorMessage = error.response.data.message;
+        } else if (error.response.data.non_field_errors) {
+          errorMessage = error.response.data.non_field_errors[0];
+        } else {
+          const firstKey = Object.keys(error.response.data)[0];
+          if (firstKey && error.response.data[firstKey]) {
+            errorMessage = Array.isArray(error.response.data[firstKey])
+              ? error.response.data[firstKey][0]
+              : error.response.data[firstKey];
+          }
+        }
       }
+      alert(errorMessage);
     }
-  };
+  }
 
   if (loading) {
     return (
@@ -334,24 +349,11 @@ export const JobApplication = () => {
     );
   }
 
-  // const formatLocation = (location) => {
-
-  //   if (!location) return "Location not specified";
-
-  //   if (Array.isArray(location)) {
-  //     return location.join(", ");
-  //   }
-  //   return location;
-  // };
-
-  // const locationDisplay = formatLocation(job.location);
-
   return (
     <>
       <Header />
 
       <div className="apply-form-page">
-
         <div className="apply-form-job-header">
           <h1 className="apply-form-job-title">{job.job_title}</h1>
 
@@ -360,16 +362,15 @@ export const JobApplication = () => {
               {job.company?.company_name}
             </span>
 
-
             <span>
-              <img src={time} className="apply-form-card-icons" />
+              <img src={time} className="apply-form-card-icons" alt="duration" />
               {job.work_duration}
             </span>
 
             <span>₹ {job.salary}</span>
 
             <span>
-              <img src={experience} className="apply-form-card-icons" />
+              <img src={experience} className="apply-form-card-icons" alt="experience" />
               {job.experience}
             </span>
 
@@ -382,6 +383,12 @@ export const JobApplication = () => {
 
         <div className="apply-form-container">
           <form className="apply-form-card" onSubmit={handleSubmit}>
+
+            {!easyApplyEnabled && (
+              <div className="easy-apply-disabled-warning">
+                <p>Easy Apply is currently disabled. Please fill in all your details manually.</p>
+              </div>
+            )}
 
             <div className="apply-form-row">
               <div className="apply-form-label">Name</div>
@@ -516,7 +523,6 @@ export const JobApplication = () => {
                   rows={4}
                   maxLength={2000}
                 />
-
                 {errors.coverLetter && (
                   <small className="error-text" style={{ display: 'block', marginTop: '5px' }}>
                     {errors.coverLetter}
@@ -533,7 +539,6 @@ export const JobApplication = () => {
                     <span>
                       {formData.resume?.name || formData.resumeName}
                     </span>
-
                     <button
                       type="button"
                       className="apply-form-remove-btn"
@@ -541,14 +546,6 @@ export const JobApplication = () => {
                     >
                       <img src={deleteIcon} alt="delete" />
                     </button>
-
-                    {/* <button
-                      type="button"
-                      onClick={() => fileInputRef.current.click()}
-                    >
-                      Replace
-                    </button> */}
-
                     <input
                       type="file"
                       hidden
@@ -568,9 +565,7 @@ export const JobApplication = () => {
                 )}
                 {errors.resume && <small className="error-text">{errors.resume}</small>}
               </div>
-
             </div>
-
 
             <div className="apply-form-action-buttons">
               <button type="button" className="apply-form-secondary-btn" onClick={() => navigate(-1)}>Cancel</button>

@@ -179,9 +179,12 @@ export const JobProvider = ({ children }) => {
         try {
             await api.post("/jobs/save/", { job_id: jobId });
             await fetchAllJobs();
-            // addNotification("Job saved successfully!");
+            addNotification("Job saved successfully!");
         } catch (err) {
             console.error(err);
+            if (err.response.data?.error === 'Save jobs feature is disabled.') {
+                alert("Saving jobs is currently disabled. Please contact Admin");
+            }
         }
     };
 
@@ -716,26 +719,26 @@ export const JobProvider = ({ children }) => {
         }
     }, []);
 
-const [blogStats, setBlogStats] = useState({ total: 0, published: 0, drafts: 0, trash: 0 });
+    const [blogStats, setBlogStats] = useState({ total: 0, published: 0, drafts: 0, trash: 0 });
 
-const fetchBlogStats = useCallback(async () => {
-    try {
-        const res = await api.get('blog-stats/');
-        setBlogStats(res.data);
-    } catch (err) {
-        console.error('Failed to fetch blog stats:', err);
-    }
-}, []);
+    const fetchBlogStats = useCallback(async () => {
+        try {
+            const res = await api.get('blog-stats/');
+            setBlogStats(res.data);
+        } catch (err) {
+            console.error('Failed to fetch blog stats:', err);
+        }
+    }, []);
 
-useEffect(() => {
-    fetchBlogStats();
-}, [fetchBlogStats]);
+    useEffect(() => {
+        fetchBlogStats();
+    }, [fetchBlogStats]);
 
 
-useEffect(() => {
-    fetchPublishedBlogs();
-    fetchBlogStats();
-}, [fetchPublishedBlogs, fetchBlogStats]);
+    useEffect(() => {
+        fetchPublishedBlogs();
+        fetchBlogStats();
+    }, [fetchPublishedBlogs, fetchBlogStats]);
 
     // ================= PROVIDER =================
     return (

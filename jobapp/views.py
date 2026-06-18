@@ -112,8 +112,7 @@ class JobSeekerRegistrationView(APIView):
             return Response(
                 {
                     "error": (
-                        "Jobseeker registration "
-                        "is currently disabled."
+                        "Jobseeker registration is currently disabled. Please contact Admin."
                     )
                 },
                 status=403
@@ -8887,83 +8886,53 @@ class RegisterDeviceTokenView(APIView):
 
 # for jobseekersetting
 
-
 from rest_framework import status
-
 from .models import (
     JobseekerPlatformSettings
 )
-
 from .serializers import (
     JobseekerPlatformSettingsSerializer
 )
 
-
-
-
 class JobseekerPlatformSettingsView(APIView):
-
     #permission_classes = [IsAuthenticated,IsAdminUserType]
-
-   
-
     def get(self, request):
-
         settings_obj = (
-            JobseekerPlatformSettings.get_settings()
-        )
-
+            JobseekerPlatformSettings.get_settings())
         serializer = (
-            JobseekerPlatformSettingsSerializer(
-                settings_obj
-            )
-        )
+            JobseekerPlatformSettingsSerializer(settings_obj))
 
         return Response(
             serializer.data,
             status=status.HTTP_200_OK
         )
 
-  
-
     def patch(self, request):
-
         settings_obj = (
             JobseekerPlatformSettings.get_settings()
         )
-
         serializer = (
             JobseekerPlatformSettingsSerializer(
-
                 settings_obj,
-
                 data=request.data,
-
                 partial=True,
-
                 context={
                     "request": request
                 }
             )
         )
-
         serializer.is_valid(
             raise_exception=True
         )
-
         serializer.save()
-
         return Response(
-
             {
                 "message": (
                     "Jobseeker platform settings "
                     "updated successfully"
                 ),
-
                 "data": serializer.data
             },
-
             status=status.HTTP_200_OK
         )
     
@@ -8986,6 +8955,8 @@ def _trend(today_val, yesterday_val):
  
 def _is_up(today_val, yesterday_val):
     return today_val >= yesterday_val
+
+
 class AdminDashboardOverviewNewView(APIView):
  
     # permission_classes = [IsAuthenticated, IsAdminUserType]
@@ -10640,3 +10611,21 @@ class EmployerAccountManagersView(APIView):
                 return request.build_absolute_uri(manager.profile_photo.url)
             return manager.profile_photo.url
         return None
+
+class AllowedDomainsView(APIView):
+    """
+    GET /api/jobseeker/allowed-domains/
+    Returns the list of allowed email domains for jobseeker registration
+    """
+    permission_classes = [AllowAny]  # Public endpoint as it's needed during signup
+   
+    def get(self, request):
+        settings_obj = JobseekerPlatformSettings.get_settings()
+       
+        data = {
+            'allowed_domains': settings_obj.allowed_domains or [],
+            'domain_restriction': settings_obj.domain_restriction
+        }
+       
+        serializer = AllowedDomainsSerializer(data)
+        return Response(serializer.data, status=status.HTTP_200_OK)
