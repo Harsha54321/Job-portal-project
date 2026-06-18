@@ -1964,7 +1964,7 @@ class UserDevice(models.Model):#newly added 11/05
     )
 
     fcm_token = models.TextField(
-        unique=True
+        
     )
 
     platform = models.CharField(

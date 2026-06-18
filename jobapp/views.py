@@ -2173,12 +2173,28 @@ class UserSettingsView(APIView):
 
 # ============ CHAT VIEWS ============
 
+# class ConversationListView(generics.ListAPIView):
+#     permission_classes = [IsAuthenticated]
+#     serializer_class = ConversationSerializer
+   
+#     def get_queryset(self):
+#         return Conversation.objects.filter(participants=self.request.user)
+   
+#     def get_serializer_context(self):
+#         return {'request': self.request}
 class ConversationListView(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = ConversationSerializer
    
     def get_queryset(self):
-        return Conversation.objects.filter(participants=self.request.user)
+        return (
+            Conversation.objects
+            .filter(participants=self.request.user)
+            .prefetch_related(
+                "participants",
+                "messages"
+            )
+        )
    
     def get_serializer_context(self):
         return {'request': self.request}

@@ -33,6 +33,7 @@ export const requestAndRegisterNotificationPermission = async () => {
 
       if (currentToken) {
         console.log("FCM Token Generated successfully:", currentToken);
+        console.log("Access Token:", sessionStorage.getItem("access"));
 
         // Dispatch payload structure updating your backend's UserDevice instances
         await api.post("devices/register/", {

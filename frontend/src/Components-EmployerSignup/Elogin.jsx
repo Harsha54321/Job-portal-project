@@ -81,7 +81,6 @@ export const Elogin = () => {
       console.log("🔍 Checking onboarding status after login...");
       
       const response = await api.get('/employer/onboarding-status/');
-      requestAndRegisterNotificationPermission();
       console.log("Onboarding status:", response.data);
 
       const { has_company_profile, has_verification, verification_status } = response.data;
@@ -167,6 +166,7 @@ export const Elogin = () => {
       sessionStorage.setItem("access", res.data.access);
       sessionStorage.setItem("refresh", res.data.refresh);
       sessionStorage.setItem("userRole", "Employer");
+      requestAndRegisterNotificationPermission();
 
       if (res.data.user_id) {
         sessionStorage.setItem("user_id", res.data.user_id);

@@ -593,10 +593,15 @@ export const JobProvider = ({ children }) => {
 
         const interval = setInterval(() => {
             fetchChats();
-        }, 3000);
+        }, 30000);
 
         return () => clearInterval(interval);
     }, [fetchChats]);
+
+    // fetch only on page load
+    // useEffect(() => {
+    //     fetchChats();
+    // }, []);
 
     // =============================Admin support hub==========================
     // ================Admin tickets=================
