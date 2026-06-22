@@ -84,13 +84,14 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
                 "detail": ["Incorrect password."]
             })
 
+        # Check if user is active
         if not user.is_active:
             raise serializers.ValidationError({
                 "detail": ["Your account is inactive. Please contact support."],
                 "account_inactive": True
             })
         
-        # Then check account status
+        # Check account status
         if user.status != User.AccountStatus.ACTIVE:
             if user.status == User.AccountStatus.HOLD:
                 raise serializers.ValidationError({
@@ -111,12 +112,11 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
                     "account_inactive": True
                 })
         
-        # If we reach here, user is active and can log in
         # Update login time
         user.login_time = timezone.now()
         user.save(update_fields=["login_time"])
  
-        # Admin security log
+        # Admin security log - SUCCESS
         if user.user_type == "admin":
             AdminSecurityService.log_event(
                 request=self.context.get("request"),
@@ -141,7 +141,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
             if admin_2fa_response:
                 return admin_2fa_response
  
-        # Generate tokens (ONLY for active users)
+        # Generate tokens
         refresh = RefreshToken.for_user(user)
 
         # Admin device tracking

@@ -76,5 +76,5 @@ celery
 PyPDF2==3.0.1
 python-docx
 django_celery_beat
-celery redis
+redis
 firebase-admin

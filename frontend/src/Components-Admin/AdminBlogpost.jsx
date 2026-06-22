@@ -25,7 +25,11 @@ export const AdminBlogPost = () => {
     const [editErrors, setEditErrors] = useState({});
     const [thumbnailFile, setThumbnailFile] = useState(null);
     const [thumbnailPreview, setThumbnailPreview] = useState('');
-    
+
+    // Dropdown states for category and status
+    const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
+    const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
+
     // LIVE CATEGORIES STATE FOR THE EDIT MODAL DROPDOWN
     const [categories, setCategories] = useState([]);
 
@@ -45,6 +49,23 @@ export const AdminBlogPost = () => {
             }
         };
         fetchCategories();
+    }, []);
+
+    // Click outside handler for dropdowns
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (!event.target.closest('.modal-input-group') &&
+                !event.target.closest('.jobpost-dropdown-trigger') &&
+                !event.target.closest('.jobpost-dropdown-panel')) {
+                setIsCategoryDropdownOpen(false);
+                setIsStatusDropdownOpen(false);
+            }
+        };
+
+        document.addEventListener("click", handleClickOutside);
+        return () => {
+            document.removeEventListener("click", handleClickOutside);
+        };
     }, []);
 
     const filteredBlogs = Object.entries(publishedBlogs || {}).reduce((acc, [categoryName, blogList]) => {
@@ -135,6 +156,9 @@ export const AdminBlogPost = () => {
         setEditErrors({});
         setIsModalOpen(true);
         setOpenMenu(null);
+        // Close any open dropdowns
+        setIsCategoryDropdownOpen(false);
+        setIsStatusDropdownOpen(false);
     };
 
     const convertToInputDate = (dateString) => {
@@ -144,7 +168,7 @@ export const AdminBlogPost = () => {
         const year = d.getFullYear();
         const month = String(d.getMonth() + 1).padStart(2, '0');
         const day = String(d.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`; 
+        return `${year}-${month}-${day}`;
     };
 
     const handleInputChange = (e) => {
@@ -164,20 +188,20 @@ export const AdminBlogPost = () => {
             } else {
                 setEditedBlogData(prev => ({ ...prev, [name]: '' }));
             }
-            return; 
+            return;
         }
 
         setEditedBlogData(prev => ({ ...prev, [name]: value }));
     };
 
-    // SAVE VALIDATION (Inner Heading is completely gone)
+    // SAVE VALIDATION
     const handleSaveChanges = async () => {
         let isCompromised = false;
         const caughtErrors = {};
         const msg = "Numbers and special characters alone are not allowed.";
 
         // 1. Standard text fields
-        const stringFields = ['title', 'categoryName', 'desc']; 
+        const stringFields = ['title', 'categoryName', 'desc'];
         stringFields.forEach(field => {
             const val = (editedBlogData[field] || '').trim();
             if (!val) {
@@ -229,7 +253,7 @@ export const AdminBlogPost = () => {
 
         if (isCompromised) {
             setEditErrors(caughtErrors);
-            return; 
+            return;
         }
 
         const confirmSave = window.confirm("Are you sure you want to save these changes?");
@@ -320,7 +344,7 @@ export const AdminBlogPost = () => {
     ).sort((a, b) => {
         const dateA = new Date(`${a.date} ${a.time || "12:00 PM"}`);
         const dateB = new Date(`${b.date} ${b.time || "12:00 PM"}`);
-        return dateB - dateA; 
+        return dateB - dateA;
     });
 
     const indexOfLastBlog = currentPage * itemsPerPage;
@@ -560,21 +584,146 @@ export const AdminBlogPost = () => {
                                 {editErrors.title && <div style={{ color: '#dc3545', fontSize: '12px', marginTop: '5px', fontWeight: '500' }}>{editErrors.title}</div>}
                             </div>
 
-                            {/* --- REPLACED PLAIN INPUT & INNER HEADING WITH FULL WIDTH CATEGORY SELECT --- */}
+                            {/* Category with dropdown arrow - matching PostJobForm style */}
                             <div className="modal-input-group">
                                 <label>Category</label>
                                 {isEditMode ? (
-                                    <select
-                                        name="categoryName"
-                                        value={editedBlogData.categoryName || ''}
-                                        onChange={handleInputChange}
-                                        style={{ width: '100%', padding: '10px', border: '1px solid', borderColor: editErrors.categoryName ? '#dc3545' : '#cbd5e1', borderRadius: '4px', backgroundColor: '#fff', fontSize: '14px', color: '#333' }}
-                                    >
-                                        <option value="">Select a Category</option>
-                                        {categories.map(cat => (
-                                            <option key={cat.id} value={cat.label}>{cat.label}</option>
-                                        ))}
-                                    </select>
+                                    <div style={{ position: 'relative' }}>
+                                        <div
+                                            className={`jobpost-dropdown-trigger ${isCategoryDropdownOpen ? 'jobpost-is-active' : ''}`}
+                                            onClick={() => setIsCategoryDropdownOpen(!isCategoryDropdownOpen)}
+                                            style={{
+                                                width: '100%',
+                                                padding: '10px 16px',
+                                                border: '1px solid #E5E7EB',
+                                                borderRadius: '6px',
+                                                fontSize: '14px',
+                                                color: '#333333',
+                                                backgroundColor: '#FFFFFF',
+                                                display: 'flex',
+                                                justifyContent: 'space-between',
+                                                alignItems: 'center',
+                                                cursor: 'pointer',
+                                                transition: 'all 0.2s ease-in-out',
+                                                boxSizing: 'border-box',
+                                                position: 'relative',
+                                                minHeight: '44px'
+                                            }}
+                                        >
+                                            <span className={editedBlogData.categoryName ? 'jobpost-dropdown-selected' : 'jobpost-dropdown-placeholder'} style={{
+                                                flex: 1,
+                                                overflow: 'hidden',
+                                                textOverflow: 'ellipsis',
+                                                whiteSpace: 'nowrap',
+                                                color: editedBlogData.categoryName ? '#333333' : '#A0AAB5'
+                                            }}>
+                                                {editedBlogData.categoryName || 'Select a Category'}
+                                            </span>
+                                            <i className={`fas fa-angle-down jobpost-arrow ${isCategoryDropdownOpen ? 'jobpost-arrow-open' : ''}`} style={{
+                                                fontSize: '14px',
+                                                color: '#A0AAB5',
+                                                transition: 'transform 0.3s ease',
+                                                flexShrink: 0,
+                                                transform: isCategoryDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)'
+                                            }}></i>
+                                        </div>
+                                        <div className={`jobpost-dropdown-panel ${isCategoryDropdownOpen ? 'jobpost-dropdown-open' : ''}`} style={{
+                                            display: isCategoryDropdownOpen ? 'block' : 'none',
+                                            position: 'absolute',
+                                            top: '100%',
+                                            left: 0,
+                                            width: '100%',
+                                            background: '#FFFFFF',
+                                            border: '1px solid #E5E7EB',
+                                            borderRadius: '8px',
+                                            padding: '12px 16px',
+                                            zIndex: 1000,
+                                            boxShadow: '0 10px 25px rgba(0, 0, 0, 0.08)',
+                                            marginTop: '5px',
+                                            boxSizing: 'border-box',
+                                            maxHeight: '200px',
+                                            overflowY: 'auto'
+                                        }}>
+                                            <label
+                                                className="jobpost-option-item"
+                                                style={{
+                                                    padding: '8px 12px',
+                                                    cursor: 'pointer',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: '10px',
+                                                    fontSize: '13px',
+                                                    color: '#4B5563',
+                                                    transition: 'background 0.2s, color 0.2s',
+                                                    borderRadius: '4px'
+                                                }}
+                                                onClick={() => {
+                                                    setEditedBlogData(prev => ({ ...prev, categoryName: '' }));
+                                                    setIsCategoryDropdownOpen(false);
+                                                    if (editErrors.categoryName) {
+                                                        setEditErrors(prev => ({ ...prev, categoryName: '' }));
+                                                    }
+                                                }}
+                                                onMouseEnter={(e) => {
+                                                    e.currentTarget.style.backgroundColor = '#F3F4F6';
+                                                    e.currentTarget.style.color = '#2D9CDB';
+                                                }}
+                                                onMouseLeave={(e) => {
+                                                    e.currentTarget.style.backgroundColor = 'transparent';
+                                                    e.currentTarget.style.color = '#4B5563';
+                                                }}
+                                            >
+                                                <input
+                                                    type="radio"
+                                                    checked={!editedBlogData.categoryName}
+                                                    onChange={() => { }}
+                                                    style={{ accentColor: '#2D9CDB', width: '16px', height: '16px', cursor: 'pointer', flexShrink: 0 }}
+                                                />
+                                                <span>None</span>
+                                            </label>
+                                            {categories.map(cat => (
+                                                <label
+                                                    key={cat.id}
+                                                    className="jobpost-option-item"
+                                                    style={{
+                                                        padding: '8px 12px',
+                                                        cursor: 'pointer',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        gap: '10px',
+                                                        fontSize: '13px',
+                                                        color: '#4B5563',
+                                                        transition: 'background 0.2s, color 0.2s',
+                                                        borderRadius: '4px'
+                                                    }}
+                                                    onClick={() => {
+                                                        setEditedBlogData(prev => ({ ...prev, categoryName: cat.label }));
+                                                        setIsCategoryDropdownOpen(false);
+                                                        if (editErrors.categoryName) {
+                                                            setEditErrors(prev => ({ ...prev, categoryName: '' }));
+                                                        }
+                                                    }}
+                                                    onMouseEnter={(e) => {
+                                                        e.currentTarget.style.backgroundColor = '#F3F4F6';
+                                                        e.currentTarget.style.color = '#2D9CDB';
+                                                    }}
+                                                    onMouseLeave={(e) => {
+                                                        e.currentTarget.style.backgroundColor = 'transparent';
+                                                        e.currentTarget.style.color = '#4B5563';
+                                                    }}
+                                                >
+                                                    <input
+                                                        type="radio"
+                                                        checked={editedBlogData.categoryName === cat.label}
+                                                        onChange={() => { }}
+                                                        style={{ accentColor: '#2D9CDB', width: '16px', height: '16px', cursor: 'pointer', flexShrink: 0 }}
+                                                    />
+                                                    <span>{cat.label}</span>
+                                                </label>
+                                            ))}
+                                        </div>
+                                        {editErrors.categoryName && <div style={{ color: '#dc3545', fontSize: '12px', marginTop: '5px', fontWeight: '500' }}>{editErrors.categoryName}</div>}
+                                    </div>
                                 ) : (
                                     <input
                                         type="text"
@@ -585,7 +734,6 @@ export const AdminBlogPost = () => {
                                         style={{ borderColor: editErrors.categoryName ? '#dc3545' : '' }}
                                     />
                                 )}
-                                {editErrors.categoryName && <div style={{ color: '#dc3545', fontSize: '12px', marginTop: '5px', fontWeight: '500' }}>{editErrors.categoryName}</div>}
                             </div>
 
                             <div className="modal-input-group">
@@ -696,10 +844,101 @@ export const AdminBlogPost = () => {
                                 <div className="modal-input-group">
                                     <label>Status</label>
                                     {isEditMode ? (
-                                        <select name="Status" value={editedBlogData.Status || 'Published'} onChange={handleInputChange}>
-                                            <option value="Published">Published</option>
-                                            <option value="Draft">Draft</option>
-                                        </select>
+                                        <div style={{ position: 'relative' }}>
+                                            <div
+                                                className={`jobpost-dropdown-trigger ${isStatusDropdownOpen ? 'jobpost-is-active' : ''}`}
+                                                onClick={() => setIsStatusDropdownOpen(!isStatusDropdownOpen)}
+                                                style={{
+                                                    width: '100%',
+                                                    padding: '10px 16px',
+                                                    border: '1px solid #E5E7EB',
+                                                    borderRadius: '6px',
+                                                    fontSize: '14px',
+                                                    color: '#333333',
+                                                    backgroundColor: '#FFFFFF',
+                                                    display: 'flex',
+                                                    justifyContent: 'space-between',
+                                                    alignItems: 'center',
+                                                    cursor: 'pointer',
+                                                    transition: 'all 0.2s ease-in-out',
+                                                    boxSizing: 'border-box',
+                                                    position: 'relative',
+                                                    minHeight: '44px'
+                                                }}
+                                            >
+                                                <span className="jobpost-dropdown-selected" style={{
+                                                    flex: 1,
+                                                    overflow: 'hidden',
+                                                    textOverflow: 'ellipsis',
+                                                    whiteSpace: 'nowrap',
+                                                    color: '#333333'
+                                                }}>
+                                                    {editedBlogData.Status || 'Published'}
+                                                </span>
+                                                <i className={`fas fa-angle-down jobpost-arrow ${isStatusDropdownOpen ? 'jobpost-arrow-open' : ''}`} style={{
+                                                    fontSize: '14px',
+                                                    color: '#A0AAB5',
+                                                    transition: 'transform 0.3s ease',
+                                                    flexShrink: 0,
+                                                    transform: isStatusDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)'
+                                                }}></i>
+                                            </div>
+                                            <div className={`jobpost-dropdown-panel ${isStatusDropdownOpen ? 'jobpost-dropdown-open' : ''}`} style={{
+                                                display: isStatusDropdownOpen ? 'block' : 'none',
+                                                position: 'absolute',
+                                                top: '100%',
+                                                left: 0,
+                                                width: '100%',
+                                                background: '#FFFFFF',
+                                                border: '1px solid #E5E7EB',
+                                                borderRadius: '8px',
+                                                padding: '12px 16px',
+                                                zIndex: 1000,
+                                                boxShadow: '0 10px 25px rgba(0, 0, 0, 0.08)',
+                                                marginTop: '5px',
+                                                boxSizing: 'border-box',
+                                                maxHeight: '200px',
+                                                overflowY: 'auto'
+                                            }}>
+                                                {['Published', 'Draft'].map(status => (
+                                                    <label
+                                                        key={status}
+                                                        className="jobpost-option-item"
+                                                        style={{
+                                                            padding: '8px 12px',
+                                                            cursor: 'pointer',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            gap: '10px',
+                                                            fontSize: '13px',
+                                                            color: '#4B5563',
+                                                            transition: 'background 0.2s, color 0.2s',
+                                                            borderRadius: '4px'
+                                                        }}
+                                                        onClick={() => {
+                                                            setEditedBlogData(prev => ({ ...prev, Status: status }));
+                                                            setIsStatusDropdownOpen(false);
+                                                        }}
+                                                        onMouseEnter={(e) => {
+                                                            e.currentTarget.style.backgroundColor = '#F3F4F6';
+                                                            e.currentTarget.style.color = '#2D9CDB';
+                                                        }}
+                                                        onMouseLeave={(e) => {
+                                                            e.currentTarget.style.backgroundColor = 'transparent';
+                                                            e.currentTarget.style.color = '#4B5563';
+                                                        }}
+                                                    >
+                                                        <input
+                                                            type="radio"
+                                                            checked={editedBlogData.Status === status}
+                                                            onChange={() => { }}
+                                                            style={{ accentColor: '#2D9CDB', width: '16px', height: '16px', cursor: 'pointer', flexShrink: 0 }}
+                                                        />
+                                                        <span>{status}</span>
+                                                    </label>
+                                                ))}
+                                            </div>
+                                        </div>
                                     ) : (
                                         <input type="text" value={editedBlogData.Status || editedBlogData.status || 'Published'} readOnly className="readonly-input" />
                                     )}

@@ -57,11 +57,20 @@ export const Elogin = () => {
   const validateForm = () => {
     const newErrors = {};
 
-    // Username/Email validation
+    // Username/Email validation - accept both
     if (!formValues.username.trim()) {
       newErrors.username = "Username or Email is required";
-    } else if (!validateEmail(formValues.username)) {
-      newErrors.username = "Please enter a valid email address";
+    } else {
+      const input = formValues.username.trim();
+      // Check if it's an email (contains @) or username
+      const isEmail = input.includes('@');
+
+      if (isEmail) {
+        // Validate as email
+        if (!validateEmail(input)) {
+          newErrors.username = "Please enter a valid email address";
+        }
+      }
     }
 
     // Password validation
@@ -79,7 +88,7 @@ export const Elogin = () => {
   const checkAndRedirect = async () => {
     try {
       console.log("🔍 Checking onboarding status after login...");
-      
+
       const response = await api.get('/employer/onboarding-status/');
       console.log("Onboarding status:", response.data);
 
@@ -148,7 +157,7 @@ export const Elogin = () => {
       console.log("Login response:", res.data);
 
       if (res.data.user.user_type !== 'employer') {
-        setErrors({ 
+        setErrors({
           username: "Invalid credentials. This login is only for Employer users."
         });
         setLoading(false);
@@ -163,10 +172,10 @@ export const Elogin = () => {
         sessionStorage.removeItem("rememberedPassword");
       }
 
+      // ✅ First store ALL tokens
       sessionStorage.setItem("access", res.data.access);
       sessionStorage.setItem("refresh", res.data.refresh);
       sessionStorage.setItem("userRole", "Employer");
-      requestAndRegisterNotificationPermission();
 
       if (res.data.user_id) {
         sessionStorage.setItem("user_id", res.data.user_id);
@@ -182,21 +191,44 @@ export const Elogin = () => {
         sessionStorage.setItem("profile_id", res.data.profile_id);
       }
 
+      // ✅ IMPORTANT: Wait a moment for tokens to be fully stored
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // ✅ Now register FCM token with proper authentication
+      try {
+        console.log("📱 Registering FCM token after login...");
+        await requestAndRegisterNotificationPermission();
+      } catch (fcmError) {
+        // Non-critical - don't block login flow
+        console.warn("⚠️ FCM registration failed but login successful:", fcmError);
+      }
+
+      // ✅ Now check onboarding and redirect
       await checkAndRedirect();
 
     } catch (err) {
       console.error("Login error:", err);
-      
+
       const newErrors = {};
       const errorData = err.response?.data;
-      
-      if (err.response?.status === 401) {
+
+      // 🔥 CRITICAL FIX: Check for user_type mismatch first
+      if (errorData?.user && errorData.user.user_type !== 'employer') {
+        newErrors.username = "Invalid credentials. This login is only for Employer users.";
+      }
+      // Check for user_type in response data
+      else if (errorData?.user_type && errorData.user_type !== 'employer') {
+        newErrors.username = "Invalid credentials. This login is only for Employer users.";
+      }
+      else if (err.response?.status === 401) {
         const errorMessage = errorData?.detail || errorData?.message || "";
-        
+
         if (errorMessage && (errorMessage.toLowerCase().includes("password") || errorMessage.toLowerCase().includes("incorrect"))) {
           newErrors.password = "Incorrect password. Please try again.";
         } else if (errorMessage && (errorMessage.toLowerCase().includes("no account") || errorMessage.toLowerCase().includes("not found"))) {
-          newErrors.username = "No account found with this email address.";
+          newErrors.username = "No account found with this email address or username.";
+        } else if (errorMessage && errorMessage.toLowerCase().includes("employer")) {
+          newErrors.username = "Invalid credentials. This login is only for Employer users.";
         } else {
           newErrors.password = "Incorrect password. Please try again.";
         }
@@ -205,15 +237,22 @@ export const Elogin = () => {
         if (errorData?.detail) {
           const detail = errorData.detail;
           const detailStr = Array.isArray(detail) ? detail[0] : detail;
-          
+
           if (detailStr && detailStr.toLowerCase().includes("password") && detailStr.toLowerCase().includes("incorrect")) {
             newErrors.password = "Incorrect password. Please try again.";
           }
           else if (detailStr && (detailStr.toLowerCase().includes("no account") || detailStr.toLowerCase().includes("not found"))) {
-            newErrors.username = "No account found with this email address.";
+            newErrors.username = "No account found with this email address or username.";
           }
-          else if (detailStr && detailStr.toLowerCase().includes("jobseeker")) {
-            newErrors.username = "Invalid credentials. This login is only for Employer users.";
+          else if (detailStr && (detailStr.toLowerCase().includes("jobseeker") || detailStr.toLowerCase().includes("employer"))) {
+            // Check which user type is mentioned in error
+            if (detailStr.toLowerCase().includes("employer")) {
+              newErrors.username = "Invalid credentials. This login is only for Employer users.";
+            } else if (detailStr.toLowerCase().includes("jobseeker")) {
+              newErrors.username = "Invalid credentials. This login is only for Employer users.";
+            } else {
+              newErrors.username = "Invalid credentials. This login is only for Employer users.";
+            }
           }
           else {
             newErrors.general = detailStr;
@@ -224,7 +263,9 @@ export const Elogin = () => {
           if (errorMsg && errorMsg.toLowerCase().includes("password")) {
             newErrors.password = "Incorrect password. Please try again.";
           } else if (errorMsg && (errorMsg.toLowerCase().includes("account") || errorMsg.toLowerCase().includes("found"))) {
-            newErrors.username = "No account found with this email address.";
+            newErrors.username = "No account found with this email address or username.";
+          } else if (errorMsg && (errorMsg.toLowerCase().includes("employer") || errorMsg.toLowerCase().includes("jobseeker"))) {
+            newErrors.username = "Invalid credentials. This login is only for Employer users.";
           } else {
             newErrors.general = errorMsg;
           }
@@ -243,7 +284,7 @@ export const Elogin = () => {
       }
       // Handle 404 - User not found
       else if (err.response?.status === 404) {
-        newErrors.username = "No account found with this email address.";
+        newErrors.username = "No account found with this email address or username.";
       }
       else {
         newErrors.general = "Something went wrong. Please try again.";
