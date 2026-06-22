@@ -451,40 +451,74 @@
 }
 
 .status-modal-content {
-  background: #ad1010;
-  padding: 20px;
-  border-radius: 8px;
-  box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
-  width: 260px;
+  background: #ffffff;
+  padding: 30px;
+  border-radius: 16px;
+  box-shadow: 0px 10px 40px rgba(0, 0, 0, 0.2);
+  width: 320px;
   text-align: center;
   box-sizing: border-box;
+}
+.status-modal-content h3 {
+  color: #000000;
+  font-size: 22px;
+  margin: 0 0 8px 0;
+  font-weight: 600;
+}
+.status-modal-content .current-status {
+  color: #6b7280;
+  font-size: 14px;
+  margin: 0 0 20px 0;
+}
+.status-modal-content .current-status span {
+  color: #000000;
+  font-weight: 600;
 }
 
 .status-modal-options {
   display: flex;
   flex-direction: column;
-  width: fit-content;
-  gap: 8px;
-  margin: 15px 0;
-  position: relative;
-  top: 0;
-  left: 0;
-  background-color: #979494;
-  padding: 20px;
-  border-radius: 10px;
-  z-index: 9999;
-  box-sizing: border-box;
+  gap: 12px;
+  margin: 20px 0 10px 0;
+  padding: 0;
+  background: transparent;
+  width: 100%;
 }
-
 .status-modal-options button {
-  padding: 10px;
-  border: 1px solid #ddd;
-  background: #898989;
-  border-radius: 4px;
+  padding: 14px 20px;
+  border: none;
+  border-radius: 10px;
   cursor: pointer;
-  font-weight: 500;
-  width: 100px;
-  white-space: nowrap;
+  font-weight: 600;
+  width: 100%;
+  font-size: 16px;
+  transition: all 0.2s ease;
+  text-align: center;
+  color: #ffffff;
+}
+/* HOLD - Full Yellow */
+.status-modal-options button:nth-child(1) {
+  background: #f59e0b;
+}
+.status-modal-options button:nth-child(1):hover {
+  background: #d97706;
+  transform: scale(1.02);
+}
+/* IN PROGRESS - Full Blue */
+.status-modal-options button:nth-child(2) {
+  background: #2563eb;
+}
+.status-modal-options button:nth-child(2):hover {
+  background: #1d4ed8;
+  transform: scale(1.02);
+}
+/* RESOLVED - Full Green */
+.status-modal-options button:nth-child(3) {
+  background: #16a34a;
+}
+.status-modal-options button:nth-child(3):hover {
+  background: #15803d;
+  transform: scale(1.02);
 }
 
 .status-modal-options button:hover {
@@ -493,11 +527,17 @@
 
 .status-modal-cancel {
   border: none;
-  color: #ba1717;
-  text-decoration: underline;
+  color: #6b7280;
   cursor: pointer;
-  margin-top: 5px;
+  margin-top: 12px;
   background: none;
+  font-size: 14px;
+  padding: 8px;
+  font-weight: 500;
+}
+ 
+.status-modal-cancel:hover {
+  color: #000000;
 }
 
 .Escalation-priority {

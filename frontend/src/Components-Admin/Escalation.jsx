@@ -21,7 +21,20 @@ export const Escalation = () => {
     const [showJobOverviewId, setShowJobOverviewId] = useState(null);
     const [actionLoading, setActionLoading] = useState(false);
 
+    useEffect(() => {
+        if (selectedReport) {
+            window.history.pushState(null, '', window.location.href);
+        }
 
+        const handlePopState = () => {
+            if (selectedReport) {
+                setSelectedReport(null);
+            }
+        };
+
+        window.addEventListener('popstate', handlePopState);
+        return () => window.removeEventListener('popstate', handlePopState);
+    }, [selectedReport]);
 
     useEffect(() => {
         fetchReports();

@@ -9,7 +9,7 @@ import mobile from '../assets/icon_mobile_otp.png';
 import './Jlogin.css';
 import api from '../api/axios';
 import { useJobs } from '../JobContext';
-import { requestAndRegisterNotificationPermission } from "../firebaseTokenHandler";
+import { requestAndRegisterNotificationPermission, registerFCMAfterLogin, isFCMReady } from "../firebaseTokenHandler";
 
 export const Jlogin = () => {
   const navigate = useNavigate();
@@ -24,6 +24,7 @@ export const Jlogin = () => {
   const [otpSent, setOtpSent] = useState(false);
   const [otpData, setOtpData] = useState(null);
   const [rememberMe, setRememberMe] = useState(false);
+  const [fcmRegistered, setFcmRegistered] = useState(false);
 
   const initialValues = {
     username: "",
@@ -39,11 +40,43 @@ export const Jlogin = () => {
     setPasswordShow((prev) => !prev);
   };
 
+  // Function to handle FCM registration after login
+  const handleFCMRegistration = async () => {
+    console.log("Checking FCM registration after login...");
+
+    try {
+      // Check if FCM is ready (authenticated and permission granted)
+      if (isFCMReady()) {
+        console.log("FCM is ready. Registering token...");
+        const result = await registerFCMAfterLogin();
+        console.log("📊 FCM Registration Result:", result);
+        setFcmRegistered(result.success);
+        return result;
+      } else {
+        // If not ready, check if we need to request permission
+        const permission = Notification.permission;
+        console.log(` FCM not ready. Permission: ${permission}, Authenticated: ${!!sessionStorage.getItem("access")}`);
+
+        if (permission === 'default') {
+          console.log(" Notification permission not yet requested. Will request when user interacts.");
+          // Optionally, you could request permission here but better to wait for user interaction
+        }
+        return null;
+      }
+    } catch (error) {
+      console.error("❌ FCM registration failed:", error);
+      return null;
+    }
+  };
+
   useEffect(() => {
+    console.log(" Jlogin component mounted - checking for saved credentials...");
+
     const savedUsername = sessionStorage.getItem("rememberedUsername");
     const savedPassword = sessionStorage.getItem("rememberedPassword");
 
     if (savedUsername && savedPassword) {
+      console.log("🔑 Saved credentials found");
       setFormValues((prev) => ({
         ...prev,
         username: savedUsername,
@@ -51,6 +84,7 @@ export const Jlogin = () => {
       }));
       setRememberMe(true);
     } else if (savedUsername) {
+      console.log("🔑 Saved username found");
       setFormValues((prev) => ({
         ...prev,
         username: savedUsername
@@ -61,7 +95,9 @@ export const Jlogin = () => {
     // Check for redirect from sessionStorage (from footer before login)
     const redirectPath = sessionStorage.getItem("redirectAfterLogin");
     const redirectTab = sessionStorage.getItem("redirectTab");
-    requestAndRegisterNotificationPermission();
+
+    console.log("🔍 Redirect check:", { redirectPath, redirectTab });
+
     if (redirectPath && redirectTab) {
       // Store in location state for after login
       window.history.replaceState(
@@ -73,7 +109,17 @@ export const Jlogin = () => {
         ''
       );
     }
-  }, []);
+
+    //  REMOVED: requestAndRegisterNotificationPermission() - This was causing the error
+    // We'll now call it only after successful login
+
+    // Check FCM status but don't register yet
+    console.log(" FCM Status:", {
+      permission: Notification.permission,
+      authenticated: !!sessionStorage.getItem("access")
+    });
+
+  }, []); // Empty dependency array - runs only once on mount
 
   const handleForm = (e) => {
     const { name, value } = e.target;
@@ -153,7 +199,7 @@ export const Jlogin = () => {
         }
       });
     } catch (error) {
-      console.error('Error sending OTP:', error);
+      console.error('❌ Error sending OTP:', error);
 
       if (error.response) {
         if (error.response.status === 400) {
@@ -317,6 +363,7 @@ export const Jlogin = () => {
     setLoading(true);
 
     try {
+      console.log("🔐 Attempting login...");
       const loginData = isEmail
         ? { email: formValues.username, password: formValues.password }
         : { username: formValues.username, password: formValues.password };
@@ -333,6 +380,7 @@ export const Jlogin = () => {
       }
 
       if (response.data.access && response.data.refresh) {
+        console.log("✅ Login successful. Storing tokens...");
         sessionStorage.setItem('access', response.data.access);
         sessionStorage.setItem('refresh', response.data.refresh);
         sessionStorage.setItem('user_type', 'jobseeker');
@@ -350,6 +398,16 @@ export const Jlogin = () => {
         } else {
           sessionStorage.removeItem("rememberedUsername");
           sessionStorage.removeItem("rememberedPassword");
+        }
+
+        //  REGISTER FCM TOKEN AFTER SUCCESSFUL LOGIN
+        console.log(" Registering FCM token after login...");
+        try {
+          const fcmResult = await handleFCMRegistration();
+          console.log(" FCM registration completed:", fcmResult);
+        } catch (fcmError) {
+          // Non-critical error - don't block login flow
+          console.warn("⚠️ FCM registration failed but login successful:", fcmError);
         }
 
         await fetchAllJobs();
@@ -408,7 +466,7 @@ export const Jlogin = () => {
           newErrors.general = detailStr;
         }
       }
-      // ✅ Handle non_field_errors
+      // Handle non_field_errors
       else if (errorData?.non_field_errors) {
         const errorMsg = Array.isArray(errorData.non_field_errors) ? errorData.non_field_errors[0] : errorData.non_field_errors;
         if (errorMsg && errorMsg.toLowerCase().includes("password")) {
@@ -419,7 +477,7 @@ export const Jlogin = () => {
           newErrors.general = errorMsg;
         }
       }
-      // ✅ Handle field-specific errors
+      // Handle field-specific errors
       else if (errorData?.email) {
         const emailError = Array.isArray(errorData.email) ? errorData.email[0] : errorData.email;
         if (emailError && emailError.toLowerCase().includes("no account")) {
@@ -440,7 +498,7 @@ export const Jlogin = () => {
         const passwordError = Array.isArray(errorData.password) ? errorData.password[0] : errorData.password;
         newErrors.password = passwordError;
       }
-      // ✅ Handle HTTP status codes
+      // Handle HTTP status codes
       else if (error.response?.status === 401) {
         newErrors.password = "Incorrect password. Please try again.";
       }
@@ -520,7 +578,6 @@ export const Jlogin = () => {
               {errors.general}
             </span>
           )}
-
 
           {/* VIEW 1: DEFAULT USERNAME & PASSWORD */}
           {view === 'default' && (

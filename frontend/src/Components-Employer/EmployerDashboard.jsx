@@ -39,6 +39,7 @@ import { PlansBilling } from './PlansBilling'
 import api from "../api/axios";
 import AdminManager from '../assets/Employer/User.png'
 import { AddManagerSupport } from './AddManagerSupport'
+import { LocationDisplay } from '../Components-Jobseeker/LocationDisplay';
 
 export const EmployerDashboard = () => {
     const { currentEmployer, getJobStats, refreshEmployerData } = useJobs();
@@ -572,9 +573,7 @@ export const EmployerDashboard = () => {
                                                                                 <h3>{job.job_title || job.title}</h3>
                                                                                 <p className="postedjobs-loc flex items-center gap-2">
                                                                                     <img src={place} alt="location" className="post-job-locationicon" />
-                                                                                    {Array.isArray(job.location)
-                                                                                        ? job.location.join(", ")
-                                                                                        : job.location || "N/A"}
+                                                                                    <LocationDisplay locations={job.location} />
                                                                                 </p>
                                                                                 <small>Created on: {new Date(job.created_at || job.posted_date).toLocaleDateString()}</small>
                                                                             </div>

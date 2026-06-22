@@ -258,8 +258,18 @@ export const JobProvider = ({ children }) => {
             return { success: true, data: response.data };
         } catch (error) {
             console.error("❌ Error posting job:", error);
-            addNotification("Failed to post job", "error");
-            return { success: false, error: error.message };
+
+            // ← CHANGE: Extract the actual backend error message
+            const backendMsg =
+                error?.response?.data?.error ||
+                error?.response?.data?.detail ||
+                error?.response?.data?.message ||
+                error?.response?.data?.is_highlighted ||
+                error?.message ||
+                "Failed to post job";
+
+            addNotification(backendMsg, "error");
+            return { success: false, error: backendMsg };  // ← was: error.message
         }
     };
 

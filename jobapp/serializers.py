@@ -3982,15 +3982,24 @@ class UserDetailSerializer(serializers.ModelSerializer):
         return {"fullName": full_name}
 
     def get_contact(self, obj):
-        mobile = ""
+        # 1. Grab the main registered phone number directly from the User model
+
+        mobile = obj.phone or ""
+
         city = ""
+
         if obj.user_type == User.UserType.JOBSEEKER:
+
             try:
+
                 p = obj.jobseeker_profile
-                mobile = p.alternate_phone or ""
+
                 city = p.city or ""
+
             except JobSeekerProfile.DoesNotExist:
+
                 pass
+
         return {"email": obj.email, "mobile": mobile, "city": city}
 
     def get_joinDate(self, obj):

@@ -2,11 +2,11 @@ import React, { useState } from 'react'
 import { useJobs } from '../JobContext'
 import Highlight from '../assets/Employer/HighLight-Active.png'
 
-export const HighligtedJobs = ({highlightedJobsData = [] }) => {
+export const HighligtedJobs = ({ highlightedJobsData = [], onBack }) => {
     // const { jobs } = useJobs()
     // const jobAds = jobs.filter(job => job.isHighlighted === true)
-     const jobAds = Array.isArray(highlightedJobsData) ? highlightedJobsData : [];
-    
+    const jobAds = Array.isArray(highlightedJobsData) ? highlightedJobsData : [];
+
     // Debug: Console lo check chesukondi
     console.log("HighlightedJobs received data:", highlightedJobsData);
     console.log("Is array?", Array.isArray(highlightedJobsData));
@@ -89,6 +89,26 @@ export const HighligtedJobs = ({highlightedJobsData = [] }) => {
 
         <div style={{ display: 'flex', flexDirection: 'column', minHeight: '600px', justifyContent: 'space-between', border: "0.5px solid #adadad", marginTop: "5px", borderRadius: "10px" }}>
             <div>
+                <div style={{ padding: "15px 15px 0 15px" }}>
+                    <button
+                        onClick={onBack}
+                        style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "6px",
+                            background: "none",
+                            border: "1px solid #adadad",
+                            borderRadius: "8px",
+                            padding: "6px 14px",
+                            cursor: "pointer",
+                            fontSize: "14px",
+                            fontWeight: "500",
+                            color: "#333"
+                        }}
+                    >
+                        ← Back
+                    </button>
+                </div>
                 <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "10px", border: "0.5px solid #adadad", margin: "15px", borderRadius: "10px" }}>
                     <h2 style={{ textAlign: "center" }}>Highlighted Jobs</h2>
                     <img src={Highlight} width={22} alt="" />
@@ -99,9 +119,9 @@ export const HighligtedJobs = ({highlightedJobsData = [] }) => {
                         currentJobs.map((job, index) => (
                             <div className="Admin-job-card" key={index}>
                                 <div className="Admin-job-left">
-                                    <div style={{display:"flex",alignItems:"center",gap:"7px"}}>
-                                    <p className="Admin-job-title">{job.title}</p>
-                                    <img src={Highlight} width={15} alt="" />
+                                    <div style={{ display: "flex", alignItems: "center", gap: "7px" }}>
+                                        <p className="Admin-job-title">{job.title}</p>
+                                        <img src={Highlight} width={15} alt="" />
                                     </div>
                                     <span className="Admin-job-under">{job.company}</span>
                                 </div>
@@ -150,8 +170,8 @@ export const HighligtedJobs = ({highlightedJobsData = [] }) => {
                         </li>
                     ))} */}
                     <div className="page-numbers">
-                    {renderPageNumbers()}
-                </div>
+                        {renderPageNumbers()}
+                    </div>
                     <li>
                         <button onClick={nextPage} disabled={currentPage === npage || npage === 0} className='Navigation-btn'>
                             Next

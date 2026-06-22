@@ -15,6 +15,21 @@ export const Enquiries = () => {
     const [actionLoading, setActionLoading] = useState(false)
 
     useEffect(() => {
+        if (selectedEnquiry) {
+            window.history.pushState(null, '', window.location.href);
+        }
+
+        const handlePopState = () => {
+            if (selectedEnquiry) {
+                setSelectedEnquiry(null);
+            }
+        };
+
+        window.addEventListener('popstate', handlePopState);
+        return () => window.removeEventListener('popstate', handlePopState);
+    }, [selectedEnquiry]);
+
+    useEffect(() => {
         fetchEnquiries();
     }, []);
 
@@ -36,7 +51,7 @@ export const Enquiries = () => {
             return dateStr;
         }
     };
-   
+
     const getSortedEnquiries = () => {
         if (!enquiries || enquiries.length === 0) return [];
         return [...enquiries].sort((a, b) => {
@@ -45,7 +60,7 @@ export const Enquiries = () => {
             return 0;
         });
     };
- 
+
     const handleDelete = async (id) => {
         if (window.confirm("Are you sure you want to delete this enquiry?")) {
             try {
@@ -67,24 +82,24 @@ export const Enquiries = () => {
     const handleStatusSelection = async (newStatus) => {
         try {
             setActionLoading(true);
-            
+
             await api.patch(`/contact/update/${selectedEnquiry.id}/`, {
                 status: newStatus
             });
-            
-            setSelectedEnquiry((prev) => ({ 
-                ...prev, 
-                status: newStatus 
+
+            setSelectedEnquiry((prev) => ({
+                ...prev,
+                status: newStatus
             }));
-            
+
             setEnquiries((prevList) =>
                 prevList.map((enquiry) =>
-                    enquiry.id === selectedEnquiry.id 
-                        ? { ...enquiry, status: newStatus } 
+                    enquiry.id === selectedEnquiry.id
+                        ? { ...enquiry, status: newStatus }
                         : enquiry
                 )
             );
-            
+
             setIsModalOpen(false);
             alert(`Status changed to "${newStatus}" successfully!`);
         } catch (error) {
@@ -94,7 +109,7 @@ export const Enquiries = () => {
             setActionLoading(false);
         }
     };
- 
+
     const sortedData = getSortedEnquiries();
 
     const formatEnquiryId = (id, index) => {
@@ -124,24 +139,24 @@ export const Enquiries = () => {
                         <h2>Enquiry Details</h2>
                     </div>
                 </div>
-                
+
                 <div className="enq-details-actions-bar">
-                    <button 
-                        className="enq-back-to-contact-btn" 
+                    <button
+                        className="enq-back-to-contact-btn"
                         onClick={() => setSelectedEnquiry(null)}
                         disabled={actionLoading}
                     >
                         Back
                     </button>
-                    <button 
-                        className="enq-delete-action-btn" 
+                    <button
+                        className="enq-delete-action-btn"
                         onClick={() => handleDelete(selectedEnquiry.id)}
                         disabled={actionLoading}
                     >
                         <img src={Delete} alt="Delete" /> Delete
                     </button>
                 </div>
- 
+
                 <div className="enq-details-main-content">
                     <div className="enq-details-left-pane">
                         {/* Header Card with Icon and Right Side Status */}
@@ -162,13 +177,13 @@ export const Enquiries = () => {
                                         {formatEnquiryId(selectedEnquiry.id, 0)}
                                     </h3>
                                     <p style={{ margin: "5px 0 0 0", color: "#666" }}>
-                                        Created on : {selectedEnquiry.created_at 
+                                        Created on : {selectedEnquiry.created_at
                                             ? formatDate(selectedEnquiry.created_at)
                                             : (selectedEnquiry.date || 'Date not available')}
                                     </p>
                                 </div>
                             </div>
-                            
+
                             {/* ✅ Status on Right Side - Like Escalation */}
                             <div style={{
                                 display: "flex",
@@ -193,22 +208,22 @@ export const Enquiries = () => {
                                 </span>
                             </div>
                         </div>
-                        
+
                         {/* User Information Section */}
-                        <div style={{marginTop:"25px"}} className="Adm-tic-user-section">
+                        <div style={{ marginTop: "25px" }} className="Adm-tic-user-section">
                             <h2 className="Adm-tic-section-title">User Information</h2>
                             <div className="Adm-tic-user-grid">
                                 <div className="Adm-tic-grid-row">
-                                    <span className="Adm-tic-grid-label">Name :</span> 
+                                    <span className="Adm-tic-grid-label">Name :</span>
                                     <input type="text" disabled value={selectedEnquiry.name || 'N/A'} />
                                 </div>
                                 <div className="Adm-tic-grid-row">
                                     <span className="Adm-tic-grid-label">Mobile number :</span>
-                                    <input type='text' disabled value={selectedEnquiry.contact || selectedEnquiry.mobile || 'N/A'}/>
+                                    <input type='text' disabled value={selectedEnquiry.contact || selectedEnquiry.mobile || 'N/A'} />
                                 </div>
                                 <div className="Adm-tic-grid-row">
                                     <span className="Adm-tic-grid-label">Mail ID :</span>
-                                    <input disabled value={selectedEnquiry.email || 'N/A'}/>
+                                    <input disabled value={selectedEnquiry.email || 'N/A'} />
                                 </div>
                             </div>
                         </div>
@@ -229,16 +244,16 @@ export const Enquiries = () => {
 
                 {/* Action Buttons */}
                 <div className="Adm-tic-top-actions">
-                    <button 
-                        onClick={() => setIsModalOpen(true)} 
+                    <button
+                        onClick={() => setIsModalOpen(true)}
                         className="Adm-tic-btn-action"
                         disabled={actionLoading}
                         style={{ display: 'flex', alignItems: 'center', gap: '5px' }}
                     >
                         <img src={pencil} alt="edit" style={{ width: '14px' }} /> Edit Status
                     </button>
-                    <button 
-                        onClick={() => handleDelete(selectedEnquiry.id)} 
+                    <button
+                        onClick={() => handleDelete(selectedEnquiry.id)}
                         className="Adm-tic-btn-action Adm-tic-btn-delete"
                         disabled={actionLoading}
                     >
@@ -252,16 +267,16 @@ export const Enquiries = () => {
                         <div className="status-modal-content">
                             <h3>Select Status</h3>
                             <p>Current Status: <strong>{selectedEnquiry.status || "Pending"}</strong></p>
-                           
+
                             <div className="status-modal-options">
-                                <button 
+                                <button
                                     onClick={() => handleStatusSelection("Pending")}
                                     disabled={actionLoading}
                                     style={{ backgroundColor: '#ffc107', color: '#000' }}
                                 >
                                     Pending
                                 </button>
-                                <button 
+                                <button
                                     onClick={() => handleStatusSelection("Contacted")}
                                     disabled={actionLoading}
                                     style={{ backgroundColor: '#28a745', color: '#fff' }}
@@ -270,8 +285,8 @@ export const Enquiries = () => {
                                 </button>
                             </div>
 
-                            <button 
-                                className="status-modal-cancel" 
+                            <button
+                                className="status-modal-cancel"
                                 onClick={() => setIsModalOpen(false)}
                                 disabled={actionLoading}
                             >
@@ -283,7 +298,7 @@ export const Enquiries = () => {
             </div>
         );
     }
- 
+
     // LIST VIEW
     return (
         <div className="Enquiries-container">
@@ -307,7 +322,7 @@ export const Enquiries = () => {
                     {enquiriesLoading ? "Refreshing..." : "Refresh"}
                 </button> */}
             </div>
- 
+
             <div className="Enquiries-table-wrapper">
                 <table className="Enquiries-table">
                     <thead>

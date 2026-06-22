@@ -6,7 +6,7 @@ import leftArrow from '../assets/left_arrow.png'
 import rightArrow from '../assets/right_arrow.png'
 import { useLocation } from 'react-router-dom'
 import api from '../api/axios'
- 
+
 export const UserManagement = () => {
   const { Alluser, currentEmployer, updateUserStatus } = useJobs()
   const [search, setSearch] = useState("")
@@ -79,15 +79,15 @@ export const UserManagement = () => {
     try {
       // Update status via API
       await api.patch(`/users/${id}/status/`, { status: newStatus });
-      
+
       // Update local state
       setUsersList(prev => prev.map(u => u.id === id ? { ...u, status: newStatus } : u));
       setSelectedUser(prev => prev && prev.id === id ? { ...prev, status: newStatus } : prev);
-     
+
       if (updateUserStatus) {
         updateUserStatus(id, newStatus);
       }
- 
+
       setIsModalOpen(false);
       alert("Status updated and saved successfully!");
     } catch (err) {
@@ -95,14 +95,14 @@ export const UserManagement = () => {
       alert(err.response?.data?.message || "Failed to update status");
     }
   };
- 
+
   const handleDeleteReport = async (id) => {
     const confirmDelete = window.confirm("Are you sure you want to delete this user?");
     if (confirmDelete) {
       try {
         // Delete user via API
         await api.delete(`users/${id}/delete/`);
-        
+
         setUsersList(prev => prev.filter(u => u.id !== id));
         setSelectedUser(null);
         setIsDetailView(false);
@@ -113,10 +113,10 @@ export const UserManagement = () => {
       }
     }
   };
- 
+
   const prevPage = () => { if (currentPage !== 1) setCurrentPage(currentPage - 1) };
   const nextPage = () => { if (currentPage !== nPages) setCurrentPage(currentPage + 1) };
- 
+
   const handleViewDetails = async (user) => {
     try {
       // Fetch full user details
@@ -128,31 +128,31 @@ export const UserManagement = () => {
       alert("Failed to load user details");
     }
   };
- 
+
   // Filter users based on search
   const filteredUsers = usersList.filter(user => {
     const searchTerm = search.toLowerCase();
     const fullName = (user.profile?.fullName || "").toLowerCase();
     const email = (user.contact?.email || "").toLowerCase();
     const role = (user.role || "").toLowerCase();
-    
-    return fullName.includes(searchTerm) || 
-           email.includes(searchTerm) || 
-           role.includes(searchTerm);
+
+    return fullName.includes(searchTerm) ||
+      email.includes(searchTerm) ||
+      role.includes(searchTerm);
   });
- 
+
   // Calculate statistics
   const totalUsers = usersList.length;
   const activeNow = usersList.filter(user => user.status === 'Active').length;
   const candidates = usersList.filter(user => user.role === 'candidate').length;
   const employers = usersList.filter(user => user.role === 'employer').length;
-  
+
   // Pagination
   const indexOfLastRecord = currentPage * recordsPerPage;
   const indexOfFirstRecord = indexOfLastRecord - recordsPerPage;
   const currentRecords = filteredUsers.slice(indexOfFirstRecord, indexOfLastRecord);
   const nPages = Math.ceil(filteredUsers.length / recordsPerPage);
- 
+
   if (loading) {
     return (
       <div className="user-management-container">
@@ -162,7 +162,7 @@ export const UserManagement = () => {
       </div>
     );
   }
- 
+
   if (error) {
     return (
       <div className="user-management-container">
@@ -172,10 +172,10 @@ export const UserManagement = () => {
       </div>
     );
   }
- 
+
   if (isDetailView && selectedUser) {
     const isEmployer = selectedUser.role === 'employer';
- 
+
     return (
       <div className="detail-page-wrapper">
         <div className="detail-section-card">
@@ -187,48 +187,48 @@ export const UserManagement = () => {
               Back to List
             </button>
           </div>
-         
+
           <div className="detail-form-group">
- 
+
             <div className="detail-field-row">
               <label>Id :</label>
-              <input type="text" readOnly value={selectedUser.id || ""} />  
+              <input type="text" readOnly value={selectedUser.id || "N/A"} />
             </div>
- 
+
             <div className="detail-field-row">
               <label>{isEmployer ? "HR Name :" : "Name :"}</label>
-              <input type="text" readOnly value={selectedUser.profile?.fullName || ""} />  
+              <input type="text" readOnly value={selectedUser.profile?.fullName || "N/A"} />
             </div>
- 
+
             <div className="detail-field-row">
               <label>Mobile number :</label>
-              <input type="text" readOnly value={selectedUser.contact?.mobile || "9876543210"} />
+              <input type="text" readOnly value={selectedUser.contact?.mobile || "N/A"} />
             </div>
- 
+
             <div className="detail-field-row">
               <label>Mail ID :</label>
-              <input type="text" readOnly value={selectedUser.contact?.email || ""} />
+              <input type="text" readOnly value={selectedUser.contact?.email || "N/A"} />
             </div>
-           
+
             {isEmployer ? (
               <>
                 <div className="detail-field-row">
-                  <label>Company ID :</label>  
+                  <label>Company ID :</label>
                   <input type="text" readOnly value={selectedUser.companyDetails?.companyId || "N/A"} />
                 </div>
- 
+
                 <div className="detail-field-row">
-                  <label>Company Name :</label>  
+                  <label>Company Name :</label>
                   <input type="text" readOnly value={selectedUser.companyDetails?.companyName || "N/A"} />
                 </div>
-               
+
                 <div className="detail-field-row">
-                  <label>Join Date :</label>  
+                  <label>Join Date :</label>
                   <input type="text" readOnly value={selectedUser.joinDate || "N/A"} />
                 </div>
- 
+
                 <div className="detail-field-row">
-                  <label>Membership Plan :</label>  
+                  <label>Membership Plan :</label>
                   <input type="text" readOnly value={selectedUser.companyDetails?.planName || "Basic Plan"} />
                 </div>
               </>
@@ -238,31 +238,31 @@ export const UserManagement = () => {
                   <label>Preferred Role :</label>
                   <input type="text" readOnly value={selectedUser.preferences?.[0]?.role || "Candidate"} />
                 </div>
- 
+
                 <div className="detail-field-row">
-                  <label>Current Details :</label>  
+                  <label>Current Details :</label>
                   <input type="text" readOnly value={selectedUser.currentDetails?.currentLocation || "Chennai"} />
                 </div>
- 
+
                 <div className="detail-field-row">
-                   <label>Education :</label>
-                   <input type="text" readOnly value={selectedUser.education?.highestQual || "B.E / B.Tech / Graduate"} />
+                  <label>Education :</label>
+                  <input type="text" readOnly value={selectedUser.education?.highestQual || "B.E / B.Tech / Graduate"} />
                 </div>
- 
+
                 <div className="detail-field-row">
                   <label>Skills :</label>
                   <input type="text" readOnly value={Array.isArray(selectedUser.skills) ? selectedUser.skills.join(", ") : selectedUser.skills || "React, Node.js, JavaScript, CSS"} />
                 </div>
               </>
             )}
- 
+
             <div className="detail-field-row">
               <label>Current Status :</label>
               <input type="text" readOnly value={selectedUser.status} style={{ fontWeight: 'bold', color: selectedUser.status === 'Active' ? '#2e7d32' : selectedUser.status === 'Hold' ? '#f57c00' : '#d32f2f' }} />
             </div>
           </div>
         </div>
- 
+
         <div className="detail-section-card">
           <h3 className="detail-section-title">Details</h3>
           <div className="detail-report-textbox">
@@ -273,7 +273,7 @@ export const UserManagement = () => {
             )}
           </div>
         </div>
- 
+
         <div className="detail-top-actions">
           <button onClick={() => setIsModalOpen(!isModalOpen)} className="detail-btn-action-edit">
             Edit Status
@@ -282,7 +282,7 @@ export const UserManagement = () => {
             Delete
           </button>
         </div>
- 
+
         {isModalOpen && (
           <div className="detail-status-modal-overlay">
             <div className="detail-status-modal-content">
@@ -301,21 +301,21 @@ export const UserManagement = () => {
       </div>
     );
   }
- 
+
   return (
     <div className="user-management-container">
       <div style={{ marginBottom: "25px" }} className='Admin-Welcome-Container'>
-        <p style={{margin:"5px 0"}} className='Admin-Welcome-Note' >User Management</p>
-        <p style={{margin:"5px 0"}} className='Admin-Welcome-para'>Manage and monitor all platform members and their activity.</p>
+        <p style={{ margin: "5px 0" }} className='Admin-Welcome-Note' >User Management</p>
+        <p style={{ margin: "5px 0" }} className='Admin-Welcome-para'>Manage and monitor all platform members and their activity.</p>
       </div>
- 
+
       <div className="um-stats">
         <div className="um-card"><p>Total Users</p><h3>{totalUsers}</h3></div>
         <div className="um-card green"><p>Active Now</p><h3>{activeNow}</h3></div>
         <div className="um-card yellow"><p>Candidates</p><h3>{candidates}</h3></div>
         <div className="um-card black"><p>Employers</p><h3>{employers}</h3></div>
       </div>
- 
+
       <div className="um-search-container">
         <div className="search-wrapper">
           <span className="search-icon"><img src={Searchicon} alt="Search" /></span>
@@ -330,7 +330,7 @@ export const UserManagement = () => {
           />
         </div>
       </div>
- 
+
       <div className="um-table">
         <table>
           <thead>
@@ -346,7 +346,7 @@ export const UserManagement = () => {
           <tbody>
             {[...currentRecords].reverse().map((user) => {
               const isEmployer = user.role === "employer"
- 
+
               return (
                 <tr key={user.id}>
                   <td>
@@ -397,7 +397,7 @@ export const UserManagement = () => {
             })}
           </tbody>
         </table>
- 
+
         <div className="pagination-footer">
           <p>Page {currentPage} of {nPages}</p>
           <div className="pagination-btns">

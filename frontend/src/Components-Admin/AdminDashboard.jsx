@@ -95,27 +95,51 @@ export const AdminDashboard = () => {
     }, [subTab]);
 
     // Fetch dashboard data from API
-    useEffect(() => {
-        const fetchDashboardData = async () => {
-            setLoading(true);
-            setError(null);
+    // useEffect(() => {
+    //     const fetchDashboardData = async () => {
+    //         setLoading(true);
+    //         setError(null);
 
-            try {
-                console.log("Fetching admin dashboard data...");
-                const response = await api.get('admin/dashboard/');
+    //         try {
+    //             console.log("Fetching admin dashboard data...");
+    //             const response = await api.get('admin/dashboard/');
 
-                if (response.status === 200) {
-                    console.log("Dashboard data received:", response.data);
-                    setDashboardData(response.data);
-                }
-            } catch (err) {
-                console.error('Error fetching dashboard data:', err);
-                setError(err.response?.data?.message || err.message || 'Failed to load dashboard data');
-            } finally {
-                setLoading(false);
+    //             if (response.status === 200) {
+    //                 console.log("Dashboard data received:", response.data);
+    //                 setDashboardData(response.data);
+    //             }
+    //         } catch (err) {
+    //             console.error('Error fetching dashboard data:', err);
+    //             setError(err.response?.data?.message || err.message || 'Failed to load dashboard data');
+    //         } finally {
+    //             setLoading(false);
+    //         }
+    //     };
+
+    //     fetchDashboardData();
+    // }, []);
+
+    // AdminDashboard.jsx — lift fetchDashboardData out of useEffect
+
+    const [lastUpdated, setLastUpdated] = useState(null);
+
+    const fetchDashboardData = async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            const response = await api.get('admin/dashboard/');
+            if (response.status === 200) {
+                setDashboardData(response.data);
+                setLastUpdated(new Date());
             }
-        };
+        } catch (err) {
+            setError(err.response?.data?.message || err.message || 'Failed to load dashboard data');
+        } finally {
+            setLoading(false);
+        }
+    };
 
+    useEffect(() => {
         fetchDashboardData();
     }, []);
 
@@ -463,6 +487,15 @@ export const AdminDashboard = () => {
                             <div className='Admin-Welcome-Container'>
                                 <p className='Admin-Welcome-Note'>Welcome Back, Admin</p>
                                 <p className='Admin-Welcome-para'>Your team's success start here. lets make progress together!</p>
+                            </div><br></br>
+
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                {/* <span style={{ fontSize: "12px", color: "#1835ef" }}>
+                                    {lastUpdated ? `Last updated: ${lastUpdated.toLocaleTimeString()}` : ''}
+                                </span> */}
+                                <button onClick={fetchDashboardData} className="Admin-create-btn">
+                                    ↻ Refresh
+                                </button>
                             </div>
 
                             <div className='Admin-Overview'>
@@ -644,7 +677,9 @@ export const AdminDashboard = () => {
                     {activetab === 'settings' && (<AdminSettings />)}
                     {activetab === 'Blog Post' && (<AdminBlogPost />)}
                     {activetab === 'Highlighted Jobs' && (
-                        <HighligtedJobs highlightedJobsData={dashboardData.highlighted_jobs} />
+                        <HighligtedJobs highlightedJobsData={dashboardData.highlighted_jobs}
+                            onBack={() => setActiveTab('Dashboard')}
+                        />
                     )}
                 </div>
             </div>

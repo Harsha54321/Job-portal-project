@@ -76,10 +76,20 @@ export const Membership = () => {
     }));
   };
 
+  // const handleInputChange = (e) => {
+  //   const { name, value } = e.target;
+  //   setFormData(prev => ({ ...prev, [name]: value }));
+  // };
   const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
+  const { name, value } = e.target;
+
+  // Bug-20: Restrict numbers and special characters in planName and summary
+  if (name === "planName" || name === "summary") {
+    if (/[^a-zA-Z\s]/.test(value)) return;
+  }
+
+  setFormData(prev => ({ ...prev, [name]: value }));
+};
 
   const handleDurationChange = (e) => {
     const value = e.target.value;

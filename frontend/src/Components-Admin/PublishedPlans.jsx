@@ -8,7 +8,6 @@ import './Membership.css';
 import { useJobs } from '../JobContext';
 import api from '../api/axios';
 
-
 // Simple Watermark Tooltip Component
 const WatermarkTooltip = ({ text, children }) => {
   const [show, setShow] = useState(false);
@@ -59,8 +58,10 @@ export const PublishedPlans = () => {
   const [isAdding, setIsAdding] = useState(false);
   const [allPlans, setAllPlans] = useState([]);
   const [isSaving, setIsSaving] = useState(false);
+  const [errors, setErrors] = useState({});
+  const [fieldErrors, setFieldErrors] = useState({});
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
 
-  // Check if the currently viewed plan is the read-only starter tier
   const isStarterPlan = editPlan?.name?.toUpperCase() === 'STARTER PLAN';
 
   const getAdminToken = () => {
@@ -121,6 +122,8 @@ export const PublishedPlans = () => {
 
       setEditPlan(normalizedPlan);
       setPreviewPlan(normalizedPlan);
+      setErrors({});
+      setFieldErrors({});
     } catch (error) {
       console.error('Error fetching plan details:', error);
     }
@@ -146,17 +149,169 @@ export const PublishedPlans = () => {
 
   const handleSelectPlan = (plan) => {
     setSelectedPlanId(plan.id);
+    setErrors({});
+    setFieldErrors({});
     fetchSelectedPlanDetails(plan.id);
   };
 
+  const validatePriceInput = (value, field) => {
+    let cleanedValue = value.replace(/[^0-9.]/g, '');
+
+    const parts = cleanedValue.split('.');
+    if (parts.length > 2) {
+      cleanedValue = parts[0] + '.' + parts.slice(1).join('');
+    }
+
+    cleanedValue = cleanedValue.replace(/-/g, '');
+
+    if (cleanedValue.length > 1 && cleanedValue.startsWith('0') && !cleanedValue.startsWith('0.')) {
+      cleanedValue = cleanedValue.replace(/^0+/, '');
+      if (cleanedValue === '') cleanedValue = '0';
+    }
+
+    if (cleanedValue.includes('.')) {
+      const [integerPart, decimalPart] = cleanedValue.split('.');
+      if (integerPart.length > 5) {
+        cleanedValue = integerPart.slice(0, 5) + '.' + decimalPart;
+      }
+      if (decimalPart && decimalPart.length > 2) {
+        cleanedValue = integerPart.slice(0, 5) + '.' + decimalPart.slice(0, 2);
+      }
+    } else {
+      if (cleanedValue.length > 5) {
+        cleanedValue = cleanedValue.slice(0, 5);
+      }
+    }
+
+    return cleanedValue;
+  };
+
+  const validateFeatureNumber = (value) => {
+    // Remove all non-numeric characters
+    let cleanedValue = value.replace(/[^0-9]/g, '');
+
+    // Get the current length
+    const currentLength = cleanedValue.length;
+
+    console.log(`Feature number input: "${value}" -> Cleaned: "${cleanedValue}" (Length: ${currentLength})`);
+
+    // If empty, return 0
+    if (cleanedValue === '') {
+      return {
+        value: '0',
+        error: null,
+        length: 0
+      };
+    }
+
+    // Remove leading zeros
+    if (cleanedValue.length > 1 && cleanedValue.startsWith('0')) {
+      cleanedValue = cleanedValue.replace(/^0+/, '');
+      if (cleanedValue === '') cleanedValue = '0';
+    }
+
+    // Parse the numeric value
+    const numericValue = parseInt(cleanedValue, 10);
+
+    // Check if value exceeds maximum (100)
+    if (numericValue > 100) {
+      // Important: Show the actual numeric value, not the original input
+      return {
+        value: cleanedValue,
+        error: `Value cannot exceed 100 (Current: ${numericValue})`,
+        length: currentLength
+      };
+    }
+
+    // Success
+    return {
+      value: cleanedValue,
+      error: null,
+      length: currentLength
+    };
+  };
+
   const handleInputChange = (field, value) => {
-    // Block price field changes for Starter Plan
     const priceFields = ['monthly_price', 'tax', 'discount_halfyear', 'discount_annual'];
+
     if (isStarterPlan && priceFields.includes(field)) {
       console.log("Starter Plan: Price fields cannot be edited");
       return;
     }
-    setEditPlan(prev => ({ ...prev, [field]: value }));
+
+    // Only restrict special characters for name field
+    if (field === "name") {
+      if (/[^a-zA-Z\s]/.test(value)) return;
+    }
+
+    // Allow any characters for summary
+    if (field === "summary") {
+      // No restrictions - allow any characters
+    }
+
+    if (priceFields.includes(field)) {
+      const cleanedValue = validatePriceInput(value, field);
+
+      let error = null;
+      let maxValue = null;
+
+      switch (field) {
+        case 'monthly_price':
+          maxValue = 99999.99;
+          break;
+        case 'discount_halfyear':
+        case 'discount_annual':
+          maxValue = 100;
+          break;
+        case 'tax':
+          maxValue = 100;
+          break;
+        default:
+          break;
+      }
+
+      if (cleanedValue !== '' && maxValue !== null) {
+        const numValue = parseFloat(cleanedValue);
+        if (numValue > maxValue) {
+          error = `Value cannot exceed ${maxValue}`;
+        }
+        if (numValue < 0) {
+          error = 'Value cannot be negative';
+        }
+      }
+
+      setFieldErrors(prev => ({
+        ...prev,
+        [field]: error
+      }));
+
+      if (errors[field]) {
+        setErrors(prev => {
+          const newErrors = { ...prev };
+          delete newErrors[field];
+          return newErrors;
+        });
+      }
+
+      setEditPlan(prev => ({ ...prev, [field]: cleanedValue }));
+      return;
+    }
+
+    // For all other fields (including summary)
+    setEditPlan(prev => {
+      const updated = { ...prev, [field]: value };
+      console.log(`Updated ${field} to:`, value);
+      return updated;
+    });
+
+    // Clear error for this field if it exists
+    if (errors[field]) {
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[field];
+        return newErrors;
+      });
+    }
   };
 
   const handleToggleFeature = (featureIdx) => {
@@ -171,12 +326,13 @@ export const PublishedPlans = () => {
     setEditPlan(prev => ({ ...prev, features: updatedFeatures }));
   };
 
-  const handleAutoRenewalToggle = () => {
-    setEditPlan(prev => ({ ...prev, is_auto_renewal: !prev.is_auto_renewal }));
-  };
-
   const handleTriggerPreview = () => {
     setPreviewPlan({ ...editPlan });
+    setShowPreviewModal(true);
+  };
+
+  const handleClosePreviewModal = () => {
+    setShowPreviewModal(false);
   };
 
   const handleTrailToggle = () => {
@@ -190,19 +346,95 @@ export const PublishedPlans = () => {
   const handleSavePlan = async () => {
     if (isSaving) return;
 
+    const hasFieldErrors = Object.values(fieldErrors).some(error => error !== null);
+    if (hasFieldErrors) {
+      alert('Please fill all required field.');
+      return;
+    }
+
+    const newErrors = {};
+
+    // Debug log to see what's in editPlan
+    console.log("Current editPlan:", editPlan);
+    console.log("Summary value:", editPlan?.summary);
+    console.log("Name value:", editPlan?.name);
+
+    // Validate name
+    if (!editPlan?.name?.trim()) {
+      newErrors.name = "Plan name is required.";
+    }
+
+    // Validate summary
+    if (!editPlan?.summary?.trim()) {
+      newErrors.summary = "Summary is required.";
+    } else {
+      console.log("Summary is valid:", editPlan.summary);
+    }
+
+    if (!isStarterPlan) {
+      if (editPlan?.monthly_price === '' || editPlan?.monthly_price === null || editPlan?.monthly_price === undefined)
+        newErrors.monthly_price = "Price is required.";
+      else if (parseFloat(editPlan?.monthly_price) < 0)
+        newErrors.monthly_price = "Price cannot be negative.";
+      else if (parseFloat(editPlan?.monthly_price) > 99999.99)
+        newErrors.monthly_price = "Price cannot exceed ₹99,999.99.";
+
+      if (editPlan?.discount_halfyear === '' || editPlan?.discount_halfyear === null || editPlan?.discount_halfyear === undefined)
+        newErrors.discount_halfyear = "Discount is required.";
+      else if (parseFloat(editPlan?.discount_halfyear) < 0)
+        newErrors.discount_halfyear = "Discount cannot be negative.";
+      else if (parseFloat(editPlan?.discount_halfyear) > 999.99)
+        newErrors.discount_halfyear = "Discount cannot exceed 999.99%.";
+
+      if (editPlan?.discount_annual === '' || editPlan?.discount_annual === null || editPlan?.discount_annual === undefined)
+        newErrors.discount_annual = "Discount is required.";
+      else if (parseFloat(editPlan?.discount_annual) < 0)
+        newErrors.discount_annual = "Discount cannot be negative.";
+      else if (parseFloat(editPlan?.discount_annual) > 999.99)
+        newErrors.discount_annual = "Discount cannot exceed 999.99%.";
+
+      if (editPlan?.tax === '' || editPlan?.tax === null || editPlan?.tax === undefined)
+        newErrors.tax = "Tax is required.";
+      else if (parseFloat(editPlan?.tax) < 0)
+        newErrors.tax = "Tax cannot be negative.";
+      else if (parseFloat(editPlan?.tax) > 100)
+        newErrors.tax = "Tax cannot exceed 100%.";
+    }
+
+    // Update errors state
+    setErrors(newErrors);
+
+    console.log("Validation errors:", newErrors);
+
+    // If there are errors, scroll to the first error
+    if (Object.keys(newErrors).length > 0) {
+      const firstErrorField = Object.keys(newErrors)[0];
+      const errorElement = document.querySelector(`[name="${firstErrorField}"]`);
+      if (errorElement) {
+        errorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        errorElement.focus();
+      } else {
+        // If no element found with that name, try to find by id or class
+        const fallbackElement = document.querySelector(`#${firstErrorField}`);
+        if (fallbackElement) {
+          fallbackElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }
+      return;
+    }
+
     setIsSaving(true);
     try {
       const token = getAdminToken();
 
-      // Prepare data for API - for Starter Plan, force price fields to 0
       const planData = {
         name: editPlan?.name,
         summary: editPlan?.summary,
         color: editPlan?.color,
-        monthly_price: isStarterPlan ? 0 : (editPlan?.monthly_price ?? 0),
-        tax: isStarterPlan ? 0 : (editPlan?.tax ?? 0),
-        discount_halfyear: isStarterPlan ? 0 : (editPlan?.discount_halfyear ?? 0),
-        discount_annual: isStarterPlan ? 0 : (editPlan?.discount_annual ?? 0),
+        monthly_price: isStarterPlan ? 0 : (parseFloat(editPlan?.monthly_price) || 0),
+        tax: isStarterPlan ? 0 : (parseFloat(editPlan?.tax) || 0),
+        discount_halfyear: isStarterPlan ? 0 : (parseFloat(editPlan?.discount_halfyear) || 0),
+        discount_annual: isStarterPlan ? 0 : (parseFloat(editPlan?.discount_annual) || 0),
         duration_days: editPlan?.duration_days ?? 30,
         is_trial_enabled: editPlan?.is_trial_enabled ?? false,
         trial_duration: editPlan?.trial_duration ?? 0,
@@ -229,9 +461,12 @@ export const PublishedPlans = () => {
       setAllPlans(prevPlans =>
         prevPlans.map(plan => plan.id === selectedPlanId ? response.data : plan)
       );
+
+      setErrors({});
+      setFieldErrors({});
+
       alert("Plan changes saved successfully");
 
-      // Refresh the current plan data
       await fetchSelectedPlanDetails(selectedPlanId);
       await fetchAllPlans();
 
@@ -239,6 +474,15 @@ export const PublishedPlans = () => {
       console.error('Error saving plan:', error);
       if (error.response) {
         console.error('Response data:', error.response.data);
+        if (error.response.data) {
+          const apiErrors = {};
+          Object.keys(error.response.data).forEach(key => {
+            apiErrors[key] = Array.isArray(error.response.data[key])
+              ? error.response.data[key][0]
+              : error.response.data[key];
+          });
+          setErrors(apiErrors);
+        }
         alert(`Error saving plan: ${JSON.stringify(error.response.data)}`);
       } else {
         alert("Error saving plan. Please try again.");
@@ -247,6 +491,114 @@ export const PublishedPlans = () => {
       setIsSaving(false);
     }
   };
+
+
+  const handleFeatureNumberInput = (i, value) => {
+    const { value: cleanedValue, error } = validateFeatureNumber(value);
+
+    const featureErrorKey = `feature_${i}`;
+    setFieldErrors(prev => ({
+      ...prev,
+      [featureErrorKey]: error
+    }));
+
+    if (!error || cleanedValue === '') {
+      const numericValue = cleanedValue === '' ? 0 : parseInt(cleanedValue);
+      handleFeatureValueChange(i, numericValue);
+    }
+  };
+
+  const getFeatureError = (i) => {
+    const featureErrorKey = `feature_${i}`;
+    return fieldErrors[featureErrorKey];
+  };
+
+  const getPriceFieldError = (field) => {
+    return fieldErrors[field];
+  };
+
+  // Preview Card Component
+  const PreviewCard = ({ plan, isStarterPlan }) => (
+    <div className="published-plan-preview-card">
+      <div className="published-plan-badge" style={{ backgroundColor: plan.color || '#1E88E5' }}>
+        {plan.name}
+      </div>
+
+      <div className="published-plan-content">
+        <div className="published-plan-price-section">
+          <h2 className="published-plan-price">
+            {isStarterPlan ? "Free Plan" : `₹ ${calculateTotalPayable(plan.monthly_price ?? 0, plan.tax ?? 0)}`}
+          </h2>
+          {!isStarterPlan && <small style={{ color: '#555' }}>For a Month</small>}
+          <p className="published-plan-sub-badge">{plan.summary}</p>
+        </div>
+
+        <div className="published-plan-divider"></div>
+        <ul className="published-plan-features">
+          {plan.features?.map((feature, i) => {
+            if (feature.text === 'Jobs Posting') {
+              const numericValue = parseInt(feature.value) || 0;
+              return (
+                <li key={i} className="published-plan-feature-item included">
+                  <span className="published-plan-icon">
+                    <img src={Tick} alt="yes" width={15} />
+                  </span>
+                  Max Job Posts: {numericValue}
+                </li>
+              );
+            }
+
+            if (feature.text === 'Highlight Your Job Listing') {
+              const numericValue = parseInt(feature.value) || 0;
+              if (numericValue > 0) {
+                return (
+                  <li key={i} className="published-plan-feature-item included">
+                    <span className="published-plan-icon">
+                      <img src={Tick} alt="yes" width={15} />
+                    </span>
+                    {numericValue} Highlight Your Job Listing
+                  </li>
+                );
+              } else {
+                return (
+                  <li key={i} className="published-plan-feature-item excluded">
+                    <span className="published-plan-icon">
+                      <img src={RedCross} alt="no" width={15} />
+                    </span>
+                    <span className="published-plan-feature-text">
+                      Highlight Your Job Listing
+                    </span>
+                  </li>
+                );
+              }
+            }
+
+            const isEnabled = feature.value === "true" || feature.value === true;
+            return (
+              <li
+                key={i}
+                className={`published-plan-feature-item ${isEnabled ? 'included' : 'excluded'}`}
+              >
+                <span className="published-plan-icon">
+                  <img src={isEnabled ? Tick : RedCross} alt={isEnabled ? "yes" : "no"} width={15} />
+                </span>
+                <span className="published-plan-feature-text">
+                  {feature.text}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+
+        <button
+          className="published-plan-btn-get-started"
+          style={{ backgroundColor: plan.color || '#1E88E5' }}
+        >
+          {isStarterPlan ? "Get Started For Free" : "Get started"}
+        </button>
+      </div>
+    </div>
+  );
 
   return (
     <>
@@ -284,7 +636,7 @@ export const PublishedPlans = () => {
       ) : (
         <div className="membership-cr-membership-container">
           <div style={{ display: "flex", alignItems: "center", padding: "10px 15px", margin: "10px 0", gap: "10px" }} >
-            <button onClick={() => { setSelectedPlanId(null); setEditPlan(null); setPreviewPlan(null); }}
+            <button onClick={() => { setSelectedPlanId(null); setEditPlan(null); setPreviewPlan(null); setErrors({}); setFieldErrors({}); }}
               style={{ padding: "7px 10px", cursor: 'pointer', fontSize: '14px', backgroundColor: '#1E88E5', color: 'white', border: 'none', borderRadius: "5px" }}>
               Back to plans
             </button>
@@ -295,7 +647,6 @@ export const PublishedPlans = () => {
             </div>
           </div>
 
-          {/* Banner notification informing admins the plan cannot be changed */}
           {isStarterPlan && (
             <div style={{ backgroundColor: '#fff3cd', color: '#856404', border: '1px solid #ffeeba', padding: '12px 20px', borderRadius: '6px', margin: '10px 15px', fontWeight: '500', fontSize: '14px', textAlign: 'start' }}>
               <strong>Notice:</strong> This is the default system Starter Plan (Free Tier). Price fields are read-only, but features can be customized.
@@ -314,42 +665,53 @@ export const PublishedPlans = () => {
                     <label>Plan name</label>
                     <input
                       type="text"
+                      name="name"
                       value={editPlan?.name ?? ''}
                       onChange={(e) => handleInputChange('name', e.target.value)}
                       disabled={false}
+                      style={{
+                        borderColor: errors.name ? '#ff0000' : '#ddd',
+                        ...(errors.name ? { border: '1px solid #ff0000' } : {})
+                      }}
                     />
+                    {errors.name && <span style={{ color: 'red', fontSize: '12px' }}>{errors.name}</span>}
                   </div>
                   <div className="membership-cr-input-group">
                     <label>Summary</label>
                     <input
                       type="text"
+                      name="summary"
                       value={editPlan?.summary ?? ''}
-                      onChange={(e) => handleInputChange('summary', e.target.value)}
+                      onChange={(e) => {
+                        console.log("Summary input changed:", e.target.value);
+                        handleInputChange('summary', e.target.value);
+                      }}
                       disabled={false}
+                      style={{
+                        borderColor: errors.summary ? '#ff0000' : '#ddd',
+                        ...(errors.summary ? { border: '1px solid #ff0000' } : {})
+                      }}
                     />
+                    {errors.summary && <span style={{ color: 'red', fontSize: '12px' }}>{errors.summary}</span>}
                   </div>
                 </div>
 
                 <div className="membership-cr-row" style={{ marginTop: '15px' }}>
                   <div className="membership-cr-input-group" style={{ width: '50%' }}>
                     <label>Card Color / Badge Visual Theme Code</label>
-                    <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                      <input
-                        type="text"
-                        value={editPlan?.color ?? '#1E88E5'}
-                        onChange={(e) => handleInputChange('color', e.target.value)}
-                        disabled={false}
-                        placeholder="e.g. #1E88E5 or green"
-                        style={{ flex: 1 }}
-                      />
-                      <input
-                        type="color"
-                        value={editPlan?.color?.startsWith('#') && editPlan?.color?.length === 7 ? editPlan.color : '#1E88E5'}
-                        onChange={(e) => handleInputChange('color', e.target.value)}
-                        disabled={false}
-                        style={{ width: '40px', height: '38px', padding: '0', border: '1px solid #ddd', borderRadius: '4px', cursor: 'pointer' }}
-                      />
-                    </div>
+                    <input
+                      type="text"
+                      value={editPlan?.color ?? '#1E88E5'}
+                      readOnly
+                      placeholder="e.g. #1E88E5 or green"
+                      style={{ flex: 1, backgroundColor: '#e9ecef', cursor: 'not-allowed' }}
+                    />
+                    <input
+                      type="color"
+                      value={editPlan?.color?.startsWith('#') && editPlan?.color?.length === 7 ? editPlan.color : '#1E88E5'}
+                      onChange={(e) => handleInputChange('color', e.target.value)}
+                      style={{ width: '40px', height: '38px', padding: '0', border: '1px solid #ddd', borderRadius: '4px', cursor: 'pointer' }}
+                    />
                   </div>
                 </div>
               </div>
@@ -362,44 +724,92 @@ export const PublishedPlans = () => {
                   <div className="membership-cr-input-group">
                     <label>Price (₹) for a month {isStarterPlan && ""}</label>
                     <input
-                      type="number"
+                      type="text"
+                      name="monthly_price"
                       value={editPlan?.monthly_price ?? ''}
                       onChange={(e) => handleInputChange('monthly_price', e.target.value)}
                       disabled={isStarterPlan}
-                      style={{ backgroundColor: isStarterPlan ? '#e9ecef' : '#fff' }}
+                      placeholder="0.00"
+                      style={{
+                        backgroundColor: isStarterPlan ? '#e9ecef' : '#fff',
+                        borderColor: (getPriceFieldError('monthly_price') || errors.monthly_price) ? '#ff0000' : '#ddd',
+                        ...((getPriceFieldError('monthly_price') || errors.monthly_price) ? { border: '1px solid #ff0000' } : {})
+                      }}
                     />
+                    {(getPriceFieldError('monthly_price') || errors.monthly_price) && (
+                      <span style={{ color: 'red', fontSize: '12px' }}>
+                        {getPriceFieldError('monthly_price') || errors.monthly_price}
+                      </span>
+                    )}
+                    <span style={{ fontSize: '11px', color: '#666' }}>Max: ₹99,999.99</span>
                   </div>
                   <div className="membership-cr-input-group">
                     <label>Discount (%) for 6 month plan {isStarterPlan && ""}</label>
                     <input
-                      type="number"
+                      type="text"
+                      name="discount_halfyear"
                       value={editPlan?.discount_halfyear ?? ''}
                       onChange={(e) => handleInputChange('discount_halfyear', e.target.value)}
                       disabled={isStarterPlan}
-                      style={{ backgroundColor: isStarterPlan ? '#e9ecef' : '#fff' }}
+                      placeholder="0.00"
+                      style={{
+                        backgroundColor: isStarterPlan ? '#e9ecef' : '#fff',
+                        borderColor: (getPriceFieldError('discount_halfyear') || errors.discount_halfyear) ? '#ff0000' : '#ddd',
+                        ...((getPriceFieldError('discount_halfyear') || errors.discount_halfyear) ? { border: '1px solid #ff0000' } : {})
+                      }}
                     />
+                    {(getPriceFieldError('discount_halfyear') || errors.discount_halfyear) && (
+                      <span style={{ color: 'red', fontSize: '12px' }}>
+                        {getPriceFieldError('discount_halfyear') || errors.discount_halfyear}
+                      </span>
+                    )}
+                    <span style={{ fontSize: '11px', color: '#666' }}>Max: 100%</span>
                   </div>
                 </div>
                 <div className="membership-cr-row">
                   <div className="membership-cr-input-group">
                     <label>Discount (%) for Annual plan {isStarterPlan && ""}</label>
                     <input
-                      type="number"
+                      type="text"
+                      name="discount_annual"
                       value={editPlan?.discount_annual ?? ''}
                       onChange={(e) => handleInputChange('discount_annual', e.target.value)}
                       disabled={isStarterPlan}
-                      style={{ backgroundColor: isStarterPlan ? '#e9ecef' : '#fff' }}
+                      placeholder="0.00"
+                      style={{
+                        backgroundColor: isStarterPlan ? '#e9ecef' : '#fff',
+                        borderColor: (getPriceFieldError('discount_annual') || errors.discount_annual) ? '#ff0000' : '#ddd',
+                        ...((getPriceFieldError('discount_annual') || errors.discount_annual) ? { border: '1px solid #ff0000' } : {})
+                      }}
                     />
+                    {(getPriceFieldError('discount_annual') || errors.discount_annual) && (
+                      <span style={{ color: 'red', fontSize: '12px' }}>
+                        {getPriceFieldError('discount_annual') || errors.discount_annual}
+                      </span>
+                    )}
+                    <span style={{ fontSize: '11px', color: '#666' }}>Max: 100%</span>
                   </div>
                   <div className="membership-cr-input-group">
                     <label>Tax (%) {isStarterPlan && ""}</label>
                     <input
-                      type="number"
+                      type="text"
+                      name="tax"
                       value={editPlan?.tax ?? ''}
                       onChange={(e) => handleInputChange('tax', e.target.value)}
                       disabled={isStarterPlan}
-                      style={{ backgroundColor: isStarterPlan ? '#e9ecef' : '#fff' }}
+                      placeholder="0.00"
+                      style={{
+                        backgroundColor: isStarterPlan ? '#e9ecef' : '#fff',
+                        borderColor: (getPriceFieldError('tax') || errors.tax) ? '#ff0000' : '#ddd',
+                        ...((getPriceFieldError('tax') || errors.tax) ? { border: '1px solid #ff0000' } : {})
+                      }}
                     />
+                    {(getPriceFieldError('tax') || errors.tax) && (
+                      <span style={{ color: 'red', fontSize: '12px' }}>
+                        {getPriceFieldError('tax') || errors.tax}
+                      </span>
+                    )}
+                    <span style={{ fontSize: '11px', color: '#666' }}>Max: 100%</span>
                   </div>
 
                   <div className="membership-cr-total-payable">
@@ -430,29 +840,8 @@ export const PublishedPlans = () => {
                   </thead>
                   <tbody style={{ border: "1px solid #f0f0ff" }}>
                     {editPlan?.features?.map((item, i) => {
-                      // if (item.text === 'Jobs Posting') {
-                      //   return (
-                      //     <tr key={i}>
-                      //       <td style={{ padding: '20px' }}>Max Job Posts</td>
-                      //       <td style={{ textAlign: 'center', padding: '10px' }}>
-                      //         <input
-                      //           type="number"
-                      //           value={item.value ? (parseInt(item.value) || 0) : 0}
-                      //           onChange={(e) => {
-                      //             const intValue = parseInt(e.target.value) || 0;
-                      //             handleFeatureValueChange(i, intValue);
-                      //           }}
-                      //           disabled={false}
-                      //           min="0"
-                      //           step="1"
-                      //           style={{ width: '80px', padding: '5px', textAlign: 'center', border: '1px solid #ddd', borderRadius: '4px' }}
-                      //         />
-                      //       </td>
-                      //     </tr>
-                      //   );
-                      // }
-
                       if (item.text === 'Jobs Posting') {
+                        const featureError = getFeatureError(i);
                         return (
                           <tr key={i}>
                             <td
@@ -462,48 +851,38 @@ export const PublishedPlans = () => {
                               Max Job Posts ⓘ
                             </td>
                             <td style={{ textAlign: 'center', padding: '10px' }}>
-                              <input
-                                type="number"
-                                value={item.value ? (parseInt(item.value) || 0) : 0}
-                                onChange={(e) => {
-                                  const intValue = parseInt(e.target.value) || 0;
-                                  handleFeatureValueChange(i, intValue);
-                                }}
-                                disabled={false}
-                                min="0"
-                                step="1"
-                                style={{ width: '80px', padding: '5px', textAlign: 'center', border: '1px solid #ddd', borderRadius: '4px' }}
-                                title="Enter the number of job posts (0 = unlimited)"
-                              />
+                              <div>
+                                <input
+                                  type="number"
+                                  value={item.value !== undefined && item.value !== '' ? String(parseInt(item.value) || 0) : '0'}
+                                  onChange={(e) => handleFeatureNumberInput(i, e.target.value)}
+                                  disabled={false}
+                                  placeholder="0"
+                                  style={{
+                                    width: '80px',
+                                    padding: '5px',
+                                    textAlign: 'center',
+                                    border: `1px solid ${featureError ? '#ff0000' : '#ddd'}`,
+                                    borderRadius: '4px'
+                                  }}
+                                  title="Enter the number of job posts (max 100)"
+                                />
+                                {featureError && (
+                                  <div style={{ color: 'red', fontSize: '11px', marginTop: '4px' }}>
+                                    {featureError}
+                                  </div>
+                                )}
+                                <div style={{ fontSize: '10px', color: '#666', marginTop: '2px' }}>
+                                  Max: 100
+                                </div>
+                              </div>
                             </td>
                           </tr>
                         );
                       }
 
-                      // if (item.text === 'Highlight Your Job Listing') {
-                      //   return (
-                      //     <tr key={i}>
-                      //       <td style={{ padding: '20px' }}>{item.text}</td>
-                      //       <td style={{ textAlign: 'center', padding: '10px' }}>
-                      //         <input
-                      //           type="number"
-                      //           value={item.value ? (parseInt(item.value) || 0) : 0}
-                      //           onChange={(e) => {
-                      //             const intValue = parseInt(e.target.value) || 0;
-                      //             handleFeatureValueChange(i, intValue);
-                      //           }}
-                      //           disabled={false}
-                      //           min="0"
-                      //           step="1"
-                      //           style={{ width: '80px', padding: '5px', textAlign: 'center', border: '1px solid #ddd', borderRadius: '4px' }}
-                      //         />
-                      //       </td>
-                      //     </tr>
-                      //   );
-                      // }
-
-
                       if (item.text === 'Highlight Your Job Listing') {
+                        const featureError = getFeatureError(i);
                         return (
                           <tr key={i}>
                             <td
@@ -513,41 +892,39 @@ export const PublishedPlans = () => {
                               {item.text} ⓘ
                             </td>
                             <td style={{ textAlign: 'center', padding: '10px' }}>
-                              <input
-                                type="number"
-                                value={item.value ? (parseInt(item.value) || 0) : 0}
-                                onChange={(e) => {
-                                  const intValue = parseInt(e.target.value) || 0;
-                                  handleFeatureValueChange(i, intValue);
-                                }}
-                                disabled={false}
-                                min="0"
-                                step="1"
-                                style={{ width: '80px', padding: '5px', textAlign: 'center', border: '1px solid #ddd', borderRadius: '4px' }}
-                                title="Set how many job posts can be highlighted (0 = no highlights)"
-                              />
+                              <div>
+                                <input
+                                  type="number"
+                                  value={item.value !== undefined && item.value !== '' ? String(parseInt(item.value) || 0) : '0'}
+                                  onChange={(e) => handleFeatureNumberInput(i, e.target.value)}
+                                  disabled={false}
+                                  placeholder="0"
+                                  style={{
+                                    width: '80px',
+                                    padding: '5px',
+                                    textAlign: 'center',
+                                    border: `1px solid ${featureError ? '#ff0000' : '#ddd'}`,
+                                    borderRadius: '4px'
+                                  }}
+                                  title="Set how many job posts can be highlighted (max 100)"
+                                />
+                                {featureError && (
+                                  <div style={{ color: 'red', fontSize: '11px', marginTop: '4px' }}>
+                                    {featureError}
+                                  </div>
+                                )}
+                                <div style={{ fontSize: '10px', color: '#666', marginTop: '2px' }}>
+                                  Max: 100
+                                </div>
+                              </div>
                             </td>
                           </tr>
                         );
                       }
 
-                      // return (
-                      //   <tr key={i}>
-                      //     <td style={{ padding: '20px' }}>{item.text}</td>
-                      //     <td style={{ textAlign: 'center', padding: '10px' }}>
-                      //       <div style={{ display: 'flex', justifyContent: 'center' }}>
-                      //         <div
-                      //           className={`membership-cr-toggle-switch ${item.value === "true" || item.value === true ? "membership-cr-active" : ""}`}
-                      //           onClick={() => handleToggleFeature(i)}
-                      //           style={{ cursor: 'pointer' }}
-                      //         ></div>
-                      //       </div>
-                      //     </td>
-                      //   </tr>
-                      // );
                       const featureHints = {
                         'Analytics ': 'Access to detailed job performance analytics and reports',
-                        'Candidate Search': 'Ability to search and filter  candidate in findtalent only',
+                        'Candidate Search': 'Ability to search and filter candidate in findtalent only',
                         'Premium Support': 'Priority customer support with faster response times',
                         'Account Manager': 'Dedicated account manager for personalized assistance'
                       };
@@ -574,32 +951,10 @@ export const PublishedPlans = () => {
                           </td>
                         </tr>
                       );
-
                     })}
                   </tbody>
                 </table>
               </div>
-
-              {/* <div className="membership-cr-form-card membership-cr-mini-section">
-                <div className="membership-cr-section-title"><span className="membership-cr-step-num">4</span> Trial Settings</div>
-                <div className="membership-cr-row membership-cr-align-center">
-                  <div className="membership-cr-toggle-group" style={{ pointerEvents: 'auto' }}>
-                    <span>Free trial option</span>
-                    <div onClick={handleTrailToggle} className={`membership-cr-toggle-switch ${editPlan?.is_trial_enabled ? "membership-cr-active" : ""}`}></div>
-                  </div>
-                  <div className="membership-cr-input-group">
-                    <label>Total Duration (Days)</label>
-                    <input
-                      type="number"
-                      name="TrailDuration"
-                      value={editPlan?.trial_duration ?? 0}
-                      disabled={!editPlan?.is_trial_enabled}
-                      onChange={(e) => handleInputChange('trial_duration', parseInt(e.target.value) || 0)}
-                    />
-                  </div>
-                </div>
-              </div> */}
-
 
               <div className="membership-cr-form-card membership-cr-mini-section">
                 <div className="membership-cr-section-title">
@@ -615,7 +970,6 @@ export const PublishedPlans = () => {
                     }}
                     title="Will be implemented after Razorpay gateway integration"
                   >
-
                   </span>
                 </div>
                 <div className="membership-cr-row membership-cr-align-center">
@@ -636,7 +990,7 @@ export const PublishedPlans = () => {
                   >
                     <label>Total Duration (Days)</label>
                     <input
-                      type="number"
+                      type="text"
                       name="TrailDuration"
                       value={editPlan?.trial_duration ?? 0}
                       disabled={true}
@@ -646,26 +1000,6 @@ export const PublishedPlans = () => {
                   </div>
                 </div>
               </div>
-
-              {/* <div className="membership-cr-form-card">
-                <div className="membership-cr-section-title"><span className="membership-cr-step-num">5</span> Advanced Settings</div>
-                <div className="membership-cr-row membership-cr-align-center">
-                  <div className="membership-cr-toggle-group" style={{ pointerEvents: 'auto' }}>
-                    <span>Auto Renewal</span>
-                    <div onClick={handleAutoRenewalToggle} className={`membership-cr-toggle-switch ${editPlan?.is_auto_renewal ? 'membership-cr-active' : ''}`}></div>
-                  </div>
-                  <div className="membership-cr-input-group">
-                    <label>Grace Period (Days)</label>
-                    <input
-                      type="number"
-                      name="GraceTime"
-                      value={editPlan?.grace_time ?? 0}
-                      onChange={(e) => handleInputChange('grace_time', parseInt(e.target.value) || 0)}
-                      disabled={!editPlan?.is_auto_renewal}
-                    />
-                  </div>
-                </div>
-              </div> */}
 
               <div className="membership-cr-form-card">
                 <div className="membership-cr-section-title">
@@ -689,7 +1023,7 @@ export const PublishedPlans = () => {
                   >
                     <label>Grace Period (Days)</label>
                     <input
-                      type="number"
+                      type="text"
                       name="GraceTime"
                       value={editPlan?.grace_time ?? 0}
                       disabled={true}
@@ -732,75 +1066,31 @@ export const PublishedPlans = () => {
 
             <div className="membership-cr-preview-sidebar">
               {previewPlan && (
-                <div className="published-plan-preview-card">
-                  <div className="published-plan-badge" style={{ backgroundColor: previewPlan.color || '#1E88E5' }}>
-                    {previewPlan.name}
-                  </div>
-
-                  <div className="published-plan-content">
-                    <div className="published-plan-price-section">
-                      <h2 className="published-plan-price">
-                        {isStarterPlan ? "Free Plan" : `₹ ${calculateTotalPayable(previewPlan.monthly_price ?? 0, previewPlan.tax ?? 0)}`}
-                      </h2>
-                      {!isStarterPlan && <small style={{ color: '#555' }}>For a Month</small>}
-                      <p className="published-plan-sub-badge">{previewPlan.summary}</p>
-                    </div>
-
-                    <div className="published-plan-divider"></div>
-                    <ul className="published-plan-features">
-                      {previewPlan.features?.map((feature, i) => {
-                        if (feature.text === 'Jobs Posting') {
-                          return (
-                            <li key={i} className="published-plan-feature-item included">
-                              <span className="published-plan-icon">
-                                <img src={Tick} alt="yes" width={15} />
-                              </span>
-                              Max Job Posts  : {feature.value ?? 0}
-                            </li>
-                          );
-                        }
-
-                        if (feature.text === 'Highlight Your Job Listing ') {
-                          const numericValue = parseInt(feature.value) || 0;
-                          if (numericValue > 0) {
-                            return (
-                              <li key={i} className="published-plan-feature-item included">
-                                <span className="published-plan-icon">
-                                  <img src={Tick} alt="yes" width={15} />
-                                </span>
-                                {numericValue} {feature.text}
-                              </li>
-                            );
-                          }
-                          return null;
-                        }
-
-                        const isEnabled = feature.value === "true" || feature.value === true;
-                        return (
-                          <li
-                            key={i}
-                            className={`published-plan-feature-item ${isEnabled ? 'included' : 'excluded'}`}
-                          >
-                            <span className="published-plan-icon">
-                              <img src={isEnabled ? Tick : RedCross} alt={isEnabled ? "yes" : "no"} width={15} />
-                            </span>
-                            <span className="published-plan-feature-text">
-                              {feature.text}
-                            </span>
-                          </li>
-                        );
-                      })}
-                    </ul>
-
-                    <button
-                      className="published-plan-btn-get-started"
-                      style={{ backgroundColor: previewPlan.color || '#1E88E5' }}
-                    >
-                      {isStarterPlan ? "Get Started For Free" : "Get started"}
-                    </button>
-                  </div>
-                </div>
+                <PreviewCard plan={previewPlan} isStarterPlan={isStarterPlan} />
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Preview Modal */}
+      {showPreviewModal && previewPlan && (
+        <div className="published-plans-preview-modal-overlay" onClick={handleClosePreviewModal}>
+          <div className="published-plans-preview-modal-content" onClick={(e) => e.stopPropagation()}>
+            <button
+              className="published-plans-preview-modal-close"
+              onClick={handleClosePreviewModal}
+            >
+              ×
+            </button>
+
+            <div className="published-plans-preview-modal-header">
+              <h3>Preview Plan</h3>
+              <p>This is how your plan will appear to users</p>
+            </div>
+
+            <div className="published-plans-preview-modal-body">
+              <PreviewCard plan={previewPlan} isStarterPlan={isStarterPlan} />
             </div>
           </div>
         </div>
