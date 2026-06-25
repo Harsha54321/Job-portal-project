@@ -49,7 +49,7 @@ export const Jsignup = () => {
         const response = await api.get('/jobseeker/settings/');
         // Map API response to our state
         console.log(response.data);
-        
+
         setJobseekerSettings({
           emailVer: response.data.emailVer || false,
           phoneVer: response.data.phoneVer || false,
@@ -669,9 +669,12 @@ export const Jsignup = () => {
             >
               Login
             </Link>
-            <Link to="/Job-portal/role-selection" className="header-back-btn">
+            <button
+              onClick={() => navigate(-1)}
+              className="header-back-btn"
+            >
               ← Back
-            </Link>
+            </button>
           </div>
         </header>
 

@@ -3,11 +3,11 @@ import './JNotification.css'
 import bell from '../assets/header_bell.png'
 import bell_dot from '../assets/header_bell_dot.png'
 import { useJobs } from "../JobContext";
-import api from "../api/axios";  // ← ఈ line add
+import api from "../api/axios";
 import { useNavigate } from "react-router-dom";
 
-export const JNotification = ({  }) => {
-    
+export const JNotification = ({ }) => {
+
     const {
         notificationsData,
         setNotificationsData,
@@ -22,12 +22,7 @@ export const JNotification = ({  }) => {
     const navigate = useNavigate();
     const containerRef = useRef(null);
 
-    // Filter notifications for current user
-    const myPersonalNotifs = notificationsData.filter(n => 
-        !n.targetId || String(n.targetId) === String(currentUserId)
-    );
-
-    const newNotificationsCount = myPersonalNotifs.filter(n => !n.isRead).length;
+    const newNotificationsCount = notificationsData.filter(n => !n.isRead).length;
 
     const toggleMenu = (id, event) => {
         event.stopPropagation();
@@ -35,7 +30,7 @@ export const JNotification = ({  }) => {
     };
 
     // ================= API FUNCTIONS =================
-    
+
     // MARK AS READ
     const handleMarkAsRead = async (id) => {
         try {
@@ -146,7 +141,7 @@ export const JNotification = ({  }) => {
 
             {/* NOTIFICATION LIST */}
             <div className="notifications-list">
-                {myPersonalNotifs.map((notification) => (
+                {notificationsData.map((notification) => (
                     <div
                         key={notification.id}
                         className={notification.isRead ? "notification-old-item" : "notification-new-item"}
@@ -193,7 +188,7 @@ export const JNotification = ({  }) => {
                     </div>
                 ))}
 
-                {myPersonalNotifs.length === 0 && (
+                {notificationsData.length === 0 && (
                     <p style={{ padding: "20px", textAlign: "center", color: "#777" }}>
                         No notifications for you
                     </p>

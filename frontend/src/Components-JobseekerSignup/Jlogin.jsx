@@ -72,8 +72,8 @@ export const Jlogin = () => {
   useEffect(() => {
     console.log(" Jlogin component mounted - checking for saved credentials...");
 
-    const savedUsername = sessionStorage.getItem("rememberedUsername");
-    const savedPassword = sessionStorage.getItem("rememberedPassword");
+    const savedUsername = localStorage.getItem("rememberedUsername");
+    const savedPassword = localStorage.getItem("rememberedPassword");
 
     if (savedUsername && savedPassword) {
       console.log("🔑 Saved credentials found");
@@ -393,11 +393,11 @@ export const Jlogin = () => {
         sessionStorage.setItem("userRole", "jobseeker");
 
         if (rememberMe) {
-          sessionStorage.setItem("rememberedUsername", formValues.username);
-          sessionStorage.setItem("rememberedPassword", formValues.password);
+          localStorage.setItem("rememberedUsername", formValues.username);
+          localStorage.setItem("rememberedPassword", formValues.password);
         } else {
-          sessionStorage.removeItem("rememberedUsername");
-          sessionStorage.removeItem("rememberedPassword");
+          localStorage.removeItem("rememberedUsername");
+          localStorage.removeItem("rememberedPassword");
         }
 
         //  REGISTER FCM TOKEN AFTER SUCCESSFUL LOGIN

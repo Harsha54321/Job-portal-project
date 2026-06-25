@@ -72,8 +72,8 @@ import { Aforgotpassword } from './Components-Admin/Aforgotpassword'
 import { Acreatepassword } from './Components-Admin/Acreatepassword'
 import React, { useEffect } from 'react'
 import { requestAndRegisterNotificationPermission, listenForForegroundMessages } from "./firebaseTokenHandler";
+import RoleSignupLanding from './Components-LandingPage/RoleSignupLanding';
 
-/* ---------- LAYOUT ---------- */
 
 const Layout = () => {
   useInactivityLogout()
@@ -93,184 +93,107 @@ const Layout = () => {
   )
 }
 
-
-/* ---------- ROUTER ---------- */
-
 const router = createBrowserRouter([
 
   {
-
     element: <Layout />,
 
     children: [
       { path: '/', element: <Landingpage /> },
-
       {
         path: '/Job-portal/role-selection',
         element: <RoleLanding />,
       },
-
       {
-
-        path: '/Job-portal/jobseeker',
-
-        children: [
-
-          { path: 'login', element: <Jlogin /> },
-
-          { path: 'login/forgotpassword', element: <Jforgotpassword /> },
-
-          { path: 'login/forgotpassword/createpassword', element: <Jcreatepassword /> },
-
-          { path: 'signup', element: <Jsignup /> },
-
-          { path: '', element: <Afterloginlanding /> },
-
-          { path: 'OpportunityOverview/:id', element: <OpportunityOverview /> },
-
-          { path: 'ReportAJob/:id', element: <ReportAJob /> },
-
-          { path: 'myjobs', element: <MyJobs /> },
-
-          { path: 'jobs', element: <JobsTab /> },
-
-          { path: 'companies', element: <CompaniesTab /> },
-
-          { path: 'companies/:companyId', element: <JobsThroughCompany /> },
-
-          { path: 'myprofile', element: <MyProfile /> },
-
-          { path: 'aboutus', element: <AboutUs /> },
-
-          { path: 'jobapplication/:id', element: <JobApplication /> },
-
-          { path: 'searchresults', element: <SearchResults /> },
-
-          { path: 'submitted/:id', element: <ApplicationStatusScreen /> },
-
-          { path: 'appliedjobsoverview/:id', element: <AppliedJobsOverview /> },
-
-          { path: 'withdrawn', element: <Revoked /> },
-
-          { path: 'Settings', element: <Settings /> },
-
-          { path: 'ContactUs', element: <ContactUs /> },
-
-          { path: 'FAQ', element: <FAQ /> },
-
-          {
-
-            path: 'Blogs',
-
-            children: [
-
-              { path: '', element: <BlogPage /> },
-
-              { path: 'Category', element: <BlogCategory /> },
-
-              { path: 'Technology', element: <TechnologyBlog /> },
-
-              { path: 'BlogDatas/:title', element: <BlogDatas /> },
-
-              { path: 'view-all/:category', element: <ViewAllBlogs /> },
-
-            ]
-
-          },
-
-          {
-
-            path: 'help-center',
-
-            children: [
-
-              { path: '', element: <HelpCenter /> },
-
-              { path: 'raise-a-ticket', element: <RaiseTicket /> },
-
-              { path: 'help-FAQs', element: <FAQ /> },
-
-              { path: 'live-chat', element: <LiveChat /> },
-
-              { path: 'profile-creation-help', element: <ProfileCreationHelp /> },
-
-              { path: 'resume-upload-help', element: <ResumeUploadHelp /> },
-
-              { path: 'job-apply-help', element: <JobApplyIssuesHelp /> },
-
-              { path: 'interview-scheduling-help', element: <InterviewSchedulingHelp /> },
-
-              { path: 'job-posting-help', element: <JobPostingHelp /> },
-
-              { path: 'candidate-search-help', element: <CandidateSearchHelp /> },
-
-              { path: 'subscription-issue-help', element: <SubscriptionIssuesHelp /> },
-
-              { path: 'invoice-payment-help', element: <InvoicePaymentHelp /> },
-
-              { path: 'login-issue-help', element: <LoginIssuesHelp /> },
-
-              { path: 'page-error-help', element: <PageErrorsHelp /> },
-
-              { path: 'file-upload-help', element: <FileUploadHelp /> },
-
-            ]
-
-          },
-
-          { path: 'chat', element: <JMessenger /> },
-
-        ]
-
+        path: '/Job-portal/signup-selection', 
+        element: <RoleSignupLanding />,
       },
 
       {
-
-        path: '/Job-portal',
-
+        path: '/Job-portal/jobseeker',
         children: [
-
+          { path: 'login', element: <Jlogin /> },
+          { path: 'login/forgotpassword', element: <Jforgotpassword /> },
+          { path: 'login/forgotpassword/createpassword', element: <Jcreatepassword /> },
+          { path: 'signup', element: <Jsignup /> },
+          { path: '', element: <Afterloginlanding /> },
+          { path: 'OpportunityOverview/:id', element: <OpportunityOverview /> },
+          { path: 'ReportAJob/:id', element: <ReportAJob /> },
+          { path: 'myjobs', element: <MyJobs /> },
+          { path: 'jobs', element: <JobsTab /> },
+          { path: 'companies', element: <CompaniesTab /> },
+          { path: 'companies/:companyId', element: <JobsThroughCompany /> },
+          { path: 'myprofile', element: <MyProfile /> },
+          { path: 'aboutus', element: <AboutUs /> },
+          { path: 'jobapplication/:id', element: <JobApplication /> },
+          { path: 'searchresults', element: <SearchResults /> },
+          { path: 'submitted/:id', element: <ApplicationStatusScreen /> },
+          { path: 'appliedjobsoverview/:id', element: <AppliedJobsOverview /> },
+          { path: 'withdrawn', element: <Revoked /> },
+          { path: 'Settings', element: <Settings /> },
+          { path: 'ContactUs', element: <ContactUs /> },
+          { path: 'FAQ', element: <FAQ /> },
+          {
+            path: 'Blogs',
+            children: [
+              { path: '', element: <BlogPage /> },
+              { path: 'Category', element: <BlogCategory /> },
+              { path: 'Technology', element: <TechnologyBlog /> },
+              { path: 'BlogDatas/:title', element: <BlogDatas /> },
+              { path: 'view-all/:category', element: <ViewAllBlogs /> },
+            ]
+          },
+          {
+            path: 'help-center',
+            children: [
+              { path: '', element: <HelpCenter /> },
+              { path: 'raise-a-ticket', element: <RaiseTicket /> },
+              { path: 'help-FAQs', element: <FAQ /> },
+              { path: 'live-chat', element: <LiveChat /> },
+              { path: 'profile-creation-help', element: <ProfileCreationHelp /> },
+              { path: 'resume-upload-help', element: <ResumeUploadHelp /> },
+              { path: 'job-apply-help', element: <JobApplyIssuesHelp /> },
+              { path: 'interview-scheduling-help', element: <InterviewSchedulingHelp /> },
+              { path: 'job-posting-help', element: <JobPostingHelp /> },
+              { path: 'candidate-search-help', element: <CandidateSearchHelp /> },
+              { path: 'subscription-issue-help', element: <SubscriptionIssuesHelp /> },
+              { path: 'invoice-payment-help', element: <InvoicePaymentHelp /> },
+              { path: 'login-issue-help', element: <LoginIssuesHelp /> },
+              { path: 'page-error-help', element: <PageErrorsHelp /> },
+              { path: 'file-upload-help', element: <FileUploadHelp /> },
+            ]
+          },
+          { path: 'chat', element: <JMessenger /> },
+        ]
+      },
+      {
+        path: '/Job-portal',
+        children: [
           {
             path: 'login/otpverification',
             element: <OtpVerification />,
           },
-
         ]
       },
 
       {
-
         path: '/Job-portal/employer',
-
         children: [
-
           { path: 'login', element: <Elogin /> },
-
           { path: 'signup', element: <Esignup /> },
-
           { path: 'login/forgotpassword', element: <Eforgotpassword /> },
-
           { path: 'login/forgotpassword/createpassword', element: <Ecreatepassword /> },
-
         ]
-
       },
-
       {
         path: '/Job-portal/employer-chat/:id',
         element: <EMessenger />
       },
-
       {
-
         path: '/Job-portal/Employer',
-
         children: [
-
           { path: 'Dashboard', element: <EmployerDashboard /> },
-
           // { path: 'chat', element: <EMessenger /> },
-
           {
             path: 'about-your-company',
             element: <AboutYourCompany />
@@ -346,9 +269,6 @@ const router = createBrowserRouter([
   }
 
 ])
-
-
-/* ---------- APP ---------- */
 
 function App() {
   return (

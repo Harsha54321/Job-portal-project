@@ -214,7 +214,7 @@ export const Header = () => {
           <>
             <div className="auth-action-links">
               <Link to="/Job-portal/role-selection" className="login-btn">Login</Link>
-              <Link to="/Job-portal/role-selection" className="signup-btn">Sign up</Link>
+              <Link to="/Job-portal/signup-selection" className="signup-btn">Sign up</Link>
             </div>
           </>
         )}
@@ -226,7 +226,7 @@ export const Header = () => {
             <a href="#" onClick={preventNav}>Jobs</a>
             <a href="#" onClick={preventNav}>Companies</a>
             <Link to="/Job-portal/role-selection" onClick={() => setMobileMenuOpen(false)}>Login</Link>
-            <Link to="/Job-portal/role-selection" onClick={() => setMobileMenuOpen(false)}>Sign up</Link>
+            <Link to="/Job-portal/signup-selection" onClick={() => setMobileMenuOpen(false)}>Sign up</Link>
             <Link to="/Job-portal/role-selection" onClick={() => setMobileMenuOpen(false)}>Choose Role</Link>
           </div>
         </div>

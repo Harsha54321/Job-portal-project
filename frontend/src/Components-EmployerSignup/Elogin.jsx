@@ -10,8 +10,10 @@ import { requestAndRegisterNotificationPermission } from "../firebaseTokenHandle
 export const Elogin = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const savedEmail = sessionStorage.getItem("rememberedEmail");
-  const savedPassword = sessionStorage.getItem("rememberedPassword");
+  // const savedEmail = sessionStorage.getItem("rememberedEmail");
+  // const savedPassword = sessionStorage.getItem("rememberedPassword");
+  const savedEmail = localStorage.getItem("rememberedEmail");
+  const savedPassword = localStorage.getItem("rememberedPassword");
   const [rememberMe, setRememberMe] = useState(false);
 
   const [passwordShow, setPasswordShow] = useState(true);
@@ -23,14 +25,35 @@ export const Elogin = () => {
     password: savedPassword || "",
   });
 
+  // useEffect(() => {
+  //   if (sessionStorage.getItem("rememberedEmail")) {
+  //     setRememberMe(true);
+  //   }
+  // }, []);
+
   useEffect(() => {
-    if (sessionStorage.getItem("rememberedEmail")) {
+    const savedEmail = localStorage.getItem("rememberedEmail");
+    const savedPassword = localStorage.getItem("rememberedPassword");
+    if (savedEmail) {
+      setFormValues({
+        username: savedEmail || "",
+        password: savedPassword || "",
+      });
       setRememberMe(true);
     }
   }, []);
 
+  // const handleRememberMeChange = (e) => {
+  //   setRememberMe(e.target.checked);
+  // };
+
   const handleRememberMeChange = (e) => {
-    setRememberMe(e.target.checked);
+    const checked = e.target.checked;
+    setRememberMe(checked);
+    if (!checked) {
+      localStorage.removeItem("rememberedEmail");
+      localStorage.removeItem("rememberedPassword");
+    }
   };
 
   const togglePasswordView = () => {
@@ -164,12 +187,20 @@ export const Elogin = () => {
         return;
       }
 
+      // if (rememberMe) {
+      //   sessionStorage.setItem("rememberedEmail", formValues.username);
+      //   sessionStorage.setItem("rememberedPassword", formValues.password);
+      // } else {
+      //   sessionStorage.removeItem("rememberedEmail");
+      //   sessionStorage.removeItem("rememberedPassword");
+      // }
+
       if (rememberMe) {
-        sessionStorage.setItem("rememberedEmail", formValues.username);
-        sessionStorage.setItem("rememberedPassword", formValues.password);
+        localStorage.setItem("rememberedEmail", formValues.username);
+        localStorage.setItem("rememberedPassword", formValues.password);
       } else {
-        sessionStorage.removeItem("rememberedEmail");
-        sessionStorage.removeItem("rememberedPassword");
+        localStorage.removeItem("rememberedEmail");
+        localStorage.removeItem("rememberedPassword");
       }
 
       // ✅ First store ALL tokens

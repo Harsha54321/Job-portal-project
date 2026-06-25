@@ -90,13 +90,28 @@ export const AppliedJobsOverview = () => {
     "recruiter_review",
     "shortlisted",
     "interview_called",
+    "offered",
+    "hired",
   ];
+
+  // useEffect(() => {
+  //   if (!appliedJob?.status) return;
+
+  //   const index = statusOrder.indexOf(appliedJob.status);
+  //   setActiveStep(index === -1 ? 0 : index);
+  // }, [appliedJob]);
 
   useEffect(() => {
     if (!appliedJob?.status) return;
 
-    const index = statusOrder.indexOf(appliedJob.status);
-    setActiveStep(index === -1 ? 0 : index);
+    const status = appliedJob.status.toLowerCase();
+
+    if (status === "rejected") {
+      setActiveStep(1); // Only "Application Submitted" shows ✓
+    } else {
+      const index = statusOrder.indexOf(status);
+      setActiveStep(index === -1 ? 0 : index);
+    }
   }, [appliedJob]);
 
   // Loading guards
@@ -162,6 +177,14 @@ export const AppliedJobsOverview = () => {
     {
       label: 'Interview Called',
       sub: "The hiring team has reached out to you."
+    },
+    {
+      label: 'Offered',
+      sub: "Congratulations! You have received a job offer."
+    },
+    {
+      label: 'Hired',
+      sub: "You have been successfully hired. Welcome aboard!"
     },
   ];
 
@@ -278,6 +301,35 @@ export const AppliedJobsOverview = () => {
             <h3>Application status</h3>
           </div>
 
+          {/* <Box sx={{ width: '100%' }}>
+            <Stepper
+              orientation="vertical"
+              activeStep={activeStep}
+              connector={<AnimatedConnector />}
+            >
+              {applicationStatus.map((step, index) => (
+                <Step key={index}>
+                  <StepLabel
+                    optional={
+                      <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary' }}>
+                        {step.sub}
+                      </Typography>
+                    }
+                    sx={{
+                      '& .MuiStepLabel-label': {
+                        fontWeight: index <= activeStep ? 700 : 400,
+                        color: index <= activeStep ? '#1976d2' : 'inherit',
+                        transition: 'color 1.50s ease'
+                      }
+                    }}
+                  >
+                    {step.label}
+                  </StepLabel>
+                </Step>
+              ))}
+            </Stepper>
+          </Box> */}
+
           <Box sx={{ width: '100%' }}>
             <Stepper
               orientation="vertical"
@@ -305,6 +357,25 @@ export const AppliedJobsOverview = () => {
                 </Step>
               ))}
             </Stepper>
+
+            {/* ✅ Rejected banner appears BELOW the stepper */}
+            {appliedJob.status?.toLowerCase() === "rejected" && (
+              <Box sx={{
+                mt: 2,
+                p: 2,
+                borderRadius: 2,
+                backgroundColor: '#ffebee',
+                borderLeft: '4px solid #d32f2f',
+              }}>
+                <Typography sx={{ color: '#d32f2f', fontWeight: 700 }}>
+                  ✗ Rejected
+                </Typography>
+                <Typography variant="caption" sx={{ color: '#d32f2f' }}>
+                  Unfortunately, your application was not selected.
+                </Typography>
+              </Box>
+            )}
+
           </Box>
           {appliedJob.status?.toLowerCase() === "applied" && (
             <button

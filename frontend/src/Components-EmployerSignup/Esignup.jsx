@@ -635,9 +635,12 @@ export const Esignup = () => {
             Login
           </Link>
 
-          <Link to="/Job-portal/role-selection" className="header-back-btn">
+          <button
+            onClick={() => navigate(-1)}
+            className="header-back-btn"
+          >
             ← Back
-          </Link>
+          </button>
         </div>
       </header>
 

@@ -30,11 +30,21 @@ export const AdminLogin = () => {
     const [isSendingOTP, setIsSendingOTP] = useState(false); // Loading state for send OTP button
     // =================================================
 
+    // useEffect(() => {
+    //     const savedRemember = sessionStorage.getItem("admin_remember_me") === "true";
+    //     if (savedRemember) {
+    //         const savedAdminID = sessionStorage.getItem("admin_saved_id") || "";
+    //         const savedPassword = sessionStorage.getItem("admin_saved_password") || "";
+    //         setFormValues({ adminID: savedAdminID, password: savedPassword });
+    //         setRememberMe(true);
+    //     }
+    // }, []);
+
     useEffect(() => {
-        const savedRemember = sessionStorage.getItem("admin_remember_me") === "true";
+        const savedRemember = localStorage.getItem("admin_remember_me") === "true";
         if (savedRemember) {
-            const savedAdminID = sessionStorage.getItem("admin_saved_id") || "";
-            const savedPassword = sessionStorage.getItem("admin_saved_password") || "";
+            const savedAdminID = localStorage.getItem("admin_saved_id") || "";
+            const savedPassword = localStorage.getItem("admin_saved_password") || "";
             setFormValues({ adminID: savedAdminID, password: savedPassword });
             setRememberMe(true);
         }
@@ -64,13 +74,23 @@ export const AdminLogin = () => {
         setServerError("");
     };
 
+    // const handleRememberMe = (e) => {
+    //     const checked = e.target.checked;
+    //     setRememberMe(checked);
+    //     if (!checked) {
+    //         sessionStorage.removeItem("admin_remember_me");
+    //         sessionStorage.removeItem("admin_saved_id");
+    //         sessionStorage.removeItem("admin_saved_password");
+    //     }
+    // };
+
     const handleRememberMe = (e) => {
         const checked = e.target.checked;
         setRememberMe(checked);
         if (!checked) {
-            sessionStorage.removeItem("admin_remember_me");
-            sessionStorage.removeItem("admin_saved_id");
-            sessionStorage.removeItem("admin_saved_password");
+            localStorage.removeItem("admin_remember_me");
+            localStorage.removeItem("admin_saved_id");
+            localStorage.removeItem("admin_saved_password");
         }
     };
 
@@ -169,14 +189,24 @@ export const AdminLogin = () => {
                 sessionStorage.setItem('access_token', response.data.access);
 
                 // Handle remember me
+                // if (rememberMe) {
+                //     sessionStorage.setItem("admin_remember_me", "true");
+                //     sessionStorage.setItem("admin_saved_id", formValues.adminID);
+                //     sessionStorage.setItem("admin_saved_password", formValues.password);
+                // } else {
+                //     sessionStorage.removeItem("admin_remember_me");
+                //     sessionStorage.removeItem("admin_saved_id");
+                //     sessionStorage.removeItem("admin_saved_password");
+                // }
+
                 if (rememberMe) {
-                    sessionStorage.setItem("admin_remember_me", "true");
-                    sessionStorage.setItem("admin_saved_id", formValues.adminID);
-                    sessionStorage.setItem("admin_saved_password", formValues.password);
+                    localStorage.setItem("admin_remember_me", "true");
+                    localStorage.setItem("admin_saved_id", formValues.adminID);
+                    localStorage.setItem("admin_saved_password", formValues.password);
                 } else {
-                    sessionStorage.removeItem("admin_remember_me");
-                    sessionStorage.removeItem("admin_saved_id");
-                    sessionStorage.removeItem("admin_saved_password");
+                    localStorage.removeItem("admin_remember_me");
+                    localStorage.removeItem("admin_saved_id");
+                    localStorage.removeItem("admin_saved_password");
                 }
 
                 // Close modal and navigate
@@ -279,14 +309,24 @@ export const AdminLogin = () => {
                 sessionStorage.setItem('token', response.data.access);
                 sessionStorage.setItem('access_token', response.data.access);
 
+                // if (rememberMe) {
+                //     sessionStorage.setItem("admin_remember_me", "true");
+                //     sessionStorage.setItem("admin_saved_id", formValues.adminID);
+                //     sessionStorage.setItem("admin_saved_password", formValues.password);
+                // } else {
+                //     sessionStorage.removeItem("admin_remember_me");
+                //     sessionStorage.removeItem("admin_saved_id");
+                //     sessionStorage.removeItem("admin_saved_password");
+                // }
+
                 if (rememberMe) {
-                    sessionStorage.setItem("admin_remember_me", "true");
-                    sessionStorage.setItem("admin_saved_id", formValues.adminID);
-                    sessionStorage.setItem("admin_saved_password", formValues.password);
+                    localStorage.setItem("admin_remember_me", "true");
+                    localStorage.setItem("admin_saved_id", formValues.adminID);
+                    localStorage.setItem("admin_saved_password", formValues.password);
                 } else {
-                    sessionStorage.removeItem("admin_remember_me");
-                    sessionStorage.removeItem("admin_saved_id");
-                    sessionStorage.removeItem("admin_saved_password");
+                    localStorage.removeItem("admin_remember_me");
+                    localStorage.removeItem("admin_saved_id");
+                    localStorage.removeItem("admin_saved_password");
                 }
                 navigate("/Job-portal/admin/dashboard");
             } else {
@@ -299,7 +339,7 @@ export const AdminLogin = () => {
             } else {
                 const status = error.response.status;
                 const errorData = error.response?.data;
-                
+
                 // Check if it's a non-admin user trying to login
                 if (errorData?.errors?.email && errorData.errors.email.includes("does not have admin access")) {
                     setErrors({
@@ -333,7 +373,7 @@ export const AdminLogin = () => {
                         errorData?.password?.[0] ||
                         errorData?.email?.[0] ||
                         null;
-                    
+
                     if (message) {
                         // Try to determine which field the error belongs to
                         if (message.toLowerCase().includes('password')) {
@@ -432,7 +472,7 @@ export const AdminLogin = () => {
                                 onChange={handleRememberMe}
                             />
                             <span>Remember me</span>
-                            
+
                         </label>
                         <Link to="/Job-portal/admin/login/forgotpassword" className="forgot-password">
                             Forgot Password?
