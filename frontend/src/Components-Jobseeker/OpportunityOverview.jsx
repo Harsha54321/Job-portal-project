@@ -19,7 +19,6 @@ import api from "../api/axios";
 export const OpportunityOverview = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  // const { id } = useParams();
   const [job, setJob] = useState(null);
   const [limitedSimilarJob, setLimitedSimilarJob] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -28,19 +27,52 @@ export const OpportunityOverview = () => {
   const [searchLocation, setSearchLocation] = useState("");
   const [searchExperience, setSearchExperience] = useState("");
   const [isLocationPopupOpen, setIsLocationPopupOpen] = useState(false);
-
+  const [similarLocationPopup, setSimilarLocationPopup] = useState({
+    open: false,
+    jobId: null,
+    locations: []
+  });
 
   const { jobs, appliedJobs, toggleSaveJob, saveJob, isJobSaved } = useJobs();
-
-  // const job = jobs.find(singleJob => singleJob.id === id) || appliedJobs.find(singleJob => singleJob.id === id);
-
   const saved = job ? isJobSaved(job.id) : false;
-  // const saved = isJobSaved(job.id);
   const { isJobApplied } = useJobs();
   const isApplied = job ? isJobApplied(job.id) : false;
 
+  // ✅ Helper function for location display
+  const getLocationDisplay = (location, maxDisplay = 3) => {
+    if (!location) return { display: "Location not specified", allLocations: [], hasMore: false };
+
+    let locationsArray = [];
+    if (Array.isArray(location)) {
+      locationsArray = location;
+    } else if (typeof location === 'string') {
+      locationsArray = location.split(',').map(l => l.trim()).filter(l => l !== "");
+    } else {
+      return { display: "Location not specified", allLocations: [], hasMore: false };
+    }
+
+    if (locationsArray.length === 0) {
+      return { display: "Location not specified", allLocations: [], hasMore: false };
+    }
+
+    const displayLocations = locationsArray.slice(0, maxDisplay);
+    const remainingCount = locationsArray.length - maxDisplay;
+    const hasMore = remainingCount > 0;
+
+    let display = displayLocations.join(", ");
+    if (hasMore) {
+      display += ` +${remainingCount} more`;
+    }
+
+    return {
+      display,
+      allLocations: locationsArray,
+      hasMore,
+      remainingCount
+    };
+  };
+
   const handleSave = async () => {
-    // const result = await saveJob(job.id);
     try {
       await saveJob(job.id);
       alert("Job saved successfully");
@@ -57,20 +89,8 @@ export const OpportunityOverview = () => {
 
   const handleApply = () => {
     if (isApplied) return;
-
     navigate(`/Job-portal/jobseeker/jobapplication/${job.id}`);
   };
-
-
-  // const similarJobs = jobs.filter((similarJob) => {
-  //   return similarJob.id !== job.id && similarJob.Department.some(item => job.Department.includes(item));
-  // });
-
-  // // const limitedSimilarJob = similarJobs.slice(0, 9);
-
-  // const [query, setQuery] = useState('');
-  // const [loc, setLoc] = useState('');
-  // const [exp, setExp] = useState('');
 
   const handleSearch = () => {
     navigate("/Job-portal/jobseeker/searchresults", {
@@ -85,23 +105,12 @@ export const OpportunityOverview = () => {
   useEffect(() => {
     const fetchJobDetails = async () => {
       try {
-        // 1️⃣ Fetch main job
         const jobRes = await api.get(`/jobs/${id}/`);
         setJob(jobRes.data);
 
-        // 2️⃣ Fetch all jobs
         const allJobsRes = await api.get(`/jobs/all/`);
-
-        // // ✅ Handle pagination safely
-        // const jobsArray = Array.isArray(allJobsRes.data)
-        //   ? allJobsRes.data
-        //   : allJobsRes.data.results || [];
         const jobsArray = allJobsRes.data.jobs || allJobsRes.data.results || [];
 
-        // 3️⃣ Filter similar (exclude current job)
-        // const similar = jobsArray
-        //   .filter(j => Number(j.id) !== Number(jobRes.data.id))
-        //   .slice(0, 3);
         const similar = jobsArray
           .filter(j => Number(j.id) !== Number(jobRes.data.id))
           .filter(j => {
@@ -119,9 +128,7 @@ export const OpportunityOverview = () => {
           })
           .slice(0, 9);
 
-
         setLimitedSimilarJob(similar);
-
         setLoading(false);
       } catch (err) {
         console.error(err);
@@ -135,8 +142,6 @@ export const OpportunityOverview = () => {
     }
   }, [id]);
 
-
-  // ✅ Safety checks
   if (loading) return (
     <>
       <Header />
@@ -170,8 +175,6 @@ export const OpportunityOverview = () => {
     );
   }
 
-  // if (!job) return null;
-  // 1. RESTORE formatLocation so the "Similar Jobs" sidebar doesn't crash!
   const formatLocation = (location) => {
     if (!location) return "Location not specified";
     if (Array.isArray(location)) {
@@ -180,19 +183,14 @@ export const OpportunityOverview = () => {
     return location;
   };
 
-  // 2. BULLETPROOF parsing for the main job locations
   let locationsList = [];
   if (job?.location) {
-    // Force the location into a single string first. 
-    // This handles both "City1, City2" and ["City1, City2"] safely.
     const rawLocationStr = Array.isArray(job.location) ? job.location.join(', ') : job.location;
-
-    // Now aggressively split it by commas so length is counted correctly
     if (typeof rawLocationStr === 'string') {
       locationsList = rawLocationStr
         .split(',')
         .map(l => l.trim())
-        .filter(l => l !== ""); // remove empty strings
+        .filter(l => l !== "");
     }
   }
 
@@ -242,7 +240,6 @@ export const OpportunityOverview = () => {
                     {job.company?.company_name?.[0]?.toUpperCase()}
                   </div>
                 )}
-
               </div>
 
               <div className="Opportunities-job-details">
@@ -266,7 +263,7 @@ export const OpportunityOverview = () => {
                           className="opp-show-more-link"
                           onClick={() => setIsLocationPopupOpen(true)}
                         >
-                          {" "}+{locationsList.length - 3} more
+                          {" +" + (locationsList.length - 3) + " more"}
                         </span>
                       </>
                     ) : (
@@ -277,14 +274,6 @@ export const OpportunityOverview = () => {
               </div>
 
               <div className='Opportunities-details-bottom'>
-                {/* <div className="Opportunities-job-tags">
-                  {Array.isArray(job.tags) &&
-                    job.tags.map((tag, index) => (
-                      <span key={index} className="Opportunities-job-tag">
-                        {tag}
-                      </span>
-                    ))}
-                </div> */}
                 <div className="Opportunities-job-tags">
                   {job.job_category && (
                     <span className={`Opportunities-job-tag ${job.job_category.toLowerCase().replace(/\s+/g, '-')}`}>
@@ -292,7 +281,6 @@ export const OpportunityOverview = () => {
                     </span>
                   )}
                 </div>
-
                 <div className="Opportunities-job-type">
                   {job.work_type}
                 </div>
@@ -326,7 +314,7 @@ export const OpportunityOverview = () => {
                     style={{
                       opacity: isApplied ? 0.6 : 1,
                       cursor: isApplied ? 'not-allowed' : 'pointer',
-                      backgroundColor: isApplied ? '#6c757d' : '' // Optional grey out
+                      backgroundColor: isApplied ? '#6c757d' : ''
                     }}
                   >
                     {isApplied ? "Applied" : "Apply"}
@@ -349,7 +337,6 @@ export const OpportunityOverview = () => {
               <h3>Company Overview</h3>
               <p>{job.company?.about || ""}</p>
 
-
               <h3>Job Description</h3>
               <p>{job.job_description}</p>
 
@@ -361,12 +348,25 @@ export const OpportunityOverview = () => {
                   ))}
               </ul>
 
-              {/* <h3>Key Details:</h3> */}
               <p><strong>Role:</strong> {job.job_title}</p>
               <p><strong>Industry Type:</strong> {Array.isArray(job.industry_type) ? job.industry_type.join(", ") : job.industry_type}</p>
               <p><strong>Department:</strong> {Array.isArray(job.department) ? job.department.join(", ") : job.department}</p>
               <p><strong>Job Type:</strong> {job.work_type}</p>
-              <p><strong>Location:</strong> {locationDisplay}</p>
+              <p><strong>Location:</strong><span className="location-text-wrap">
+                {locationsList.length > 3 ? (
+                  <>
+                    {locationsList.slice(0, 3).join(", ")}
+                    <span
+                      className="opp-show-more-link"
+                      onClick={() => setIsLocationPopupOpen(true)}
+                    >
+                      {" +" + (locationsList.length - 3) + " more"}
+                    </span>
+                  </>
+                ) : (
+                  locationDisplay
+                )}
+              </span></p>
               <p><strong>Shift:</strong> {job.shift}</p>
 
               <h3>Key Skills</h3>
@@ -393,61 +393,85 @@ export const OpportunityOverview = () => {
             </div>
           </div>
 
+          {/* Similar Jobs Section - Updated with location popup */}
           <div className="opp-job-sidebar">
             <h3>Similar Jobs</h3>
             {limitedSimilarJob.length > 0 ? (
-              limitedSimilarJob.map((sim) => (
-                <div
-                  key={sim.id}
-                  onClick={() => navigate(`/Job-portal/jobseeker/OpportunityOverview/${sim.id}`)}
-                  className="opp-similar-job"
-                >
-                  <div className="Opportunities-job-header">
-                    <div>
-                      <h2 className="similar-job-title">{sim.job_title}</h2>
-                      <p className="similar-job-company">
-                        {sim.company?.company_name}
-                        <span className="Opportunities-divider">|</span>
-                        <span className="star"><img src={starIcon} alt="star" /></span>
-                        {sim.company?.rating || 0}
-                        <span className="Opportunities-divider">|</span>
-                        <span>{sim.company?.review_count || 0} reviews</span>
-                      </p>
+              limitedSimilarJob.map((sim) => {
+                const locationInfo = getLocationDisplay(sim.location);
 
-                    </div>
-                    {sim.company.logo || sim.company.company_logo ? (
-                      <img
-                        src={sim.company.logo || sim.company.company_logo}
-                        alt={sim.company?.company_name}
-                        className="Opportunities-job-logo"
-                      />
-                    ) : (
-                      <div className="Opportunities-job-logo-placeholder">
-                        {sim.company?.company_name?.[0]?.toUpperCase()}
+                return (
+                  <div
+                    key={sim.id}
+                    onClick={() => navigate(`/Job-portal/jobseeker/OpportunityOverview/${sim.id}`)}
+                    className="opp-similar-job"
+                  >
+                    <div className="Opportunities-job-header">
+                      <div>
+                        <h2 className="similar-job-title">{sim.job_title}</h2>
+                        <p className="similar-job-company">
+                          {sim.company?.company_name}
+                          <span className="Opportunities-divider">|</span>
+                          <span className="star"><img src={starIcon} alt="star" /></span>
+                          {sim.company?.rating || 0}
+                          <span className="Opportunities-divider">|</span>
+                          <span>{sim.company?.review_count || 0} reviews</span>
+                        </p>
                       </div>
-                    )}
-
-                  </div>
-                  <div className="Opportunities-job-details">
-                    <p className='Opportunities-detail-line'>
-                      {Array.isArray(sim.tags) ? sim.tags.join(", ") : sim.tags}
-                      {" "}- {sim.experience}
-                    </p>
-                    <p className='Opportunities-detail-line'>
-                      <img src={place} className='card-icons' alt="location" />
-                      {formatLocation(sim.location)}
-                    </p>
-                  </div>
-                  <div className="similar-job-footer">
-                    <div className="Opportunities-job-type">
-                      {sim.work_type}
+                      {sim.company.logo || sim.company.company_logo ? (
+                        <img
+                          src={sim.company.logo || sim.company.company_logo}
+                          alt={sim.company?.company_name}
+                          className="Opportunities-job-logo"
+                        />
+                      ) : (
+                        <div className="Opportunities-job-logo-placeholder">
+                          {sim.company?.company_name?.[0]?.toUpperCase()}
+                        </div>
+                      )}
                     </div>
-                    <p className='similar-job-footer-posted'>
-                      {formatPostedDate(sim.posted_date)}
-                    </p>
+
+                    <div className="Opportunities-job-details">
+                      <p className='Opportunities-detail-line'>
+                        {Array.isArray(sim.tags) ? sim.tags.join(", ") : sim.tags}
+                        {" "}- {sim.experience}
+                      </p>
+                      <p className='Opportunities-detail-line'>
+                        <img src={place} className='card-icons' alt="location" />
+                        {locationInfo.hasMore ? (
+                          <>
+                            {locationInfo.allLocations.slice(0, 3).join(", ")}
+                            <span
+                              className="opp-show-more-link"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSimilarLocationPopup({
+                                  open: true,
+                                  jobId: sim.id,
+                                  locations: locationInfo.allLocations
+                                });
+                              }}
+                            >
+                              {" +" + locationInfo.remainingCount + " more"}
+                            </span>
+                          </>
+                        ) : (
+                          locationInfo.display
+                        )}
+                      </p>
+                    </div>
+
+                    <div className="similar-job-footer">
+                      <div className="Opportunities-job-type">
+                        {sim.work_type}
+                      </div>
+                      <p className='similar-job-footer-posted'>
+                        {formatPostedDate(sim.posted_date)}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              ))
+                );
+              })
             ) : (
               <div>
                 <p>Currently no similar jobs available.</p>
@@ -458,7 +482,7 @@ export const OpportunityOverview = () => {
       </div>
       <Footer />
 
-      {/* Location Popup Modal */}
+      {/* Main Location Popup Modal */}
       {isLocationPopupOpen && (
         <div className="opp-loc-modal-overlay" onClick={() => setIsLocationPopupOpen(false)}>
           <div className="opp-loc-modal-content" onClick={e => e.stopPropagation()}>
@@ -474,6 +498,31 @@ export const OpportunityOverview = () => {
           </div>
         </div>
       )}
+
+      {/* Similar Jobs Location Popup Modal */}
+      {similarLocationPopup.open && (
+        <div
+          className="opp-loc-modal-overlay"
+          onClick={() => setSimilarLocationPopup({ open: false, jobId: null, locations: [] })}
+        >
+          <div className="opp-loc-modal-content" onClick={e => e.stopPropagation()}>
+            <div className="opp-loc-modal-header">
+              <h3>All Locations</h3>
+              <button
+                className="opp-loc-modal-close"
+                onClick={() => setSimilarLocationPopup({ open: false, jobId: null, locations: [] })}
+              >
+                &times;
+              </button>
+            </div>
+            <div className="opp-loc-modal-body">
+              {similarLocationPopup.locations.map((loc, index) => (
+                <span key={index} className="opp-loc-chip">{loc}</span>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </>
-  )
-}
+  );
+};

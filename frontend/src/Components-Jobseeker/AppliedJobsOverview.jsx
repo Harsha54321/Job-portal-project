@@ -24,7 +24,6 @@ const AnimatedConnector = styled(StepConnector)(({ theme }) => ({
   },
   '&.Mui-active .MuiStepConnector-line': {
     borderColor: '#1976d2',
-
   },
   '&.Mui-completed .MuiStepConnector-line': {
     borderColor: '#1976d2',
@@ -40,6 +39,9 @@ export const AppliedJobsOverview = () => {
   const [appliedJob, setAppliedJob] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeStep, setActiveStep] = useState(-1);
+
+  // ✅ Location popup state
+  const [isLocationPopupOpen, setIsLocationPopupOpen] = useState(false);
 
   // Fetch application by ID
   useEffect(() => {
@@ -66,15 +68,11 @@ export const AppliedJobsOverview = () => {
 
     try {
       await api.patch(`/jobs/applications/${appliedJob.id}/withdraw/`);
-      // Update local page state
       setAppliedJob(prev => ({
         ...prev,
         status: "withdrawn"
       }));
-
-      // Refresh applied jobs in context
       await refreshAppliedJobs();
-
       alert("Application withdrawn successfully");
       navigate("/Job-portal/jobseeker");
     } catch (err) {
@@ -94,21 +92,18 @@ export const AppliedJobsOverview = () => {
     "hired",
   ];
 
-  // useEffect(() => {
-  //   if (!appliedJob?.status) return;
-
-  //   const index = statusOrder.indexOf(appliedJob.status);
-  //   setActiveStep(index === -1 ? 0 : index);
-  // }, [appliedJob]);
-
   useEffect(() => {
     if (!appliedJob?.status) return;
 
     const status = appliedJob.status.toLowerCase();
+    const storageKey = `last_stage_${appliedJob.id}`;
 
     if (status === "rejected") {
-      setActiveStep(1); // Only "Application Submitted" shows ✓
+      const savedStage = localStorage.getItem(storageKey);
+      const index = statusOrder.indexOf(savedStage);
+      setActiveStep(index === -1 ? 0 : index);
     } else {
+      localStorage.setItem(storageKey, status);
       const index = statusOrder.indexOf(status);
       setActiveStep(index === -1 ? 0 : index);
     }
@@ -120,17 +115,42 @@ export const AppliedJobsOverview = () => {
 
   const job = appliedJob.job;
 
-  const formatLocation = (location) => {
+  // ✅ Helper function to get location display with + more
+  const getLocationDisplay = (location, maxDisplay = 2) => {
+    if (!location) return { display: "Location not specified", allLocations: [], hasMore: false };
 
-    if (!location) return "Location not specified";
-
+    let locationsArray = [];
     if (Array.isArray(location)) {
-      return location.join(", ");
+      locationsArray = location;
+    } else if (typeof location === 'string') {
+      locationsArray = location.split(',').map(l => l.trim()).filter(l => l !== "");
+    } else {
+      return { display: "Location not specified", allLocations: [], hasMore: false };
     }
-    return location;
+
+    if (locationsArray.length === 0) {
+      return { display: "Location not specified", allLocations: [], hasMore: false };
+    }
+
+    const displayLocations = locationsArray.slice(0, maxDisplay);
+    const remainingCount = locationsArray.length - maxDisplay;
+    const hasMore = remainingCount > 0;
+
+    let display = displayLocations.join(", ");
+    if (hasMore) {
+      display += ` +${remainingCount} more`;
+    }
+
+    return {
+      display,
+      allLocations: locationsArray,
+      hasMore,
+      remainingCount
+    };
   };
 
-  const locationDisplay = formatLocation(job.location);
+  // ✅ Get location info
+  const locationInfo = getLocationDisplay(job.location, 2);
 
   const viewJob = {
     title: job.job_title,
@@ -140,8 +160,8 @@ export const AppliedJobsOverview = () => {
     WorkType: job.work_type,
     experience: job.experience,
     salary: job.salary,
-    location: locationDisplay,
-    logo: job.company.logo || job.company.company_logo,
+    location: locationInfo.display,
+    logo: job.company?.logo || job.company?.company_logo,
     tags: job.job_category || "",
     JobHighlights: job.job_highlights || [],
     Responsibilities: job.responsibilities || [],
@@ -149,13 +169,12 @@ export const AppliedJobsOverview = () => {
     jobDescription: job.job_description,
     companyOverview: job.company?.about || "",
     status: {
-      type: appliedJob.job.job_status.toLowerCase(),
+      type: appliedJob.job.job_status?.toLowerCase() || "reviewing application",
       text: appliedJob.job.job_status
-        .replace(/_/g, " ")
-        .replace(/\b\w/g, c => c.toUpperCase()),
+        ?.replace(/_/g, " ")
+        ?.replace(/\b\w/g, c => c.toUpperCase()) || "Reviewing Application",
     },
   };
-
 
   const applicationStatus = [
     {
@@ -189,21 +208,51 @@ export const AppliedJobsOverview = () => {
   ];
 
   return (
-
-    <div >
+    <div>
       <Header />
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr" }} className='appliedjobsO-job-card'>
-        <div >
+        <div>
           <div className="myjobs-card-header">
             <div><h2 className="myjobs-job-title">{viewJob.title}</h2></div>
-
           </div>
           <div style={{ marginTop: "20px" }} className="myjobs-company-sub">
-            <p className="myjobs-company-name"> {viewJob.company} <span className="Opportunities-divider">|</span><span className="star"><img src={starIcon} /></span> {viewJob.ratings}<span className="Opportunities-divider">|</span><span>{viewJob.reviewNo}</span></p>
+            <p className="myjobs-company-name">
+              {viewJob.company}
+              <span className="Opportunities-divider">|</span>
+              <span className="star"><img src={starIcon} alt="star" /></span>
+              {viewJob.ratings}
+              <span className="Opportunities-divider">|</span>
+              <span>{viewJob.reviewNo}</span>
+            </p>
           </div>
           <div style={{ marginTop: "20px" }} className="Opportunities-job-details">
-            <p className='Opportunities-detail-line'><img src={time} className='card-icons' />{viewJob.WorkType} <span className="Opportunities-divider">|</span> <span>{viewJob.salary}</span><span className="Opportunities-divider">|</span> <img src={experience} className='card-icons' />{viewJob.experience} <span className="Opportunities-divider">|</span><img src={place} className='card-icons' /> Coimbatore </p>
+            <p className='Opportunities-detail-line'>
+              <img src={time} className='card-icons' alt="time" />
+              {viewJob.WorkType}
+              <span className="Opportunities-divider">|</span>
+              <span>{viewJob.salary}</span>
+              <span className="Opportunities-divider">|</span>
+              <img src={experience} className='card-icons' alt="experience" />
+              {viewJob.experience}
+              <span className="Opportunities-divider">|</span>
+              <img src={place} className='card-icons' alt="location" />
+
+              {/* ✅ Location with + more functionality */}
+              {locationInfo.hasMore ? (
+                <>
+                  {locationInfo.allLocations.slice(0, 2).join(", ")}
+                  <span
+                    className="opp-show-more-link"
+                    onClick={() => setIsLocationPopupOpen(true)}
+                  >
+                    +{locationInfo.remainingCount} more
+                  </span>
+                </>
+              ) : (
+                viewJob.location
+              )}
+            </p>
           </div>
           <div style={{ marginTop: "20px", alignItems: "center", display: "flex", justifyContent: "space-between" }} className="Applied-job-tags">
             {viewJob.tags && (
@@ -221,7 +270,6 @@ export const AppliedJobsOverview = () => {
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", alignItems: "end", paddingRight: "50px" }}>
-
           {viewJob.logo ? (
             <img
               width={150}
@@ -253,11 +301,8 @@ export const AppliedJobsOverview = () => {
             <h3>Company Overview</h3>
             <p>{viewJob.companyOverview}</p>
 
-
             <h3>Job Description</h3>
-            <p>
-              {viewJob.jobDescription}
-            </p>
+            <p>{viewJob.jobDescription}</p>
 
             <h3>Responsibilities</h3>
             <ul>
@@ -266,10 +311,25 @@ export const AppliedJobsOverview = () => {
               ))}
             </ul>
 
-            {/* <h3>Key Details:</h3> */}
             <p><strong>Role:</strong> {viewJob.title}</p>
             <p><strong>Job Type:</strong> {viewJob.WorkType}</p>
-            <p><strong>Location:</strong> {viewJob.location}</p>
+            <p>
+              <strong>Location:</strong>
+              {/* ✅ Location with + more in details section */}
+              {locationInfo.hasMore ? (
+                <>
+                  {locationInfo.allLocations.slice(0, 2).join(", ")}
+                  <span
+                    className="opp-show-more-link"
+                    onClick={() => setIsLocationPopupOpen(true)}
+                  >
+                    +{locationInfo.remainingCount} more
+                  </span>
+                </>
+              ) : (
+                viewJob.location
+              )}
+            </p>
             <p><strong>Experience:</strong> {viewJob.experience}</p>
             <p><strong>Salary:</strong> {viewJob.salary}</p>
 
@@ -297,38 +357,9 @@ export const AppliedJobsOverview = () => {
         </div>
         <div className="status-container">
           <div className="status-header">
-            <img src={breifcase} className='card-icons' />
+            <img src={breifcase} className='card-icons' alt="briefcase" />
             <h3>Application status</h3>
           </div>
-
-          {/* <Box sx={{ width: '100%' }}>
-            <Stepper
-              orientation="vertical"
-              activeStep={activeStep}
-              connector={<AnimatedConnector />}
-            >
-              {applicationStatus.map((step, index) => (
-                <Step key={index}>
-                  <StepLabel
-                    optional={
-                      <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary' }}>
-                        {step.sub}
-                      </Typography>
-                    }
-                    sx={{
-                      '& .MuiStepLabel-label': {
-                        fontWeight: index <= activeStep ? 700 : 400,
-                        color: index <= activeStep ? '#1976d2' : 'inherit',
-                        transition: 'color 1.50s ease'
-                      }
-                    }}
-                  >
-                    {step.label}
-                  </StepLabel>
-                </Step>
-              ))}
-            </Stepper>
-          </Box> */}
 
           <Box sx={{ width: '100%' }}>
             <Stepper
@@ -358,7 +389,7 @@ export const AppliedJobsOverview = () => {
               ))}
             </Stepper>
 
-            {/* ✅ Rejected banner appears BELOW the stepper */}
+            {/* Rejected banner */}
             {appliedJob.status?.toLowerCase() === "rejected" && (
               <Box sx={{
                 mt: 2,
@@ -375,7 +406,6 @@ export const AppliedJobsOverview = () => {
                 </Typography>
               </Box>
             )}
-
           </Box>
           {appliedJob.status?.toLowerCase() === "applied" && (
             <button
@@ -394,16 +424,32 @@ export const AppliedJobsOverview = () => {
               Withdraw
             </button>
           )}
-
         </div>
         {appliedJob.status?.toLowerCase() !== "applied" && (
           <p style={{ color: "gray", fontSize: "12px" }}>
             Withdrawal not allowed after screening
           </p>
         )}
-
       </div>
-    </div>
 
+      {/* ✅ Location Popup Modal */}
+      {isLocationPopupOpen && (
+        <div className="opp-loc-modal-overlay" onClick={() => setIsLocationPopupOpen(false)}>
+          <div className="opp-loc-modal-content" onClick={e => e.stopPropagation()}>
+            <div className="opp-loc-modal-header">
+              <h3>All Locations</h3>
+              <button className="opp-loc-modal-close" onClick={() => setIsLocationPopupOpen(false)}>
+                &times;
+              </button>
+            </div>
+            <div className="opp-loc-modal-body">
+              {locationInfo.allLocations.map((loc, index) => (
+                <span key={index} className="opp-loc-chip">{loc}</span>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 };

@@ -1,4 +1,5 @@
 import React, { useCallback, useState, useEffect, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 import './Chatbox.css';
 import { useJobs } from '../JobContext';
 import home from "../assets/home_icon.png";
@@ -8,6 +9,9 @@ import api from '../api/axios';
 export const EMessenger = () => {
   const context = useJobs();
 
+  const location = useLocation();
+
+  const userId = location.state?.userId;
   // Safety check
   if (!context) {
     console.error("JobContext is not available");
@@ -18,7 +22,6 @@ export const EMessenger = () => {
     chats,
     setChats,
     Alluser,
-    setAlluser,
     currentEmployer,
     addNotification,
     activeSidebarUsers,
@@ -30,7 +33,7 @@ export const EMessenger = () => {
     currentUserId,
     isChatEnded,
     setIsChatEnded,
-    loading: contextLoading
+    fetchAllUsers
   } = context;
 
   const [input, setInput] = useState("");
@@ -38,7 +41,6 @@ export const EMessenger = () => {
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [messages, setMessages] = useState([]);
-  const [initialLoading, setInitialLoading] = useState(true);
   const scrollRef = useRef(null);
   const pollingRef = useRef(null);
   const isComponentMounted = useRef(true);
@@ -54,34 +56,13 @@ export const EMessenger = () => {
     };
   }, []);
 
-  // Fetch all users directly if not available in context
-  const fetchAllUsers = useCallback(async () => {
-    try {
-      // Check if users already exist in context
-      if (Alluser && Alluser.length > 0) {
-        console.log("✅ Users already loaded in context:", Alluser.length);
-        return Alluser;
+  useEffect(()=>{
+      fetchAllUsers()
+      if(userId)
+      {
+        setSelectedUserId(userId)
       }
-
-      console.log("📡 Fetching jobseekers from API...");
-      const response = await api.get("/jobseekers/", { timeout: 10000 });
-      const allData = response.data;
-
-      // Filter only jobseekers
-      const jobseekersOnly = allData.filter(item => item.user?.user_type === "jobseeker");
-      console.log(`✅ Loaded ${jobseekersOnly.length} jobseekers`);
-
-      // Update context with fetched users
-      if (setAlluser) {
-        setAlluser(jobseekersOnly);
-      }
-
-      return jobseekersOnly;
-    } catch (err) {
-      console.error("❌ Error fetching jobseekers:", err);
-      return [];
-    }
-  }, [Alluser, setAlluser]);
+  },[])
 
   const markAsRead = async (messageId) => {
     try {
@@ -114,15 +95,35 @@ export const EMessenger = () => {
   }, [chats]);
 
   const activeConversation = getConversationForUser(selectedUserId);
-
-  // Get active user from Alluser, or fetch if needed
   const activeUser = Alluser?.find(u => parseInt(u.user?.id) === selectedUserId);
 
-  const sidebarDisplayUsers = Alluser?.filter(user => {
+  // const sidebarDisplayUsers = Alluser?.filter(user => {
+  //   const hasConversation = chats.some(chat =>
+  //     chat.participants?.some(p => p.id === parseInt(user.user?.id))
+  //   );
+    
+  // }) || [];
+const sidebarDisplayUsers =
+  Alluser?.filter(user => {
     const hasConversation = chats.some(chat =>
-      chat.participants?.some(p => p.id === parseInt(user.user?.id))
+      chat.participants?.some(
+        p => p.id === parseInt(user.user?.id)
+      )
     );
-    return hasConversation || activeSidebarUsers?.includes(parseInt(user.user?.id));
+
+    return (
+      user.user?.user_type === "jobseeker" &&
+      (
+        hasConversation ||
+        activeSidebarUsers?.includes(parseInt(user.user?.id))
+      )
+    );
+  }).sort((a, b) => {
+    const convA = chats.find(c => c.participants?.some(p => p.id === parseInt(a.user?.id)));
+    const convB = chats.find(c => c.participants?.some(p => p.id === parseInt(b.user?.id)));
+    const timeA = new Date(convA?.updated_at || 0);
+    const timeB = new Date(convB?.updated_at || 0);
+    return timeB - timeA;
   }) || [];
 
   // Fetch messages when conversation is selected
@@ -157,51 +158,17 @@ export const EMessenger = () => {
     }
   }, [selectedUserId, activeConversation?.id, fetchMsg]);
 
-  // Load all data on mount
+  // Load chats on mount
   useEffect(() => {
-    const loadInitialData = async () => {
+    const loadChats = async () => {
       try {
-        setInitialLoading(true);
-        console.log("🚀 EMessenger: Loading initial data...");
-
-        // 1. Fetch all users (jobseekers)
-        const users = await fetchAllUsers();
-        console.log(`📊 Total users loaded: ${users.length}`);
-
-        // 2. Fetch chats
         await fetchChats();
-        console.log("✅ Chats loaded successfully");
-
-        // 3. Restore selected user from session storage if exists
-        const savedUserId = sessionStorage.getItem('selectedChatUserId');
-        if (savedUserId && users.some(u => parseInt(u.user?.id) === parseInt(savedUserId))) {
-          setSelectedUserId(parseInt(savedUserId));
-          console.log(`🔄 Restored selected user: ${savedUserId}`);
-        }
-
-        console.log("✅ EMessenger: Initial data load complete");
       } catch (err) {
-        console.error("❌ Failed to load initial data:", err);
-      } finally {
-        if (isComponentMounted.current) {
-          setInitialLoading(false);
-        }
+        console.error("Failed to load chats:", err);
       }
     };
-
-    loadInitialData();
-
-    // Set up polling for new chats
-    const pollInterval = setInterval(() => {
-      if (isComponentMounted.current) {
-        fetchChats().catch(err => console.error("Polling error:", err));
-      }
-    }, 30000);
-
-    return () => {
-      clearInterval(pollInterval);
-    };
-  }, [fetchAllUsers, fetchChats]);
+    loadChats();
+  }, [fetchChats]);
 
   // Auto scroll
   useEffect(() => {
@@ -317,23 +284,6 @@ export const EMessenger = () => {
 
   const groupedMessages = groupMessagesByDate(messages);
 
-  // Show loading state while initial data is being fetched
-  if (initialLoading || contextLoading) {
-    return (
-      <div style={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        height: '100vh',
-        flexDirection: 'column',
-        gap: '20px'
-      }}>
-        <div className="loader">Loading...</div>
-        <p style={{ color: '#666' }}>Please wait while we load your chats...</p>
-      </div>
-    );
-  }
-
   return (
     <div className="messages-container">
       <div className="EChat-Mainsec">
@@ -356,10 +306,7 @@ export const EMessenger = () => {
                   <div
                     key={user.id}
                     className={`sidebar-item ${isActive ? 'active' : ''}`}
-                    onClick={() => {
-                      setSelectedUserId(parseInt(user.user?.id));
-                      sessionStorage.setItem('selectedChatUserId', parseInt(user.user?.id));
-                    }}
+                    onClick={() => setSelectedUserId(parseInt(user.user?.id))}
                     style={{ cursor: 'pointer' }}
                   >
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>

@@ -258,30 +258,33 @@ class EmployerRegistrationSerializer(UserRegistrationSerializer):
  
  
 # Child Model Serializers
- 
+
 class EducationEntrySerializer(serializers.ModelSerializer):
     class Meta:
         model = EducationEntry
-        fields = '__all__'
+        fields = ['id', 'qualification_level', 'institution', 'degree', 
+                  'department', 'completion_year', 'start_year', 'end_year',
+                  'status', 'percentage_or_cgpa', 'location', 'city', 'state', 
+                  'country', 'post_10th_study']
         read_only_fields = ['id', 'profile']
- 
+
     def validate(self, data):
         level = data.get('qualification_level')
         errors = {}
- 
+
         if not data.get('institution'):
             errors['institution'] = "Institution name is required."
- 
+
         if level in ['SSLC', 'HSC', 'Diploma']:
             if not data.get('completion_year'):
                 errors['completion_year'] = "Year of completion is required for this level."
- 
+
         if level == 'HSC' and not data.get('post_10th_study'):
             errors['post_10th_study'] = "Please select what you studied after 10th."
- 
+
         if errors:
             raise serializers.ValidationError(errors)
- 
+
         return data
  
 
@@ -1871,30 +1874,112 @@ class JobApplicationListSerializer(serializers.ModelSerializer):
  
 class JobApplicationEmployerSerializer(serializers.ModelSerializer):
     job = JobReadSerializer(read_only=True)
-    user = UserReadSerializer(read_only=True)
+    user = serializers.SerializerMethodField()
     total_experience_years = serializers.SerializerMethodField()
 
     class Meta:
         model = JobApplication
-        fields = ['id', 'job', 'user', 'applied_date', 'status', 'cover_letter','total_experience_years']
+        fields = ['id', 'job', 'user', 'applied_date', 'status', 
+                  'cover_letter', 'total_experience_years', 'resume_version']
         read_only_fields = ['id', 'applied_date']
 
-    # def get_total_experience_years(self, obj):
-    #     profile = getattr(obj.user, 'jobseeker_profile', None)
-    #     return profile.total_experience_years if profile else 0
+    def get_user(self, obj):
+        """Return user with complete jobseeker profile data"""
+        user = obj.user
+        
+        # Base user data
+        user_data = {
+            'id': user.id,
+            'username': user.username,
+            'email': user.email,
+            'phone': user.phone,
+            'user_type': user.user_type,
+        }
+        
+        # Add jobseeker profile data if available
+        if hasattr(user, 'jobseeker_profile'):
+            profile = user.jobseeker_profile
+            
+            # Get education entries
+            educations = profile.educations.all().order_by('-end_year', '-completion_year')
+            education_data = []
+            for edu in educations:
+                edu_data = {
+                    'id': edu.id,
+                    'qualification_level': edu.qualification_level,
+                    'institution': edu.institution,
+                    'degree': edu.degree,
+                    'department': edu.department,
+                    'completion_year': edu.completion_year.strftime('%Y') if edu.completion_year else None,
+                    'start_year': edu.start_year.strftime('%Y') if edu.start_year else None,
+                    'end_year': edu.end_year.strftime('%Y') if edu.end_year else None,
+                    'status': edu.status,
+                    'percentage_or_cgpa': str(edu.percentage_or_cgpa) if edu.percentage_or_cgpa else None,
+                }
+                education_data.append(edu_data)
+            
+            # Get skills
+            skills = list(profile.skills.values_list('name', flat=True))
+            
+            # Get profile photo URL
+            profile_photo_url = None
+            if profile.profile_photo:
+                request = self.context.get('request')
+                if request:
+                    profile_photo_url = request.build_absolute_uri(profile.profile_photo.url)
+                else:
+                    profile_photo_url = profile.profile_photo.url
+            
+            # Get resume URL
+            resume_url = None
+            if profile.resume_file:
+                request = self.context.get('request')
+                if request:
+                    resume_url = request.build_absolute_uri(profile.resume_file.url)
+                else:
+                    resume_url = profile.resume_file.url
+            
+            # Build complete profile data
+            user_data.update({
+                'full_name': profile.full_name or '',
+                'gender': profile.gender or '',
+                'current_job_title': profile.current_job_title or '',
+                'current_company': profile.current_company or '',
+                'current_location': profile.current_location or '',
+                'total_experience_years': float(profile.total_experience_years) if profile.total_experience_years else 0,
+                'notice_period': profile.notice_period or '',
+                'profile_photo': profile_photo_url,
+                'resume_file': resume_url,
+                'skills': skills,
+                'educations': education_data,
+                'expected_ctc': float(profile.expected_ctc) if profile.expected_ctc else None,
+                'current_ctc': float(profile.current_ctc) if profile.current_ctc else None,
+                'preferred_locations': profile.preferred_locations or '',
+                'city': profile.city or '',
+                'state': profile.state or '',
+                'country': profile.country or '',
+                'profile_completion': profile.profile_completion,
+            })
+        else:
+            # Fallback if no jobseeker profile
+            user_data.update({
+                'full_name': user.username,
+                'current_job_title': '',
+                'current_location': '',
+                'total_experience_years': 0,
+                'skills': [],
+                'educations': [],
+                'profile_photo': None,
+                'resume_file': None,
+            })
+        
+        return user_data
 
     def get_total_experience_years(self, obj):
         try:
             profile = obj.user.jobseeker_profile
-            if profile:
-                experience = profile.total_experience_years
-                print(f"✅ User: {obj.user.username} (ID: {obj.user.id}) - Experience: {experience}")
-                return float(experience) if experience is not None else 0
-            else:
-                print(f"❌ No JobSeekerProfile for user: {obj.user.username} (ID: {obj.user.id})")
-                return 0
-        except Exception as e:
-            print(f"❌ Error getting experience for {obj.user.username}: {e}")
+            return float(profile.total_experience_years) if profile.total_experience_years else 0
+        except:
             return 0
  
  

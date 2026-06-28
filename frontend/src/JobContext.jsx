@@ -5,7 +5,6 @@ const JobContext = createContext();
 
 export const JobProvider = ({ children }) => {
 
-    // ================= STATE =================
     const [jobs, setJobs] = useState([]);
     const [appliedJobs, setAppliedJobs] = useState([]);
     const [savedJobs, setSavedJobs] = useState([]);
@@ -15,19 +14,15 @@ export const JobProvider = ({ children }) => {
     const [notificationsData, setNotificationsData] = useState([]);
     const [showNotification, setShowNotification] = useState(false);
 
-    // Jobseeker
     const [currentUser, setCurrentUser] = useState(null);
     const currentUserId = currentUser?.id || sessionStorage.getItem("user_id") || null;
 
-    // Employer
     const [currentEmployer, setCurrentEmployer] = useState(null);
     const [companyProfile, setCompanyProfile] = useState(null);
     const [employerNotifications, setEmployerNotifications] = useState([]);
 
-    // All jobseekers for employer
     const [Alluser, setAlluser] = useState([]);
 
-    // UI States
     const [activeMenuId, setActiveMenuId] = useState(null);
     const [employeractiveMenuId, setEmployerActiveMenuId] = useState(null);
     const [employershowNotification, setEmployerShowNotification] = useState(false);
@@ -35,11 +30,9 @@ export const JobProvider = ({ children }) => {
     const [activeSidebarUsers, setActiveSidebarUsers] = useState([]);
     const [onlineStatus, setOnlineStatus] = useState("yes");
 
-    // Cache for messages to prevent unnecessary updates
     const messagesCache = useRef(new Map());
     const isUpdatingMessages = useRef(false);
 
-    // ================= HELPER FUNCTIONS =================
     const getFormattedDate = () => {
         return new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
     };
@@ -84,7 +77,6 @@ export const JobProvider = ({ children }) => {
         }));
     };
 
-    // ================= NOTIFICATIONS =================
     const addNotification = (text) => {
         const newNotif = {
             id: Date.now(),
@@ -116,7 +108,6 @@ export const JobProvider = ({ children }) => {
             }));
 
             const userType = sessionStorage.getItem("user_type");
-
             if (userType === "jobseeker") {
                 setNotificationsData(transformedData);
             } else if (userType === "employer") {
@@ -451,6 +442,18 @@ export const JobProvider = ({ children }) => {
             setActiveSidebarUsers(prev => [...prev, parseInt(userId)]);
         }
     };
+
+    const fetchAllUsers = async () => {
+        try {
+            const res = await api.get('jobseekers/')
+            if (res.data)
+            {
+                setAlluser(res.data)
+            }
+        } catch (error) {
+            console.log(error.data)
+        }
+    }
 
     // ================= EMPLOYER DATA FETCH =================
     // ================= EMPLOYER DATA FETCH =================
@@ -810,7 +813,7 @@ export const JobProvider = ({ children }) => {
             showNotification, setShowNotification,
             addNotification,
             fetchNotifications,
-
+            fetchAllUsers,
             // Utils
             fetchAllJobs,
             getFormattedDate,

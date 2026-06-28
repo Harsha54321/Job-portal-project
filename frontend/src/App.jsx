@@ -186,7 +186,7 @@ const router = createBrowserRouter([
         ]
       },
       {
-        path: '/Job-portal/employer-chat/:id',
+        path: '/Job-portal/employer-chat/',
         element: <EMessenger />
       },
       {

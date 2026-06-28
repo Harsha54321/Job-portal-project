@@ -29,7 +29,7 @@ export const ViewApplicants = ({ job, onBack }) => {
         console.log("All applications:", response.data);
 
         const jobApplications = response.data.filter(
-          app => app.job.id === job?.id
+          app => app.job?.id === job?.id
         );
 
         console.log("Filtered applications for this job:", jobApplications);
@@ -124,39 +124,40 @@ export const ViewApplicants = ({ job, onBack }) => {
     navigate(`/Job-portal/employer-chat/${userId}`);
   };
 
-  // ✅ FIXED handleViewDetails - no extra API call needed
+  // In ViewApplicants.jsx - Updated handleViewDetails
   const handleViewDetails = (application) => {
-    console.log("Viewing details for application:", application);
+    console.log("🔍 Viewing details for application:", application);
 
-    // Set selected application directly from the data we have
+    // ✅ Set selected application directly
     setSelectedApplication(application);
 
-    // Find jobseeker profile from Alluser
-    // const jobseeker = Alluser.find(user => user.id === application.user.id);
-    const jobseeker = Alluser.find(user =>
-      user.user?.id === application.user.id
-    );
+    // ✅ Get full profile from application.user (backend now returns everything)
+    const userData = application.user || {};
 
-    if (jobseeker) {
-      console.log("Jobseeker profile found in Alluser:", jobseeker);
-      console.log("Skills:", jobseeker.skills);
-      console.log("Education:", jobseeker.educations);
-      setJobseekerProfile(jobseeker);
-    } else {
-      // Fallback: create basic profile from application data
-      console.log("Jobseeker not found in Alluser, using application data");
-      setJobseekerProfile({
-        id: application.user.id,
-        full_name: application.user.username || application.user.full_name,
-        email: application.user.email,
-        current_job_title: application.user.current_job_title || "",
-        total_experience_years: application.user.total_experience || 0,
-        current_location: application.user.location || "",
-        skills: application.user.skills || [],
-        educations: application.user.educations || [],
-        resume_file: application.resume_version || null
-      });
-    }
+    console.log("👤 User data from application:", userData);
+
+    // ✅ Build profile from the data we received
+    setJobseekerProfile({
+      id: userData.id,
+      full_name: userData.full_name || userData.username || "N/A",
+      email: userData.email,
+      phone: userData.phone,
+      current_job_title: userData.current_job_title || "",
+      current_company: userData.current_company || "",
+      current_location: userData.current_location || "",
+      total_experience_years: userData.total_experience_years || 0,
+      notice_period: userData.notice_period || "",
+      profile_photo: userData.profile_photo || null,
+      resume_file: userData.resume_file || null,
+      skills: userData.skills || [],
+      educations: userData.educations || [],
+      expected_ctc: userData.expected_ctc,
+      current_ctc: userData.current_ctc,
+      city: userData.city,
+      state: userData.state,
+      country: userData.country,
+      profile_completion: userData.profile_completion || 0,
+    });
 
     setViewMode("detail");
   };
@@ -248,10 +249,10 @@ export const ViewApplicants = ({ job, onBack }) => {
                     </td>
                     {/* <td>{new Date(app.applied_date).toLocaleDateString()}</td> */}
                     <td>
-    {Alluser.find(u => u.user?.id === app.user.id)?.total_experience_years
-        ? `${Alluser.find(u => u.user?.id === app.user.id)?.total_experience_years} Years`
-        : "Fresher"}
-</td>
+                      {Alluser.find(u => u.user?.id === app.user.id)?.total_experience_years
+                        ? `${Alluser.find(u => u.user?.id === app.user.id)?.total_experience_years} Years`
+                        : "Fresher"}
+                    </td>
                     <td>
                       <span className={`status-pill ${getStatusClass(app.status)}`}>
                         {statusLabels[app.status] || app.status}
@@ -386,7 +387,7 @@ export const ViewApplicants = ({ job, onBack }) => {
                     </div>
                   </div>
 
-                  {/* ✅ Resume download - from selectedApplication or jobseekerProfile */}
+                  {/* Check BOTH resume_version from application AND resume_file from profile */}
                   {(selectedApplication?.resume_version || jobseekerProfile?.resume_file) ? (
                     <a
                       href={selectedApplication?.resume_version || jobseekerProfile?.resume_file}
@@ -473,18 +474,41 @@ export const ViewApplicants = ({ job, onBack }) => {
               {/* Education Summary */}
               <div className="info-section">
                 <h4>Education</h4>
-                <div className="edu-item">
-                  <p>
-                    <strong>
-                      {jobseekerProfile?.highest_qualification || "No education details provided"}
-                    </strong>
-                  </p>
-                  {jobseekerProfile?.highest_qualification && (
-                    <p className="sub-text">
-                      {/* Institute name and year will come here if available */}
-                    </p>
-                  )}
-                </div>
+                {jobseekerProfile?.educations && jobseekerProfile.educations.length > 0 ? (
+                  jobseekerProfile.educations.map((edu, index) => {
+                    // Get year from completion_year, end_year, or start_year
+                    let year = 'N/A';
+                    if (edu.completion_year) year = edu.completion_year;
+                    else if (edu.end_year) year = edu.end_year;
+                    else if (edu.start_year) year = edu.start_year;
+
+                    // Build qualification display
+                    let qualification = edu.qualification_level || '';
+                    if (edu.degree) qualification += ` / ${edu.degree}`;
+                    if (edu.department) qualification += ` / ${edu.department}`;
+
+                    return (
+                      <div key={index} className="edu-item" style={{ marginBottom: '15px' }}>
+                        <p><strong>{qualification || 'Education'}</strong></p>
+                        <p className="sub-text">
+                          {edu.institution || 'Not specified'}
+                          {year && ` | ${year}`}
+                          {edu.status && ` (${edu.status})`}
+                        </p>
+                        {edu.percentage_or_cgpa && (
+                          <p className="sub-text" style={{ color: '#64748b' }}>
+                            Score: {edu.percentage_or_cgpa}%
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="edu-item">
+                    <p><strong>No education details provided</strong></p>
+                    <p className="sub-text">Candidate has not added education information yet.</p>
+                  </div>
+                )}
               </div>
             </div>
           </div>

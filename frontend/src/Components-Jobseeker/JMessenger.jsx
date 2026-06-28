@@ -324,17 +324,32 @@ export const JMessenger = () => {
     };
 
     // Check if message is from current user (Jobseeker)
-    const isMessageFromMe = (msg) => {
-        // Try different possible structures of message object
-        const senderId = msg.sender?.id || msg.sender_id || msg.senderId;
-        const senderIdNum = parseInt(senderId);
-        const currentUserIdNum = parseInt(currentUserId);
+    // const isMessageFromMe = (msg) => {
+    //     // Try different possible structures of message object
+    //     const senderId = msg.sender?.id || msg.sender_id || msg.senderId;
+    //     const senderIdNum = parseInt(senderId);
+    //     const currentUserIdNum = parseInt(currentUserId);
 
-        console.log(`Comparing: sender=${senderIdNum}, currentUser=${currentUserIdNum}, result=${senderIdNum === currentUserIdNum}`);
+    //     console.log(`Comparing: sender=${senderIdNum}, currentUser=${currentUserIdNum}, result=${senderIdNum === currentUserIdNum}`);
 
-        return senderIdNum === currentUserIdNum;
-    };
+    //     return senderIdNum === currentUserIdNum;
+    // };
 
+    // Check if message is from current user
+const isMessageFromMe = (msg) => {
+    // Get sender ID from message
+    const senderId = msg.sender?.id || msg.sender_id || msg.senderId;
+    const senderIdNum = parseInt(senderId);
+    
+    // Get current user ID directly from session storage (most reliable)
+    const storedUserId = sessionStorage.getItem("user_id");
+    const currentUserIdNum = parseInt(storedUserId);
+    
+    // Debug log (remove in production)
+    console.log(`[isMessageFromMe] Sender: ${senderIdNum}, Current User: ${currentUserIdNum}, Is Me: ${senderIdNum === currentUserIdNum}`);
+    
+    return senderIdNum === currentUserIdNum;
+};
     // Get correct unread count for a chat
     const getUnreadCount = (chat) => {
         // If chat is active, return 0

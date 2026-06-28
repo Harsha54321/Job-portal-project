@@ -1969,74 +1969,51 @@ class JobApplicationDetailView(
 
 # ============ EMPLOYER APPLICATION VIEWS ============
 
-class EmployerApplicationsListView(
-    generics.ListAPIView
-):
-
+class EmployerApplicationsListView(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
-
-    serializer_class = (
-        JobApplicationEmployerSerializer
-    )
+    serializer_class = JobApplicationEmployerSerializer
 
     def get_queryset(self):
-
         user = self.request.user
 
-     
-
-        if not hasattr(
-            user,
-            'employer_profile'
-        ):
-
+        if not hasattr(user, 'employer_profile'):
             return JobApplication.objects.none()
 
-
         jobs = PostAJob.objects.filter(
-
             employer=user,
-
             is_published=True
         )
 
-    
-
         queryset = (
             JobApplication.objects.filter(
-
                 job__in=jobs
-
             ).filter(
-
-                Q(expires_at__isnull=True)
-
-                |
-
+                Q(expires_at__isnull=True) |
                 Q(expires_at__gt=timezone.now())
-
             ).select_related(
-
                 'user',
-
                 'job'
+            ).prefetch_related(
+                'user__jobseeker_profile__skills',
+                'user__jobseeker_profile__educations',
             ).order_by(
                 '-applied_date'
             )
         )
 
         return queryset
-    def get_total_experience_years(self, obj):
-        try:
-            profile = obj.user.jobseeker_profile
-            # Handle None or empty values
-            experience = profile.total_experience_years
-            if experience is None:
-                return 0
-            # Convert to float if it's a Decimal
-            return float(experience)
-        except (JobSeekerProfile.DoesNotExist, AttributeError):
-            return 0 
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        
+        # ✅ Pass request context to serializer
+        serializer = self.get_serializer(
+            queryset, 
+            many=True, 
+            context={'request': request}
+        )
+        
+        return Response(serializer.data)
 
 class EmployerApplicationStatusUpdateView(generics.UpdateAPIView):
     permission_classes = [IsAuthenticated]
