@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import './UserManagement.css'
 import { useJobs } from '../JobContext'
 import Searchicon from '../assets/icon_search.png'
@@ -13,6 +13,9 @@ export const UserManagement = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [activeMenuId, setActiveMenuId] = useState(null);
   const recordsPerPage = 5;
+  const modalRef = useRef(null);
+  const firstButtonRef = useRef(null);
+  const lastButtonRef = useRef(null);
   const location = useLocation();
   const [isDetailView, setIsDetailView] = useState(() => {
     return sessionStorage.getItem('umIsDetailView') === 'true';
@@ -25,6 +28,59 @@ export const UserManagement = () => {
   const [usersList, setUsersList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  useEffect(() => {
+    if (isModalOpen) {
+      // Focus trap for modal
+      const handleTabKey = (e) => {
+        if (e.key === 'Tab') {
+          const focusableElements = modalRef.current?.querySelectorAll(
+            'button:not([disabled])'
+          );
+
+          if (!focusableElements || focusableElements.length === 0) return;
+
+          const firstElement = focusableElements[0];
+          const lastElement = focusableElements[focusableElements.length - 1];
+          const activeElement = document.activeElement;
+
+          // If Shift+Tab on first element → move to last
+          if (e.shiftKey && activeElement === firstElement) {
+            e.preventDefault();
+            lastElement.focus();
+          }
+          // If Tab on last element → move to first
+          else if (!e.shiftKey && activeElement === lastElement) {
+            e.preventDefault();
+            firstElement.focus();
+          }
+          // If focus is outside modal → move to first
+          else if (!modalRef.current?.contains(activeElement)) {
+            e.preventDefault();
+            firstElement.focus();
+          }
+        }
+      };
+
+      // Add event listener when modal opens
+      document.addEventListener('keydown', handleTabKey);
+
+      // Focus first button when modal opens
+      setTimeout(() => {
+        const firstBtn = modalRef.current?.querySelector('button');
+        if (firstBtn) firstBtn.focus();
+      }, 100);
+
+      // Prevent body scroll
+      document.body.style.overflow = 'hidden';
+
+      // Cleanup
+      return () => {
+        document.removeEventListener('keydown', handleTabKey);
+        document.body.style.overflow = 'unset';
+      };
+    }
+  }, [isModalOpen]);
 
 
   useEffect(() => {
@@ -284,13 +340,30 @@ export const UserManagement = () => {
         </div>
 
         {isModalOpen && (
-          <div className="detail-status-modal-overlay">
+          <div className="detail-status-modal-overlay"
+            ref={modalRef}
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setIsModalOpen(false);
+            }}
+          >
             <div className="detail-status-modal-content">
               <h3>Select Status</h3>
               <div className="detail-status-modal-options">
-                <button onClick={() => handleStatusChange(selectedUser.id, "Active")}>Active</button>
-                <button onClick={() => handleStatusChange(selectedUser.id, "Hold")}>Hold</button>
-                <button onClick={() => handleStatusChange(selectedUser.id, "Deactivated")}>Deactivated</button>
+                <button
+                  ref={firstButtonRef}
+                  onClick={() => handleStatusChange(selectedUser.id, "Active")}
+                >
+                  Active
+                </button>
+                <button onClick={() => handleStatusChange(selectedUser.id, "Hold")}>
+                  Hold
+                </button>
+                <button
+                  ref={lastButtonRef}
+                  onClick={() => handleStatusChange(selectedUser.id, "Deactivated")}
+                >
+                  Deactivated
+                </button>
               </div>
               <button className="detail-status-modal-cancel" onClick={() => setIsModalOpen(false)}>
                 Cancel

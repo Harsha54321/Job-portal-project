@@ -226,10 +226,14 @@ export const PostJobForm = ({ onCancel }) => {
     const value = e.target.value;
     setSkillInput(value);
 
+    if (errors.key_skills) {
+      setErrors({ ...errors, key_skills: "" });
+    }
+
     if (value.trim()) {
       const filtered = availableSkills.filter(skill =>
         skill.toLowerCase().includes(value.toLowerCase()) &&
-        !skillsList.includes(skill)
+        !skillsList.some(s => s.toLowerCase() === skill.toLowerCase())
       );
       setFilteredSkills(filtered);
     } else {
@@ -399,14 +403,34 @@ export const PostJobForm = ({ onCancel }) => {
   };
 
   const handleKeyDown = (e) => {
-    if (e.key === 'Enter' && e.target.name === 'key_skills_input') {
+    if (e.key === 'Enter') {
       e.preventDefault();
-      const newSkill = e.target.value.trim();
-      if (newSkill && !skillsList.includes(newSkill)) {
-        setSkillsList([...skillsList, newSkill]);
-        setFormData({ ...formData, key_skills_input: '' });
-        setErrors({ ...errors, key_skills: "" });
+      const newSkill = skillInput.trim();
+
+      if (!newSkill) return;
+
+      
+      if (skillsList.length >= 20) {
+        setErrors({ ...errors, key_skills: "You can add a maximum of 20 skills." });
+        return;
       }
+
+      const hasLetter = /[a-zA-Z]/.test(newSkill);
+      if (!hasLetter) {
+        setErrors({ ...errors, key_skills: "Invalid skill name. Must contain at least one alphabetical letter." });
+        return;
+      }
+
+
+      if (skillsList.some(s => s.toLowerCase() === newSkill.toLowerCase())) {
+        setErrors({ ...errors, key_skills: "This skill has already been added." });
+        return;
+      }
+
+      setSkillsList([...skillsList, newSkill]);
+      setSkillInput('');
+      setFilteredSkills([]);
+      setErrors({ ...errors, key_skills: "" });
     }
   };
 

@@ -5,6 +5,10 @@
   box-sizing: border-box;
 }
 
+body.modal-open {
+  overflow: hidden;
+}
+
 .um-stats {
   display: flex;
   gap: 20px;
@@ -478,6 +482,7 @@ td {
   align-items: center;
   z-index: 9999;
   animation: fadeIn 0.25s ease-out;
+  cursor: pointer;
 }
 
 .detail-status-modal-content {

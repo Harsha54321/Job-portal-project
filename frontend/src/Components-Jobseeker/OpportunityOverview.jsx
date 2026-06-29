@@ -434,7 +434,7 @@ export const OpportunityOverview = () => {
                     <div className="Opportunities-job-details">
                       <p className='Opportunities-detail-line'>
                         {Array.isArray(sim.tags) ? sim.tags.join(", ") : sim.tags}
-                        {" "}- {sim.experience}
+                        {" "}<img src={experience} className='card-icons' alt="experience" /> {sim.experience}
                       </p>
                       <p className='Opportunities-detail-line'>
                         <img src={place} className='card-icons' alt="location" />

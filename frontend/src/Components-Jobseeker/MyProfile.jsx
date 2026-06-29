@@ -625,13 +625,13 @@ const CurrentDetails = ({ data, onChange, onReset, onNext }) => {
             if (!isFresher) {
                 if (!data.jobTitle?.trim()) newErrors.jobTitle = "*Job Title is required";
                 if (!data.company?.trim()) newErrors.company = "*Company name is required";
-                
+
                 if (!data.experience) {
                     newErrors.experience = "*Experience is required";
                 } else if (isNaN(data.experience)) {
                     newErrors.experience = "*Please enter a valid number";
                 }
-                
+
                 if (!data.noticePeriod || data.noticePeriod === "Select") {
                     newErrors.noticePeriod = "*Please select a notice period";
                 }
@@ -2247,6 +2247,16 @@ const KeySkills = ({ skills, onAdd, onUpdate, onDelete, onReset, onNext }) => {
             setError("Key Skills field is Mandatory");
             return;
         }
+        if (editIndex === null && skills.length >= 20) {
+            setError("You can add a maximum of 20 skills.");
+            return;
+        }
+
+        const hasLetter = /[a-zA-Z]/.test(value);
+        if (!hasLetter) {
+            setError("Enter a valid skill name (must contain at least one letter; numbers or symbols alone are invalid)");
+            return;
+        }
         const isDuplicate = skills.some((skill, index) =>
             skill.toLowerCase() === currentSkill.toLowerCase() && index !== editIndex
         );
@@ -2257,10 +2267,10 @@ const KeySkills = ({ skills, onAdd, onUpdate, onDelete, onReset, onNext }) => {
         }
 
 
-        if (!isValidValue(value)) {
-            setError("Enter a valid skill (avoid special character misuse)");
-            return;
-        }
+        // if (!isValidValue(value)) {
+        //     setError("Enter a valid skill (avoid special character misuse)");
+        //     return;
+        // }
 
         if (editIndex !== null) onUpdate(editIndex, value);
         else onAdd(value);
@@ -2337,12 +2347,42 @@ const KeySkills = ({ skills, onAdd, onUpdate, onDelete, onReset, onNext }) => {
                 )}
                 <div className="form-group">
                     <label>Skill *</label>
-                    <FilterableDropdown
-                        options={skillOptions.filter(opt => !skills.includes(opt))}
-                        selectedValue={currentSkill}
-                        onSelect={setCurrentSkill}
-                        placeholder="Select or Search Skill"
-                    />
+                    <div
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                                e.preventDefault();
+
+                                const nativeInput = e.target;
+                                const typedValue = nativeInput && nativeInput.value ? nativeInput.value.trim() : "";
+
+                                if (typedValue) {
+                                    if (typeof nativeInput.blur === 'function') {
+                                        nativeInput.blur();
+                                    }
+
+                                    setCurrentSkill(typedValue);
+                                    handleCustomSave(typedValue);
+
+                                    setTimeout(() => {
+                                        document.body.click();
+                                    }, 30);
+
+                                } else {
+                                    setError("Key Skills field is Mandatory");
+                                }
+                            }
+                        }}
+                    >
+                        <FilterableDropdown
+                            options={skillOptions.filter(opt => !skills.includes(opt))}
+                            selectedValue={currentSkill}
+                            onSelect={(val) => {
+                                setCurrentSkill(val);
+                                setError("");
+                            }}
+                            placeholder="Select or Search Skill"
+                        />
+                    </div>
                 </div>
             </PopupModal>
         </form>
@@ -3964,16 +4004,16 @@ export const MyProfile = () => {
                     }));
                 }
             }
-        }catch (err) {
+        } catch (err) {
             console.error("Profile save failed", err);
             if (err.response?.status === 401) {
                 alert("Session expired. Please login again.");
                 return;
             }
-            
+
             if (err.response && err.response.data) {
                 const backendErrors = err.response.data;
-                
+
                 // Fallback text if something generic fails
                 let alertMessage = "Could not save profile. Please fix the following:\n\n";
                 let issuesFound = false;
@@ -4007,7 +4047,7 @@ export const MyProfile = () => {
                 Object.keys(backendErrors).forEach((key) => {
                     const errorContent = backendErrors[key];
                     const msg = Array.isArray(errorContent) ? errorContent[0] : errorContent;
-                    
+
                     if (fieldMapping[key]) {
                         issuesFound = true;
                         alertMessage += `📍 Section: [${fieldMapping[key].section}] \n👉 Field: ${fieldMapping[key].field} - ${msg}\n\n`;
