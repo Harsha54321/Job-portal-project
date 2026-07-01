@@ -35,6 +35,7 @@ export const Jlogin = () => {
 
   const [formValues, setFormValues] = useState(initialValues);
   const [errors, setErrors] = useState({});
+  const[underDevEffect, setUnderDevEffect] = useState(false);
 
   const togglePasswordView = () => {
     setPasswordShow((prev) => !prev);
@@ -136,6 +137,13 @@ export const Jlogin = () => {
     setFormValues({ ...formValues, [name]: value });
     setErrors({ ...errors, [name]: "" });
   };
+
+  const underDevEffectHandler = () => {
+    setUnderDevEffect(true);
+    setInterval(() => {
+      setUnderDevEffect(false);
+    }, 5000);
+  }
 
   const validateForm = () => {
     const newErrors = {};
@@ -673,11 +681,10 @@ export const Jlogin = () => {
 
               <button
                 type="button"
-                className="mobile-btn-outline"
-                onClick={() => setView('mobile-otp')}
-                disabled={loading}
+                className="mobile-btn-outline mobile-login-btn"
+                onClick={underDevEffectHandler}
               >
-                <img src={mobile} alt="mobile" /> Mobile number
+                <img src={mobile} alt="mobile" />{underDevEffect ? "Under Development" : "Mobile number"}
               </button>
             </>
           )}
