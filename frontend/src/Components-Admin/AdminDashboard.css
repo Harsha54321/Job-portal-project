@@ -3,8 +3,10 @@
     grid-template-columns: 250px Auto;
     gap: 5px;
     margin-top: 70px;
-    height: calc(100vh - 70px);
-    overflow: hidden;
+    /* Remove fixed height and overflow hidden - let content flow naturally */
+    min-height: calc(100vh - 70px);
+    height: auto;
+    overflow: visible;
 }
 
 .Admin-Sidebar {
@@ -15,10 +17,14 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    position: relative;
-    height: 100%;
+    position: sticky;
+    top: 70px;
+    height: calc(100vh - 80px);
+    /* Fixed height for sidebar only */
     overflow-y: auto;
     overflow-x: hidden;
+    align-self: flex-start;
+    /* Prevent stretching */
 }
 
 /* Scrollbar styling for Admin sidebar - matching EmployerDashboard */
@@ -63,6 +69,12 @@
     flex: 1;
 }
 
+/* Logout button at bottom - ensure it's visible */
+.Admin-Sidebar-list .Admin-Navbar:last-child,
+.Admin-Sidebar-list .Admin-Navbar:last-of-type {
+    margin-bottom: 15px;
+}
+
 .Admin-Navbar {
     margin: 2px 7px;
     padding-left: 15px;
@@ -95,13 +107,14 @@
 .Admin-MainSec {
     border-radius: 10px;
     padding: 20px;
-    height: 100%;
-    overflow-y: auto;
-    overflow-x: hidden;
+    /* Remove fixed height - let it grow with content */
+    height: auto;
+    overflow: visible;
+    /* Add some bottom padding for content */
+    padding-bottom: 40px;
 }
 
-.Admin-MainSec ::-webkit-scrollbar,
-.AdminContainer ::-webkit-scrollbar {
+.Admin-MainSec ::-webkit-scrollbar {
     display: none;
 }
 
@@ -597,100 +610,8 @@
     }
 }
 
-/* RESPONSIVE STYLES */
+/* ANALYTICAL REPORTS STYLES */
 
-@media (max-width: 768px) {
-    .unauthorized-card {
-        padding: 32px 24px;
-        margin: 20px;
-    }
-
-    .unauthorized-title {
-        font-size: 24px;
-    }
-
-    .unauthorized-message {
-        font-size: 14px;
-    }
-
-    .unauthorized-btn {
-        padding: 10px 20px;
-        font-size: 14px;
-    }
-
-    .unauthorized-actions {
-        gap: 12px;
-    }
-
-    .AdminContainer {
-        grid-template-columns: 200px Auto;
-        height: calc(100vh - 70px);
-    }
-
-    .Admin-Navbar,
-    .Admin-Active {
-        width: 170px;
-        padding-left: 10px;
-    }
-
-    .Admin-Overview {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 10px;
-    }
-}
-
-@media (max-width: 480px) {
-    .unauthorized-card {
-        padding: 24px 20px;
-    }
-
-    .unauthorized-title {
-        font-size: 20px;
-    }
-
-    .unauthorized-icon svg {
-        width: 60px;
-        height: 60px;
-    }
-
-    .unauthorized-actions {
-        flex-direction: column;
-    }
-
-    .unauthorized-btn {
-        width: 100%;
-    }
-
-    .AdminContainer {
-        grid-template-columns: 1fr;
-        height: auto;
-        overflow: visible;
-    }
-
-    .Admin-Sidebar {
-        height: auto;
-        max-height: 300px;
-        border-radius: 10px;
-    }
-
-    .Admin-MainSec {
-        height: auto;
-        overflow: visible;
-    }
-
-    .Admin-Navbar,
-    .Admin-Active {
-        width: 90%;
-    }
-
-    .Admin-Overview {
-        grid-template-columns: 1fr;
-    }
-}
-
-/* ADDITIONAL EMPLOYER DASHBOARD REFERENCE STYLES */
-
-/* Analytical Reports Styles */
 .Admin-Reports-Overview {
     display: grid;
     grid-template-columns: repeat(5, 1fr);
@@ -760,13 +681,119 @@
 }
 
 @media (max-width: 768px) {
+    .unauthorized-card {
+        padding: 32px 24px;
+        margin: 20px;
+    }
+
+    .unauthorized-title {
+        font-size: 24px;
+    }
+
+    .unauthorized-message {
+        font-size: 14px;
+    }
+
+    .unauthorized-btn {
+        padding: 10px 20px;
+        font-size: 14px;
+    }
+
+    .unauthorized-actions {
+        gap: 12px;
+    }
+
+    .AdminContainer {
+        grid-template-columns: 200px Auto;
+        min-height: calc(100vh - 70px);
+    }
+
+    .Admin-Navbar,
+    .Admin-Active {
+        width: 170px;
+        padding-left: 10px;
+    }
+
+    .Admin-Overview {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+
     .Admin-Reports-Overview {
         grid-template-columns: repeat(2, 1fr);
     }
 }
 
 @media (max-width: 480px) {
+    .unauthorized-card {
+        padding: 24px 20px;
+    }
+
+    .unauthorized-title {
+        font-size: 20px;
+    }
+
+    .unauthorized-icon svg {
+        width: 60px;
+        height: 60px;
+    }
+
+    .unauthorized-actions {
+        flex-direction: column;
+    }
+
+    .unauthorized-btn {
+        width: 100%;
+    }
+
+    .AdminContainer {
+        grid-template-columns: 1fr;
+        height: auto;
+        overflow: visible;
+        min-height: auto;
+    }
+
+    .Admin-Sidebar {
+        height: auto;
+        max-height: 300px;
+        border-radius: 10px;
+        position: relative;
+        top: 0;
+    }
+
+    .Admin-MainSec {
+        height: auto;
+        overflow: visible;
+        padding-bottom: 20px;
+    }
+
+    .Admin-Navbar,
+    .Admin-Active {
+        width: 90%;
+    }
+
+    .Admin-Overview {
+        grid-template-columns: 1fr;
+    }
+
     .Admin-Reports-Overview {
         grid-template-columns: 1fr;
     }
+}
+
+/* Fix for grid layout on medium screens */
+@media (min-width: 769px) and (max-width: 1024px) {
+    .Admin-Overview {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* Ensure sidebar doesn't overlap content */
+.Admin-Sidebar {
+    align-self: flex-start;
+}
+
+/* Bottom padding for main content to ensure visibility */
+.Admin-MainSec>*:last-child {
+    margin-bottom: 30px;
 }

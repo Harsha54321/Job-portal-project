@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import './Header.css';
-import { Link, NavLink, useLocation } from 'react-router-dom';
+import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import breifcase from '../assets/header_case.png';
 import chat from '../assets/header_message.png';
 import bell from '../assets/header_bell.png';
@@ -9,15 +9,9 @@ import home_icon from '../assets/home_icon.png';
 import { AvatarMenu } from '../Components-Jobseeker/AvatarMenu';
 import { JNotification } from '../Components-Jobseeker/JNotification';
 import { useJobs } from '../JobContext';
-// import api from "../api/axios";
-
 
 export const Header = () => {
   const location = useLocation();
-  // const [showNotification, setShowNotification] = useState(false);
-  // const [notificationsData, setNotificationsData] = useState([]);
-
-  // Get notifications from JobContext
   const { notificationsData, showNotification, setShowNotification, fetchNotifications, chats, currentUserId } = useJobs();
 
   const newNotificationsCount = Array.isArray(notificationsData)
@@ -47,34 +41,11 @@ export const Header = () => {
     { image: chat, path: '/Job-portal/jobseeker/chat', label: 'Chat' },
   ];
 
-  // const refreshNotifications = async () => {
-  //   try {
-  //     const res = await api.get("notifications/");
-  //     setNotificationsData(
-  //       res.data.map(n => ({
-  //         id: n.id,
-  //         message: n.message,
-  //         created_at: n.created_at,
-  //         is_read: n.is_read,
-  //       }))
-  //     );
-  //   } catch (err) {
-  //     console.error("Failed to refresh notifications", err);
-  //   }
-  // };  
-
   const refreshNotifications = async () => {
     if (fetchNotifications) {
       await fetchNotifications();
     }
   };
-
-  // useEffect(() => {
-  //   if (isLoggedIn) {
-  //     refreshNotifications();
-  //   }
-  // }, [isLoggedIn]);  
-
 
   useEffect(() => {
     if (isLoggedIn && fetchNotifications) {
@@ -82,33 +53,58 @@ export const Header = () => {
     }
   }, [isLoggedIn]);
 
-
-  ///const handleNavClick = (e) => {
-  ///    setActiveItem(e);
-  //}
-
-  // const newNotificationsCount = notificationsData
-  //   ? notificationsData.filter(n => n.isRead).length
-  //   : 0;
-
   const preventNav = (e) => {
     e.preventDefault();
     setMobileMenuOpen(false);
   };
 
+  // Handle keyboard events for notification toggle
+  const handleNotificationKeyDown = (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      setShowNotification(!showNotification);
+    }
+  };
+
+  // Handle keyboard events for mobile menu toggle
+  const handleMenuKeyDown = (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      setMobileMenuOpen(prev => !prev);
+    }
+  };
+  
+  const handleLogoClick = () => {
+    const accessToken = sessionStorage.getItem("access");
+    const userRole = sessionStorage.getItem("userRole");
+    const currentRole = userRole ? userRole.toLowerCase() : "";
+
+    if (accessToken && currentRole === "jobseeker") {
+      navigate('/Job-portal/jobseeker');
+    } else if (accessToken && currentRole === "employer") {
+      navigate('/Job-portal/Employer/Dashboard');
+    } else {
+      navigate('/');
+    }
+  };
+
   return (
     <header className="header">
       <div className="logo-container">
-        <Link to="/" className="logo">
+        <div className="logo" onClick={handleLogoClick} style={{ cursor: "pointer" }}>
           <span className="logo-text">Job portal</span>
-        </Link>
+        </div>
         {!isLoggedIn && (
-          <div
+          <button
             className="hamburger"
             onClick={() => setMobileMenuOpen(prev => !prev)}
+            onKeyDown={handleMenuKeyDown}
+            aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
+            aria-expanded={mobileMenuOpen}
+            type="button"
           >
             {mobileMenuOpen ? '✕' : '☰'}
-          </div>
+          </button>
         )}
       </div>
       <nav className="nav-links">
@@ -133,7 +129,7 @@ export const Header = () => {
       <div className="auth-links">
         {isLoggedIn ? (
           <>
-            <Link to="/Job-portal/jobseeker" className="mobile-home-icon">
+            <Link to="/Job-portal/jobseeker" className="mobile-home-icon" aria-label="Home">
               <img
                 src={home_icon}
                 alt="Home"
@@ -152,6 +148,7 @@ export const Header = () => {
                   key={index}
                   to={IC.path}
                   style={{ position: "relative" }}
+                  aria-label={IC.label}
                 >
                   <img
                     src={IC.image}
@@ -178,6 +175,7 @@ export const Header = () => {
                         fontWeight: "bold",
                         padding: "0 5px"
                       }}
+                      aria-label={`${unreadMessagesCount} unread messages`}
                     >
                       {unreadMessagesCount > 99 ? "99+" : unreadMessagesCount}
                     </span>
@@ -186,13 +184,54 @@ export const Header = () => {
               );
             })}
 
-            <div onClick={() => setShowNotification(!showNotification)} title="Notifications">
+            {/* Changed from div to button for better accessibility */}
+            <button
+              onClick={() => setShowNotification(!showNotification)}
+              onKeyDown={handleNotificationKeyDown}
+              aria-label={`Notifications ${newNotificationsCount > 0 ? `(${newNotificationsCount} unread)` : ''}`}
+              aria-expanded={showNotification}
+              aria-haspopup="true"
+              className="notification-button"
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                padding: '0',
+                display: 'flex',
+                alignItems: 'center',
+                position: 'relative'
+              }}
+              type="button"
+            >
               <img
                 src={newNotificationsCount > 0 ? bell_dot : bell}
                 alt="Notifications"
                 className="jheader-icons"
               />
-            </div>
+              {/* {newNotificationsCount > 0 && (
+                <span
+                  style={{
+                    position: "absolute",
+                    top: "-5px",
+                    right: "-5px",
+                    background: "#007bff",
+                    color: "white",
+                    borderRadius: "50%",
+                    width: "18px",
+                    height: "18px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: "11px",
+                    fontWeight: "bold",
+                    padding: "0 5px"
+                  }}
+                  aria-label={`${newNotificationsCount} unread notifications`}
+                >
+                  {newNotificationsCount > 99 ? "99+" : newNotificationsCount}
+                </span>
+              )} */}
+            </button>
 
             <AvatarMenu />
 
@@ -220,7 +259,7 @@ export const Header = () => {
         )}
       </div>
       {!isLoggedIn && mobileMenuOpen && (
-        <div className="mobile-menu">
+        <div className="mobile-menu" role="dialog" aria-modal="true" aria-label="Mobile navigation menu">
           <div className="mobile-menu-links">
             <a href="#" onClick={preventNav} className="active">Home</a>
             <a href="#" onClick={preventNav}>Jobs</a>
@@ -231,7 +270,6 @@ export const Header = () => {
           </div>
         </div>
       )}
-
     </header>
   );
 };

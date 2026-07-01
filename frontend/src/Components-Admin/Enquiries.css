@@ -1,657 +1,759 @@
 .Enquiries-container {
-
     width: 100%;
-
     background: #ffffff;
-
     border-radius: 16px;
-
     padding: 24px;
-
     border: 1px solid #e5e7eb;
-
     box-sizing: border-box;
-    /* Strict padding boundary constraints */
-
 }
 
 .Enquiries-header {
-
     margin-bottom: 24px;
-
 }
 
 .Enquiries-header h2 {
-
     font-size: 28px;
-
     font-weight: 700;
-
     color: #111827;
-
     margin-bottom: 6px;
-
     overflow-wrap: break-word;
-
     word-break: break-word;
-
 }
 
 .Enquiries-header p {
-
     font-size: 15px;
-
     color: #6b7280;
-
     overflow-wrap: break-word;
-
     word-break: break-word;
-
 }
 
-.Enquiries-table-wrapper {
+/* ===== SEARCH ===== */
+.enq-search-container {
+    margin-bottom: 24px;
+}
 
+.enq-search-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.enq-search-icon {
+    position: absolute;
+    left: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+}
+
+.enq-search-icon img {
+    width: 18px;
+    height: 18px;
+    opacity: 0.6;
+}
+
+.enq-search-container input {
     width: 100%;
-
-    overflow-x: auto;
-
-    border-radius: 14px;
-
+    padding: 12px 12px 12px 48px;
+    border-radius: 10px;
     border: 1px solid #e5e7eb;
+    font-size: 14px;
+    color: #333;
+    outline: none;
+    transition: all 0.2s ease-in-out;
+    box-sizing: border-box;
+    background: #ffffff;
+}
 
+.enq-search-container input:focus {
+    border-color: #407bff;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+/* ===== TABLE ===== */
+.Enquiries-table-wrapper {
+    width: 100%;
+    overflow-x: auto;
+    border-radius: 14px;
+    border: 1px solid #e5e7eb;
 }
 
 .Enquiries-table {
-
     width: 100%;
-
     border-collapse: collapse;
-
-    min-width: 950px;
-
+    min-width: 750px;
     table-layout: fixed;
-    /* Ensures specified column max-widths are strictly respected */
-
 }
 
 .Enquiries-table thead {
-
     background: #f3f6fb;
-
 }
 
 .Enquiries-table th {
-
     padding: 16px;
-
     text-align: left;
-
     font-size: 13px;
-
     font-weight: 600;
-
     color: #374151;
-
     border-bottom: 1px solid #e5e7eb;
-
     white-space: nowrap;
-    /* Keeps head labels uniform */
-
 }
 
 .Enquiries-table td {
-
     padding: 16px;
-
     font-size: 14px;
-
     color: #111827;
-
     border-bottom: 1px solid #f3f4f6;
-
     vertical-align: middle;
-
-    /* General responsive cell line-breaking mechanics */
-
     white-space: normal;
-
     overflow-wrap: break-word;
-
     word-break: break-word;
-
-}
-
-.Enquiries-table tbody tr {
-
-    transition: 0.2s ease;
-
 }
 
 .Enquiries-table tbody tr:hover {
-
     background: #fafafa;
-
 }
 
-/* Message detail or subject column adjustments */
-
-.Enquiries-table td:nth-child(5) {
-
-    max-width: 250px;
-
-    overflow-wrap: break-word;
-
-    word-break: break-word;
-
-    line-height: 1.5;
-
-    color: #374151;
-
-}
-
-.Enquiries-status {
-
-    padding: 8px 14px;
-
-    border-radius: 30px;
-
-    border: none;
-
-    outline: none;
-
-    font-size: 13px;
-
-    font-weight: 600;
-
-    cursor: pointer;
-
-    box-sizing: border-box;
-
-    white-space: nowrap;
-    /* Prevents status badge label splits */
-
-}
-
-.Enquiries-status option {
-
-    background: #ffffff;
-
-    color: #1e3a8a;
-
-}
-
-.Enquiries-status.Pending {
-
-    background: #fef3c7;
-
-    color: #92400e;
-
-}
-
-.Enquiries-status.Contacted {
-
-    background: #dbeafe;
-
-    color: #1d4ed8;
-
-}
-
-.Enquiries-table td[colspan="7"] {
-
-    font-size: 15px;
-
-    color: #6b7280;
-
-    background: #fff;
-
+/* Column Widths */
+.enq-col-id {
+    width: 12%;
     text-align: center;
-    /* Balanced presentation layout rule */
-
 }
 
-.enq-table-view-action-btn {
+.enq-col-enquiry {
+    width: 28%;
+}
 
-    display: inline-flex;
+.enq-col-user {
+    width: 15%;
+}
 
-    align-items: center;
+.enq-col-received {
+    width: 15%;
+}
 
-    gap: 8px;
+.enq-col-status {
+    width: 15%;
+    text-align: center;
+}
 
-    padding: 6px 14px;
+.enq-col-action {
+    width: 15%;
+    text-align: center;
+}
 
-    border: 1px solid #d1d5db;
+.enq-cell-id {
+    text-align: center;
+    font-weight: 400;
+}
 
-    background-color: #ffffff;
+.enq-cell-user {
+    font-weight: 400;
+}
 
-    border-radius: 6px;
+.enq-cell-status {
+    text-align: center;
+}
 
-    font-size: 13px;
+.enq-cell-action {
+    text-align: center;
+}
 
+/* Received Date */
+.enq-received-date {
     font-weight: 500;
+    color: #111827;
+}
 
-    color: #374151;
+.enq-received-time {
+    color: #6b7280;
+    font-size: 13px;
+    margin-top: 3px;
+}
 
-    cursor: pointer;
-
-    transition: background-color 0.2s ease;
-
+/* ===== STATUS BADGE ===== */
+.enq-status-badge {
+    display: inline-block;
+    padding: 4px 14px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
     white-space: nowrap;
-
+    min-width: 70px;
+    text-align: center;
 }
 
-.enq-table-view-action-btn:hover {
-
-    background-color: #f9fafb;
-
+.enq-status-badge.Pending {
+    background: #fef3c7;
+    color: #92400e;
 }
 
-.enq-table-view-action-btn img {
-
-    width: 16px;
-
-    height: auto;
-
+.enq-status-badge.Contacted {
+    background: #dbeafe;
+    color: #1d4ed8;
 }
 
-.enq-details-actions-bar {
+.enq-status-badge.Resolved {
+    background: #dcfce7;
+    color: #166534;
+}
 
+/* ===== VIEW BUTTON ===== */
+.enq-view-btn {
+    background: #1E88E5;
+    color: white;
+    border-radius: 5px;
+    padding: 7px 14px;
+    outline: none;
+    border: none;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    transition: background 0.2s ease;
+}
+
+.enq-view-btn:hover {
+    background: #1565c0;
+}
+
+/* ===== NO RECORDS ===== */
+.enq-no-records {
+    text-align: center;
+    padding: 24px;
+    color: #6b7280;
+    font-size: 15px;
+}
+
+/* ===== PAGINATION ===== */
+.enq-pagination-footer {
     display: flex;
-
     justify-content: space-between;
-
     align-items: center;
+    padding: 15px 20px;
+    background-color: #fff;
+    border-top: 1px solid #f1f4f8;
+}
 
-    margin-bottom: 30px;
+.enq-pagination-footer p {
+    font-size: 13px;
+    color: #676f79;
+    margin: 0;
+}
 
+.enq-pagination-btns {
+    display: flex;
+    gap: 5px;
+}
+
+.enq-pagination-btns button {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.enq-nav-arrow {
+    width: 25px;
+    height: auto;
+}
+
+.enq-pagination-btns button:hover:not(:disabled) {
+    background-color: #f7fafc;
+    border-color: #407bff;
+}
+
+.enq-pagination-btns button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+/* ===== DETAILS VIEW ===== */
+
+/* Actions Bar */
+.enq-details-actions-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
     gap: 15px;
-
 }
 
 .enq-back-to-contact-btn {
-
-    display: flex;
-
-    align-items: center;
-
-    gap: 8px;
-
-    padding: 6px 12px;
-
-    border: 1px solid #d1d5db;
-
-    background: #ffffff;
-
+    color: #fff;
+    border: 1px solid #1E88E5;
+    background-color: #1E88E5;
+    padding: 8px 12px;
     border-radius: 4px;
-
-    font-size: 14px;
-
-    font-weight: 500;
-
-    color: #111827;
-
     cursor: pointer;
-
-    white-space: nowrap;
-
-}
-
-.enq-delete-action-btn {
-
-    display: flex;
-
-    align-items: center;
-
-    gap: 8px;
-
-    padding: 12px 24px;
-
-    border: 1px solid #d1d5db;
-
-    background: #ffffff;
-
-    border-radius: 4px;
-
-    font-size: 14px;
-
     font-weight: 500;
-
-    color: #0a0a0a;
-
-    cursor: pointer;
-
     white-space: nowrap;
-
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    outline: none;
 }
 
-.enq-delete-action-btn img {
-
-    width: 17px;
-
-    height: auto;
-
+.enq-back-to-contact-btn:hover {
+    background-color: #eff6ff;
+    border-color: #bfdbfe;
+    color: #1e88e5;
 }
 
+.enq-back-to-contact-btn:active {
+    transform: scale(0.98);
+    box-shadow: 0 0 8px rgba(30, 136, 229, 0.4),
+        0 0 20px rgba(30, 136, 229, 0.2);
+}
+
+/* Main Content */
 .enq-details-main-content {
-
     display: flex;
-
     gap: 40px;
-
     align-items: flex-start;
-
-    margin-top: 20px;
-
+    margin-top: 10px;
     width: 100%;
-
 }
 
 .enq-details-left-pane {
-
-    flex: 1.8;
-
+    flex: 1;
     min-width: 0;
-    /* Prevents raw dynamic data strings from widening the column scale */
-
+    width: 100%;
 }
 
-.enq-details-right-pane {
-
-    flex: 1.2;
-
-    min-width: 0;
-
-}
-
-.enq-ticket-meta-box {
-
+/* Header Card */
+.enq-details-header-card {
+    border: 1px solid #e5e7eb;
+    padding: 20px 24px;
+    border-radius: 10px;
     display: flex;
-
+    justify-content: space-between;
     align-items: center;
-
-    gap: 20px;
-
-    margin-bottom: 35px;
-
-    min-width: 0;
-
+    flex-wrap: wrap;
+    gap: 15px;
+    margin-bottom: 25px;
+    background: #fafbfc;
 }
 
-.enq-details-status-img {
+.enq-details-header-left {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
 
-    width: 52px;
-
-    height: auto;
-
-    flex-shrink: 0;
-    /* Prevents dimension distortion */
-
+.enq-details-header-icon {
+    width: 50px;
+    height: 50px;
 }
 
 .enq-details-id-title {
-
     font-size: 18px;
-
     font-weight: 700;
-
     color: #3b82f6;
-
     margin: 0;
-
     word-break: break-all;
-    /* Breaks long identification hashes safely */
-
 }
 
 .enq-details-created-on {
-
     font-size: 13px;
-
     color: #6b7280;
-
     margin: 6px 0 0 0;
-
 }
 
-.enq-details-msg-block h4,
+/* Status Box */
+.enq-details-status-box {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 20px;
+    background-color: #ffffff;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+    min-width: 150px;
+}
 
-.enq-details-user-block h4 {
+.enq-details-status-label {
+    font-weight: 500;
+    color: #374151;
+}
 
-    font-size: 20px;
+.enq-details-status-badge {
+    padding: 4px 14px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+}
 
+.enq-details-status-badge.Pending {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.enq-details-status-badge.Contacted {
+    background: #dbeafe;
+    color: #1d4ed8;
+}
+
+.enq-details-status-badge.Resolved {
+    background: #dcfce7;
+    color: #166534;
+}
+
+/* User Section */
+.enq-details-user-section {
+    margin-top: 10px;
+    margin-bottom: 25px;
+}
+
+.enq-details-section-title {
+    font-size: 18px;
     font-weight: 700;
-
     color: #111827;
-
     margin-bottom: 16px;
-
     margin-top: 0;
-
-    overflow-wrap: break-word;
-
-    word-break: break-word;
-
-}
-
-.enq-details-msg-text {
-
-    font-size: 15px;
-
-    line-height: 1.7;
-
-    color: #111827;
-
-    margin-bottom: 40px;
-
-    max-width: 100%;
-    /* Changed from 90% for a cleaner box match alignment */
-
-    /* Strict formatting behavior for message body text */
-
-    white-space: pre-wrap;
-
-    overflow-wrap: break-word;
-
-    word-break: break-word;
-
 }
 
 .enq-details-user-grid {
-
-    display: grid;
-
-    grid-template-columns: 160px 1fr;
-
-    row-gap: 16px;
-
-    column-gap: 10px;
-
-    font-size: 15px;
-
-    margin-top: 20px;
-
-    min-width: 0;
-
-}
-
-.enq-grid-label {
-
-    color: #9ca3af;
-
-    word-break: break-word;
-
-}
-
-.enq-grid-value {
-
-    color: #111827;
-
-    font-weight: 600;
-
-    overflow-wrap: break-word;
-
-    word-break: break-word;
-    /* Wraps structural addresses or raw strings cleanly */
-
-}
-
-.enq-grid-value.blue-name {
-
-    color: #3b82f6;
-
-}
-
-.enq-details-conversation-card {
-
-    border: 1px solid #e5e7eb;
-
-    border-radius: 12px;
-
-    padding: 30px 24px;
-
-    background: #ffffff;
-
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02);
-
-    box-sizing: border-box;
-
-    width: 100%;
-
-}
-
-.enq-details-conversation-card h4 {
-
-    font-size: 20px;
-
-    font-weight: 700;
-
-    color: #111827;
-
-    margin-top: 0;
-
-    margin-bottom: 24px;
-
-    overflow-wrap: break-word;
-
-    word-break: break-word;
-
-}
-
-.enq-details-mail-btn {
-
-    width: 100%;
-
-    max-width: 200px;
-
-    background-color: #1e88e5;
-
-    color: #ffffff;
-
-    border: none;
-
-    padding: 12px 16px;
-
-    border-radius: 8px;
-
-    font-size: 13px;
-
-    font-weight: 600;
-
-    cursor: pointer;
-
     display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
 
+.enq-details-grid-row {
+    display: flex;
     align-items: center;
+    gap: 10px;
+}
 
-    justify-content: center;
-
-    gap: 8px;
-
-    margin: 0 auto;
-
-    transition: background-color 0.2s ease;
-
+.enq-details-grid-row input {
+    flex: 1;
+    height: 35px;
+    color: #0084ff;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    padding: 0 12px;
+    box-sizing: border-box;
+    text-overflow: ellipsis;
+    overflow: hidden;
     white-space: nowrap;
-
+    background: #f8fafc;
+    font-size: 14px;
+    font-weight: 500;
 }
 
-.enq-details-mail-btn:hover {
-
-    background-color: #1565c0;
-
+.enq-details-grid-row input:focus {
+    outline: none;
 }
 
-.enq-details-mail-btn svg,
+.enq-details-grid-label {
+    color: #777777;
+    width: 140px;
+    flex-shrink: 0;
+    font-size: 14px;
+}
 
-.enq-details-mail-btn span {
+/* Message Section */
+.enq-details-message-section {
+    margin-top: 10px;
+}
 
-    display: inline-flex;
+.enq-details-message-text {
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 20px 24px;
+    min-height: 100px;
+    color: #4a4a4a;
+    font-size: 15px;
+    line-height: 1.7;
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
+    word-break: break-word;
+    background: #ffffff;
+}
 
+/* Bottom Actions */
+.enq-details-actions-bottom {
+    display: flex;
     align-items: center;
+    gap: 16px;
+    padding: 10px 0;
+    margin-top: 25px;
+}
+
+.enq-details-btn-edit-status {
+    padding: 10px 24px;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    background: #1e88e5;
+    color: #ffffff;
+    border: 1px solid #1e88e5;
+    box-shadow: 0 4px 12px rgba(30, 136, 229, 0.2);
+    display: flex;
+    align-items: center;
+    gap: 6px;
 
 }
 
 
-.Enquiries-table th:nth-child(1),
-.Enquiries-table td:nth-child(1) {
+.enq-details-btn-edit-status:hover {
+    background: #1e88e5;
+    border-color: #1e88e5;
+    box-shadow: 0 0 8px rgba(30, 136, 229, 0.4), 0 0 20px rgba(30, 136, 229, 0.3);
+    text-shadow: 0 0 4px rgba(255, 255, 255, 0.4);
+    transform: translateY(-2px);
+}
+
+.enq-details-btn-edit-status:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.enq-details-btn-delete {
+    padding: 10px 24px;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    background: #ef4444;
+    border: 1px solid #dc2626;
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.enq-details-btn-delete:hover {
+    background: #dc2626;
+    border-color: #b91c1c;
+    box-shadow: 0 0 8px rgba(239, 68, 68, 0.5), 0 0 20px rgba(239, 68, 68, 0.35);
+    text-shadow: 0 0 4px rgba(255, 255, 255, 0.4);
+    transform: translateY(-2px);
+}
+
+.enq-details-btn-delete:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.enq-details-btn-icon {
+    width: 16px;
+    height: 16px;
+}
+
+/* ===== STATUS MODAL ===== */
+.enq-status-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(15, 23, 42, 0.45);
+    backdrop-filter: blur(4px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    animation: enqFadeIn 0.25s ease-out;
+}
+
+.enq-status-modal-content {
+    background: #ffffff;
+    width: 100%;
+    max-width: 400px;
+    padding: 28px;
+    border-radius: 16px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
     text-align: center;
-    width: 90px;
+    box-sizing: border-box;
+    animation: scaleUp 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-.Enquiries-table th:nth-child(2) {
-    width: 45%;
-    text-align: left;
-    padding-left: 8px;
-}
-
-
-.Enquiries-table th:nth-child(1) {
-    width: 10%;
-    /* Ticket ID */
-    text-align: center;
-}
-
-.Enquiries-table th:nth-child(3) {
-    width: 15%;
-    /* User */
-}
-
-.Enquiries-table th:nth-child(4) {
-    width: 15%;
-    /* Received At */
-}
-
-.Enquiries-table th:nth-child(5) {
-    width: 15%;
-    /* Action Button */
+.enq-status-modal-content h3 {
+    margin: 0 0 20px 0;
+    font-family: 'Inter', -apple-system, sans-serif;
+    font-size: 20px;
+    font-weight: 600;
+    color: #1e293b;
 }
 
 
-/* Media Queries for responsive scaling safety */
 
-@media (max-width: 868px) {
+.enq-status-modal-current {
+    color: #6b7280;
+    font-size: 14px;
+    margin: 0 0 20px 0;
+}
+
+.enq-status-modal-current span {
+    color: #000000;
+    font-weight: 600;
+}
+
+.enq-status-modal-options {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.enq-status-modal-options button {
+    width: 100%;
+    padding: 12px 16px;
+    font-family: 'Inter', sans-serif;
+    font-size: 15px;
+    font-weight: 500;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    background-color: #ffffff;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.enq-status-modal-options button:nth-child(1):hover {
+    color: #d97706;
+    background-color: #fffbeb;
+    border-color: #fef3c7;
+    box-shadow: 0 0 12px rgba(22, 163, 74, 0.2);
+}
+
+.enq-status-modal-options button:nth-child(2):hover {
+    color: #1d4ed8;
+    background-color: #dbeafe;
+    border-color: #c5dbf8;
+    box-shadow: 0 0 12px rgba(59, 130, 246, 0.3);
+}
+
+.enq-status-modal-options button:nth-child(3):hover {
+    color: #16a34a;
+    background-color: #f0fdf4;
+    border-color: #bbf7d0;
+    box-shadow: 0 0 12px rgba(22, 163, 74, 0.2);
+}
+
+.enq-status-modal-options button:active {
+    transform: scale(0.98);
+}
+
+.enq-status-modal-cancel {
+    width: 100%;
+    padding: 12px 16px;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    color: #64748b;
+    background-color: #f1f5f9;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.enq-status-modal-cancel:hover {
+    background-color: #e2e8f0;
+    color: #334155;
+}
+
+/* ===== ANIMATIONS ===== */
+@keyframes enqFadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes enqScaleUp {
+    from {
+        opacity: 0;
+        transform: scale(0.95) translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 992px) {
+    .enq-details-header-card {
+        flex-direction: column;
+        align-items: stretch;
+    }
 
     .enq-details-main-content {
-
         flex-direction: column;
-
-        gap: 30px;
-
+        gap: 20px;
     }
 
-    .enq-details-actions-bar {
+    .enq-details-actions-bottom {
+        flex-wrap: wrap;
+    }
 
+    .enq-details-btn-edit-status,
+    .enq-details-btn-delete {
+        flex: 1;
+        justify-content: center;
+        min-width: 120px;
+    }
+}
+
+@media (max-width: 768px) {
+    .Enquiries-container {
+        padding: 16px;
+    }
+
+    .Enquiries-header h2 {
+        font-size: 22px;
+    }
+
+    .enq-details-grid-row {
         flex-direction: column;
-
         align-items: flex-start;
+        gap: 4px;
+    }
 
+    .enq-details-grid-row input {
+        width: 100%;
+    }
+
+    .enq-details-grid-label {
+        width: 100%;
+    }
+
+    .enq-details-header-left {
+        flex-wrap: wrap;
+    }
+
+    .enq-details-status-box {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .enq-pagination-footer {
+        flex-direction: column;
         gap: 12px;
-
+        text-align: center;
     }
 
-    .enq-details-user-grid {
-
-        grid-template-columns: 120px 1fr;
-
+    .enq-status-modal-content {
+        margin: 0 16px;
+        padding: 20px;
     }
-
 }

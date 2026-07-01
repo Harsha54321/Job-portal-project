@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './Escalation.css';
 import { useJobs } from '../JobContext';
 import api from '../api/axios';
@@ -11,15 +11,62 @@ import eye from '../assets/AdminAssets/EyeIcon.png';
 import Priority from '../assets/AdminAssets/Priority.png';
 import AdminCategory from '../assets/AdminAssets/AdminCategory.png';
 import AdminStatus from '../assets/AdminAssets/AdminStatus.png';
+import Searchicon from '../assets/icon_search.png';
+import leftArrow from '../assets/left_arrow.png';
+import rightArrow from '../assets/right_arrow.png';
 import { JobMonitorOverview } from './JobMonitorOverview';
 
 export const Escalation = () => {
-
     const { reports, setReports, fetchReports, reportsLoading } = useJobs();
     const [selectedReport, setSelectedReport] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [showJobOverviewId, setShowJobOverviewId] = useState(null);
     const [actionLoading, setActionLoading] = useState(false);
+
+    // Search and Pagination states
+    const [search, setSearch] = useState("");
+    const [currentPage, setCurrentPage] = useState(1);
+    const recordsPerPage = 10;
+    const modalRef = useRef(null);
+
+    // Sync modal focus trap and body scroll lock configuration[cite: 4]
+    useEffect(() => {
+        if (isModalOpen) {
+            const handleTabKey = (e) => {
+                if (e.key === 'Tab') {
+                    const focusableElements = modalRef.current?.querySelectorAll('button:not([disabled])');
+                    if (!focusableElements || focusableElements.length === 0) return;
+
+                    const firstElement = focusableElements[0];
+                    const lastElement = focusableElements[focusableElements.length - 1];
+                    const activeElement = document.activeElement;
+
+                    if (e.shiftKey && activeElement === firstElement) {
+                        e.preventDefault();
+                        lastElement.focus();
+                    } else if (!e.shiftKey && activeElement === lastElement) {
+                        e.preventDefault();
+                        firstElement.focus();
+                    } else if (!modalRef.current?.contains(activeElement)) {
+                        e.preventDefault();
+                        firstElement.focus();
+                    }
+                }
+            };
+
+            document.addEventListener('keydown', handleTabKey);
+            setTimeout(() => {
+                const firstBtn = modalRef.current?.querySelector('button');
+                if (firstBtn) firstBtn.focus();
+            }, 100);
+
+            document.body.style.overflow = 'hidden'; //[cite: 4]
+            return () => {
+                document.removeEventListener('keydown', handleTabKey);
+                document.body.style.overflow = 'unset';
+            };
+        }
+    }, [isModalOpen]);
 
     useEffect(() => {
         if (selectedReport) {
@@ -40,7 +87,6 @@ export const Escalation = () => {
         fetchReports();
     }, []);
 
-    // Helper to format any ISO or DB datetime string into Local Indian Time format
     const formatToLocalTime = (dateString) => {
         if (!dateString) return "N/A";
         try {
@@ -116,7 +162,6 @@ export const Escalation = () => {
         }
     };
 
-
     const handleDeleteReport = async (reportId) => {
         if (window.confirm("Are you sure you want to delete this report?")) {
             try {
@@ -140,7 +185,34 @@ export const Escalation = () => {
         }
     };
 
-    // Loading state
+    // Filter pipeline tracking down dynamic matches across critical keys[cite: 4]
+    const filteredReports = reports.filter((item) => {
+        const searchTerm = search.toLowerCase();
+
+        const subject = (item.reason || "Progress, project & status reports").toLowerCase();
+        const priority = (item.priority || "Medium").toLowerCase();
+        const status = (item.status || "Pending").toLowerCase();
+
+        const firstName = item.firstName || "";
+        const lastName = item.lastName || "";
+        const nameAttr = item.name || "";
+        const userCombined = `${firstName} ${lastName} ${nameAttr}`.toLowerCase();
+
+        return subject.includes(searchTerm) ||
+            priority.includes(searchTerm) ||
+            status.includes(searchTerm) ||
+            userCombined.includes(searchTerm);
+    });
+
+    // Pagination calculations based on filtered records[cite: 4]
+    const indexOfLastRecord = currentPage * recordsPerPage;
+    const indexOfFirstRecord = indexOfLastRecord - recordsPerPage;
+    const currentRecords = filteredReports.slice(indexOfFirstRecord, indexOfLastRecord);
+    const nPages = Math.ceil(filteredReports.length / recordsPerPage) || 1;
+
+    const prevPage = () => { if (currentPage !== 1) setCurrentPage(currentPage - 1); }; //[cite: 4]
+    const nextPage = () => { if (currentPage !== nPages) setCurrentPage(currentPage + 1); }; //[cite: 4]
+
     if (reportsLoading && reports.length === 0) {
         return (
             <div className="RepAJob-container">
@@ -159,12 +231,10 @@ export const Escalation = () => {
                     <button
                         className="RepAJob-btn-back"
                         onClick={() => setShowJobOverviewId(null)}
-                        style={{ backgroundColor: '#6c757d', color: 'white', padding: '8px 16px', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
                     >
                         Back to Report Details
                     </button>
                 </div>
-
                 <div style={{ background: '#fff', padding: '20px', borderRadius: '8px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}>
                     <JobMonitorOverview jobId={showJobOverviewId} setSelectedJobId={setShowJobOverviewId} />
                 </div>
@@ -178,9 +248,8 @@ export const Escalation = () => {
 
         return (
             <div className="RepAJob-detail-container">
-                <h2 className="RepAJob-main-title">Report Information</h2>
-
-                <div className="RepAJob-detail-actions">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                    <h2 className="RepAJob-main-title" style={{ margin: 0 }}>Report Information</h2>
                     <button
                         className="RepAJob-btn-back"
                         onClick={() => { setSelectedReport(null); setIsModalOpen(false); }}
@@ -233,101 +302,86 @@ export const Escalation = () => {
                     </div>
                 </div>
 
-                <div className="RepAJob-grid-details">
-                    <div className="RepAJob-user-section">
-                        <h2 className="RepAJob-section-title">User Information</h2>
-                        <div className="RepAJob-user-grid">
-                            <div className="RepAJob-grid-row">
-                                <span className="RepAJob-grid-label">Name :</span>
-                                <input type="text" disabled value={`${selectedReport.firstName || ''} ${selectedReport.lastName || ''}`.trim() || selectedReport.name || 'N/A'} />
+                <div className="detail-page-wrapper" style={{ padding: 0 }}>
+                    <div className="detail-section-card">
+                        <h3 className="detail-section-title">User Information</h3>
+                        <div className="detail-form-group">
+                            <div className="detail-field-row">
+                                <label>Name :</label>
+                                <input type="text" readOnly value={`${selectedReport.firstName || ''} ${selectedReport.lastName || ''}`.trim() || selectedReport.name || 'N/A'} />
                             </div>
-                            <div className="RepAJob-grid-row">
-                                <span className="RepAJob-grid-label">Mobile number :</span>
-                                <input type='text' disabled value={selectedReport.mobile || selectedReport.contact || 'N/A'} />
+                            <div className="detail-field-row">
+                                <label>Mobile number :</label>
+                                <input type='text' readOnly value={selectedReport.mobile || selectedReport.contact || 'N/A'} />
                             </div>
-                            <div className="RepAJob-grid-row">
-                                <span className="RepAJob-grid-label">Mail ID :</span>
-                                <input type='text' disabled value={selectedReport.email || 'N/A'} />
+                            <div className="detail-field-row">
+                                <label>Mail ID :</label>
+                                <input type='text' readOnly value={selectedReport.email || 'N/A'} />
                             </div>
-                            <div className="RepAJob-grid-row">
-                                <span className="RepAJob-grid-label">User :</span>
-                                <input type='text' disabled value={selectedReport.category || 'Report'} />
+                            <div className="detail-field-row">
+                                <label>User :</label>
+                                <input type='text' readOnly value={selectedReport.category || 'Report'} />
                             </div>
                         </div>
                     </div>
+
+                    <div className="detail-section-card">
+                        <h3 className="detail-section-title">Report details</h3>
+                        <p style={{ fontSize: '14px', margin: '0 0 10px 0', color: '#555' }}>
+                            Job Id: <strong>{selectedReport.JobId || selectedReport.jobId || selectedReport.id}</strong>
+                        </p>
+                        <div className="detail-report-textbox">
+                            {selectedReport.explanation || selectedReport.message || 'No details provided'}
+                        </div>
+                    </div>
+
+                    <div className="detail-top-actions">
+                        <button
+                            onClick={() => setIsModalOpen(!isModalOpen)}
+                            className="detail-btn-action-edit"
+                            disabled={actionLoading}
+                        >
+                            <img src={pencil} alt="edit-icon" className="RepAJob-btn-icon-img" style={{ marginRight: '6px', filter: 'brightness(0) invert(1)' }} />
+                            Edit Status
+                        </button>
+                        {/* <button
+                            onClick={() => handleDeleteReport(selectedReport.id)}
+                            className="detail-btn-action detail-btn-delete"
+                            disabled={actionLoading}
+                        >
+                            <img src={deleteIcon} alt="delete-icon" className="RepAJob-btn-icon-img" style={{ marginRight: '6px', filter: 'brightness(0) invert(1)' }} />
+                            Delete
+                        </button> */}
+                        <button
+                            style={{ background: "#2b8bf9", borderColor: "#2b8bf9", color: "#ffffff" }}
+                            onClick={() => setShowJobOverviewId(selectedReport.JobId || selectedReport.jobId)}
+                            className="detail-btn-action-edit"
+                            disabled={actionLoading}
+                        >
+                            View this Job
+                        </button>
+                    </div>
                 </div>
 
-                <div className="RepAJob-section">
-                    <h4>Report details</h4>
-                    <p>Job Id: {selectedReport.JobId || selectedReport.jobId || selectedReport.id}</p>
-                    <p className="RepAJob-description-text">
-                        {selectedReport.explanation || selectedReport.message || 'No details provided'}
-                    </p>
-                </div>
-
-                <div className="RepAJob-top-actions">
-                    <button
-                        onClick={() => setIsModalOpen(!isModalOpen)}
-                        className="RepAJob-btn-action"
-                        disabled={actionLoading}
-                    >
-                        <img src={pencil} alt="edit-icon" className="RepAJob-btn-icon-img" style={{ marginRight: '6px' }} />
-                        Edit Status
-                    </button>
-                    <button
-                        onClick={() => handleDeleteReport(selectedReport.id)}
-                        className="RepAJob-btn-action RepAJob-btn-delete"
-                        disabled={actionLoading}
-                    >
-                        <img src={deleteIcon} alt="delete-icon" className="RepAJob-btn-icon-img" style={{ marginRight: '6px' }} />
-                        Delete
-                    </button>
-                    <button
-                        style={{ background: "#2b8bf9" }}
-                        onClick={() => setShowJobOverviewId(selectedReport.JobId || selectedReport.jobId)}
-                        className="RepAJob-btn-action"
-                        disabled={actionLoading}
-                    >
-                        View this Job
-                    </button>
-                </div>
-
-                {/* ✅ Status Update Modal - Like AdminTickets */}
                 {isModalOpen && (
-                    <div className="RepAJob-status-modal-overlay">
-                        <div className="RepAJob-status-modal-content">
+                    <div className="detail-status-modal-overlay"
+                        ref={modalRef}
+                        onClick={(e) => { if (e.target === e.currentTarget) setIsModalOpen(false); }}
+                    >
+                        <div className="detail-status-modal-content">
                             <h3>Select Status</h3>
-                            <p>Current Status: <strong>{currentStatus || "Pending"}</strong></p>
-
-                            <div className="RepAJob-status-modal-options">
-                                <button
-                                    onClick={() => handleStatusChange(selectedReport.id, "Pending")}
-                                    disabled={actionLoading}
-                                    style={{ backgroundColor: '#ffc107', color: '#000' }}
-                                >
+                            <div className="detail-status-modal-options">
+                                <button onClick={() => handleStatusChange(selectedReport.id, "Pending")} disabled={actionLoading}>
                                     Pending
                                 </button>
-                                <button
-                                    onClick={() => handleStatusChange(selectedReport.id, "In Progress")}
-                                    disabled={actionLoading}
-                                    style={{ backgroundColor: '#17a2b8', color: '#fff' }}
-                                >
+                                <button onClick={() => handleStatusChange(selectedReport.id, "In Progress")} disabled={actionLoading}>
                                     In Progress
                                 </button>
-                                <button
-                                    onClick={() => handleStatusChange(selectedReport.id, "Resolved")}
-                                    disabled={actionLoading}
-                                    style={{ backgroundColor: '#28a745', color: '#fff' }}
-                                >
+                                <button onClick={() => handleStatusChange(selectedReport.id, "Resolved")} disabled={actionLoading}>
                                     Resolved
                                 </button>
                             </div>
-
-                            <button
-                                className="RepAJob-status-modal-cancel"
-                                onClick={() => setIsModalOpen(false)}
-                                disabled={actionLoading}
-                            >
+                            <button className="detail-status-modal-cancel" onClick={() => setIsModalOpen(false)} disabled={actionLoading}>
                                 Cancel
                             </button>
                         </div>
@@ -337,7 +391,6 @@ export const Escalation = () => {
         );
     }
 
-    // ✅ LIST VIEW with Refresh button
     return (
         <div className="RepAJob-container">
             <div className="RepAJob-header">
@@ -345,22 +398,24 @@ export const Escalation = () => {
                     <h2>Received Reports</h2>
                     <p>List of newly received reports for the job</p>
                 </div>
-                {/* ✅ Refresh button */}
-                {/* <button
-                    onClick={() => fetchReports()}
-                    disabled={reportsLoading}
-                    style={{
-                        padding: "8px 16px",
-                        backgroundColor: "#1E88E5",
-                        color: "white",
-                        border: "none",
-                        borderRadius: "5px",
-                        cursor: "pointer"
-                    }}
-                >
-                    {reportsLoading ? "Refreshing..." : "Refresh"}
-                </button> */}
             </div>
+
+            {/* Search Module bridging styles from UserManagement[cite: 4] */}
+            <div className="um-search-container">
+                <div className="search-wrapper">
+                    <span className="search-icon"><img src={Searchicon} alt="Search" /></span>
+                    <input
+                        type="text"
+                        placeholder="Search by subject, priority, status or user"
+                        value={search}
+                        onChange={(e) => {
+                            setSearch(e.target.value);
+                            setCurrentPage(1);
+                        }}
+                    />
+                </div>
+            </div>
+
             <div className="RepAJob-table-wrapper">
                 <table className="RepAJob-table">
                     <thead>
@@ -372,18 +427,18 @@ export const Escalation = () => {
                             <th>CATEGORY</th>
                             <th style={{ paddingLeft: "40px" }}>PRIORITY</th>
                             <th>RECEIVED AT</th>
-                            <th>STATUS / TIME</th>
+                            <th>STATUS</th>
                             <th>ACTION</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {reports && reports.length > 0 ? (
-                            reports.map((item, index) => {
+                        {currentRecords.length > 0 ? (
+                            currentRecords.map((item, index) => {
                                 const itemPriority = item.priority || 'Medium';
                                 return (
                                     <tr key={item.id || index}>
                                         <td>{item.RepId || `REP-${item.id}`}</td>
-                                        <td>{item.reason || "Progress, project & status reports"}</td>
+                                        <td className="subject-column">{item.reason || "Progress, project & status reports"}</td>
                                         <td>{item.JobId || item.jobId || item.id}</td>
                                         <td>{item.firstName || item.name || 'N/A'} {item.lastName || ''}</td>
                                         <td>{item.category || 'Report'}</td>
@@ -425,6 +480,19 @@ export const Escalation = () => {
                         )}
                     </tbody>
                 </table>
+
+                {/* Footnotes pagination frame sync[cite: 4] */}
+                <div className="pagination-footer">
+                    <p>Page {currentPage} of {nPages}</p>
+                    <div className="pagination-btns">
+                        <button onClick={prevPage} disabled={currentPage === 1}>
+                            <img src={leftArrow} alt="prev" className="nav-arrow" />
+                        </button>
+                        <button onClick={nextPage} disabled={currentPage === nPages}>
+                            <img src={rightArrow} alt="next" className="nav-arrow" />
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
     );

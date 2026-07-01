@@ -8,10 +8,14 @@ export const MembershipPlans = ({ onSelectPlan, plans: externalPlans }) => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
-    const getPlanColor = (index, planName = '') => {
-        if (planName.toLowerCase() === 'free' || planName.toLowerCase() === 'starter plan') return 'green';
-        const colors = ['blue', 'orange', 'purple'];
-        return colors[index % colors.length];
+    // 🔹 Get color from plan - ALWAYS use plan.color
+    const getPlanColor = (plan) => {
+        // Always use plan.color if it exists
+        if (plan.color) {
+            return plan.color;
+        }
+        // Fallback if no color (should not happen)
+        return '#1E88E5';
     };
 
     useEffect(() => {
@@ -81,7 +85,7 @@ export const MembershipPlans = ({ onSelectPlan, plans: externalPlans }) => {
             name: plan.name,
             price: finalPriceWithTax,  
             displayPrice: priceWithoutTax,  
-            color: plan.color || getPlanColor(0, plan.name),
+            color: plan.color || '#1E88E5',  // Use plan.color with fallback
             summary: plan.summary,
             duration: duration,
             price_breakdown: priceBreakdown,
@@ -160,9 +164,17 @@ export const MembershipPlans = ({ onSelectPlan, plans: externalPlans }) => {
                         originalPrice = plan.pricing.yearly.base_price;
                     }
 
+                    // 🔹 Get color from plan - ALWAYS use plan.color
+                    const planColor = getPlanColor(plan);
+
+                    console.log(`Plan: ${plan.name}, Color: ${planColor}`); // Debug log
+
                     return (
                         <div key={plan.id} className={`MembershipPlans-card ${isFreePlan ? 'free-tier' : ''}`}>
-                            <div className={`MembershipPlans-banner ${getPlanColor(index, plan.name)}`}>
+                            <div 
+                                className="MembershipPlans-banner" 
+                                style={{ backgroundColor: planColor }}
+                            >
                                 {plan.name.toUpperCase()}
                             </div>
 
@@ -215,7 +227,8 @@ export const MembershipPlans = ({ onSelectPlan, plans: externalPlans }) => {
                                 </ul>
 
                                 <button
-                                    className={`MembershipPlans-btn-start ${getPlanColor(index, plan.name)}`}
+                                    className="MembershipPlans-btn-start"
+                                    style={{ backgroundColor: planColor }}
                                     onClick={() => handleGetStarted(plan)}
                                     title={isFreePlan ? "This plan is currently disabled" : ""}
                                 >

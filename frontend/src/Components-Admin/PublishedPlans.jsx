@@ -61,6 +61,7 @@ export const PublishedPlans = () => {
   const [errors, setErrors] = useState({});
   const [fieldErrors, setFieldErrors] = useState({});
   const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [tempInputValues, setTempInputValues] = useState({});
 
   const isStarterPlan = editPlan?.name?.toUpperCase() === 'STARTER PLAN';
 
@@ -116,7 +117,12 @@ export const PublishedPlans = () => {
         color: planData.color ?? '#1E88E5',
         features: planData.features?.map(feature => ({
           ...feature,
-          value: feature.value ?? (feature.text === 'Jobs Posting' || feature.text === 'Highlight Your Job Listing' ? 0 : "false")
+          // For numeric features, ensure they're numbers
+          value: feature.text === 'Jobs Posting' || feature.text === 'Highlight Your Job Listing'
+            ? (feature.value !== undefined && feature.value !== null && feature.value !== ''
+              ? parseInt(feature.value, 10) || 0
+              : 0)
+            : (feature.value ?? (feature.text === 'Jobs Posting' || feature.text === 'Highlight Your Job Listing' ? 0 : "false"))
         })) || []
       };
 
@@ -140,7 +146,12 @@ export const PublishedPlans = () => {
   const handleFeatureValueChange = (featureIdx, value) => {
     const updatedFeatures = editPlan.features.map((feature, i) => {
       if (i === featureIdx) {
-        return { ...feature, value: value };
+        // Ensure value is a number for numeric features
+        const numericValue = typeof value === 'string' ? parseInt(value, 10) : value;
+        return {
+          ...feature,
+          value: isNaN(numericValue) ? 0 : numericValue
+        };
       }
       return feature;
     });
@@ -239,14 +250,37 @@ export const PublishedPlans = () => {
       return;
     }
 
-    // Only restrict special characters for name field
     if (field === "name") {
       if (/[^a-zA-Z\s]/.test(value)) return;
     }
 
-    // Allow any characters for summary
     if (field === "summary") {
-      // No restrictions - allow any characters
+      if (/[^a-zA-Z\s.,!?\-]/.test(value)) return;
+
+      // Check if value contains at least one alphabet character
+      const hasAlphabet = /[a-zA-Z]/.test(value);
+
+      // Store validation state
+      setFieldErrors(prev => ({
+        ...prev,
+        summary: !hasAlphabet && value.length > 0 ? "Summary must contain at least one letter" : null
+      }));
+
+      setEditPlan(prev => {
+        const updated = { ...prev, [field]: value };
+        console.log(`Updated ${field} to:`, value);
+        return updated;
+      });
+
+      // Clear general error for this field if it exists
+      if (errors[field]) {
+        setErrors(prev => {
+          const newErrors = { ...prev };
+          delete newErrors[field];
+          return newErrors;
+        });
+      }
+      return;
     }
 
     if (priceFields.includes(field)) {
@@ -367,6 +401,9 @@ export const PublishedPlans = () => {
     // Validate summary
     if (!editPlan?.summary?.trim()) {
       newErrors.summary = "Summary is required.";
+    } else if (!/[a-zA-Z]/.test(editPlan?.summary)) {
+      // Check if summary contains at least one alphabet character
+      newErrors.summary = "Summary must contain at least one letter.";
     } else {
       console.log("Summary is valid:", editPlan.summary);
     }
@@ -494,16 +531,54 @@ export const PublishedPlans = () => {
 
 
   const handleFeatureNumberInput = (i, value) => {
-    const { value: cleanedValue, error } = validateFeatureNumber(value);
+    // Store the raw input temporarily
+    setTempInputValues(prev => ({
+      ...prev,
+      [i]: value
+    }));
 
+    // Remove all non-numeric characters
+    let cleanedValue = value.replace(/[^0-9]/g, '');
+
+    // If empty, set to 0 for display
+    if (cleanedValue === '') {
+      // Don't update feature value yet - user is still typing
+      // Just clear the error
+      const featureErrorKey = `feature_${i}`;
+      setFieldErrors(prev => ({
+        ...prev,
+        [featureErrorKey]: null
+      }));
+      return;
+    }
+
+    // Remove leading zeros but keep single zero
+    if (cleanedValue.length > 1 && cleanedValue.startsWith('0')) {
+      cleanedValue = cleanedValue.replace(/^0+/, '');
+      if (cleanedValue === '') cleanedValue = '0';
+    }
+
+    // Parse numeric value
+    const numericValue = parseInt(cleanedValue, 10);
+
+    // Validate max (100)
+    let error = null;
+    if (numericValue > 100) {
+      error = `Value cannot exceed 100 (Current: ${numericValue})`;
+    }
+
+    // Store error
     const featureErrorKey = `feature_${i}`;
     setFieldErrors(prev => ({
       ...prev,
       [featureErrorKey]: error
     }));
 
-    if (!error || cleanedValue === '') {
-      const numericValue = cleanedValue === '' ? 0 : parseInt(cleanedValue);
+    // If no error, update the feature value
+    if (!error) {
+      handleFeatureValueChange(i, numericValue);
+    } else {
+      // Still update but with error state
       handleFeatureValueChange(i, numericValue);
     }
   };
@@ -536,27 +611,36 @@ export const PublishedPlans = () => {
         <div className="published-plan-divider"></div>
         <ul className="published-plan-features">
           {plan.features?.map((feature, i) => {
+            // Handle Jobs Posting
             if (feature.text === 'Jobs Posting') {
-              const numericValue = parseInt(feature.value) || 0;
+              const numericValue = feature.value !== undefined && feature.value !== null && feature.value !== ''
+                ? parseInt(feature.value, 10)
+                : 0;
+              const displayValue = isNaN(numericValue) ? 0 : numericValue;
               return (
                 <li key={i} className="published-plan-feature-item included">
                   <span className="published-plan-icon">
                     <img src={Tick} alt="yes" width={15} />
                   </span>
-                  Max Job Posts: {numericValue}
+                  Max Job Posts: {displayValue}
                 </li>
               );
             }
 
+            // Handle Highlight Your Job Listing
             if (feature.text === 'Highlight Your Job Listing') {
-              const numericValue = parseInt(feature.value) || 0;
-              if (numericValue > 0) {
+              const numericValue = feature.value !== undefined && feature.value !== null && feature.value !== ''
+                ? parseInt(feature.value, 10)
+                : 0;
+              const displayValue = isNaN(numericValue) ? 0 : numericValue;
+
+              if (displayValue > 0) {
                 return (
                   <li key={i} className="published-plan-feature-item included">
                     <span className="published-plan-icon">
                       <img src={Tick} alt="yes" width={15} />
                     </span>
-                    {numericValue} Highlight Your Job Listing
+                    {displayValue} Highlight Your Job Listing
                   </li>
                 );
               } else {
@@ -688,11 +772,15 @@ export const PublishedPlans = () => {
                       }}
                       disabled={false}
                       style={{
-                        borderColor: errors.summary ? '#ff0000' : '#ddd',
-                        ...(errors.summary ? { border: '1px solid #ff0000' } : {})
+                        borderColor: (fieldErrors.summary || errors.summary) ? '#ff0000' : '#ddd',
+                        ...((fieldErrors.summary || errors.summary) ? { border: '1px solid #ff0000' } : {})
                       }}
                     />
-                    {errors.summary && <span style={{ color: 'red', fontSize: '12px' }}>{errors.summary}</span>}
+                    {(fieldErrors.summary || errors.summary) && (
+                      <span style={{ color: 'red', fontSize: '12px' }}>
+                        {fieldErrors.summary || errors.summary}
+                      </span>
+                    )}
                   </div>
                 </div>
 
@@ -842,28 +930,41 @@ export const PublishedPlans = () => {
                     {editPlan?.features?.map((item, i) => {
                       if (item.text === 'Jobs Posting') {
                         const featureError = getFeatureError(i);
+                        // Get raw input value if exists, otherwise use actual value
+                        const rawValue = tempInputValues[i];
+                        const actualValue = item.value !== undefined && item.value !== null && item.value !== ''
+                          ? parseInt(item.value, 10)
+                          : 0;
+                        const displayValue = rawValue !== undefined ? rawValue : (isNaN(actualValue) ? 0 : actualValue);
+
                         return (
                           <tr key={i}>
-                            <td
-                              style={{ padding: '20px' }}
-                              title="Maximum number of job posts allowed for this plan."
-                            >
+                            <td style={{ padding: '20px' }} title="Maximum number of job posts allowed for this plan.">
                               Max Job Posts ⓘ
                             </td>
                             <td style={{ textAlign: 'center', padding: '10px' }}>
                               <div>
                                 <input
-                                  type="number"
-                                  value={item.value !== undefined && item.value !== '' ? String(parseInt(item.value) || 0) : '0'}
+                                  type="text"
+                                  value={String(displayValue)}
                                   onChange={(e) => handleFeatureNumberInput(i, e.target.value)}
+                                  onBlur={() => {
+                                    // On blur, clear temp value and use actual
+                                    setTempInputValues(prev => {
+                                      const newState = { ...prev };
+                                      delete newState[i];
+                                      return newState;
+                                    });
+                                  }}
                                   disabled={false}
                                   placeholder="0"
                                   style={{
                                     width: '80px',
-                                    padding: '5px',
+                                    padding: '8px',
                                     textAlign: 'center',
                                     border: `1px solid ${featureError ? '#ff0000' : '#ddd'}`,
-                                    borderRadius: '4px'
+                                    borderRadius: '4px',
+                                    fontSize: '14px'
                                   }}
                                   title="Enter the number of job posts (max 100)"
                                 />
@@ -883,28 +984,41 @@ export const PublishedPlans = () => {
 
                       if (item.text === 'Highlight Your Job Listing') {
                         const featureError = getFeatureError(i);
+                        // Get raw input value if exists, otherwise use actual value
+                        const rawValue = tempInputValues[i];
+                        const actualValue = item.value !== undefined && item.value !== null && item.value !== ''
+                          ? parseInt(item.value, 10)
+                          : 0;
+                        const displayValue = rawValue !== undefined ? rawValue : (isNaN(actualValue) ? 0 : actualValue);
+
                         return (
                           <tr key={i}>
-                            <td
-                              style={{ padding: '20px' }}
-                              title="Number of job highlights available per billing cycle. Highlighted jobs appear at top of search results."
-                            >
+                            <td style={{ padding: '20px' }} title="Number of job highlights available per billing cycle. Highlighted jobs appear at top of search results.">
                               {item.text} ⓘ
                             </td>
                             <td style={{ textAlign: 'center', padding: '10px' }}>
                               <div>
                                 <input
-                                  type="number"
-                                  value={item.value !== undefined && item.value !== '' ? String(parseInt(item.value) || 0) : '0'}
+                                  type="text"
+                                  value={String(displayValue)}
                                   onChange={(e) => handleFeatureNumberInput(i, e.target.value)}
+                                  onBlur={() => {
+                                    // On blur, clear temp value and use actual
+                                    setTempInputValues(prev => {
+                                      const newState = { ...prev };
+                                      delete newState[i];
+                                      return newState;
+                                    });
+                                  }}
                                   disabled={false}
                                   placeholder="0"
                                   style={{
                                     width: '80px',
-                                    padding: '5px',
+                                    padding: '8px',
                                     textAlign: 'center',
                                     border: `1px solid ${featureError ? '#ff0000' : '#ddd'}`,
-                                    borderRadius: '4px'
+                                    borderRadius: '4px',
+                                    fontSize: '14px'
                                   }}
                                   title="Set how many job posts can be highlighted (max 100)"
                                 />

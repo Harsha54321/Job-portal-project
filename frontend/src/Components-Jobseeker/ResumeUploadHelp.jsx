@@ -27,41 +27,41 @@ export const ResumeUploadHelp = () => {
   return (
     <>
       <FHeader />
-      <div className="profilehelp-page">
-        <div className="profilehelp-container">
-          <h1 className="profilehelp-title">
-             Resume Upload
+      <div className="resumehelp-page">
+        <div className="resumehelp-container">
+          <h1 className="resumehelp-title">
+            Resume Upload
           </h1>
 
-          <p className="profilehelp-updated">
+          <p className="resumehelp-updated">
             {resumeHelpData.updatedDate}
           </p>
-          <p className="profilehelp-intro">
+          <p className="resumehelp-intro">
             {resumeHelpData.intro}
           </p>
 
-          <div className="profilehelp-layout">
-            <div className="profilehelp-left">
-               <img 
-                src={ResumeHelpImg} 
-                alt="Resume Upload Process" 
-                style={{ width: '100%', height: 'auto', borderRadius: '8px' }} 
-              />
-            </div>
+          {/* Centered Hero Image Section */}
+          <div className="resumehelp-hero-section">
+            <img 
+              src={ResumeHelpImg} 
+              alt="Resume Upload Process" 
+              className="resumehelp-hero-img"
+            />
+          </div>
 
-            <div className="profilehelp-right">
-              <div className="profilehelp-steps-container" style={{ marginTop: 0 }}>
-                <h2>Resume Upload Summary</h2>
-                <ul className="profilehelp-steps-list">
-                  {resumeUploadSteps.map((step, index) => (
-                    <li key={index}>{step}</li>
-                  ))}
-                </ul>
-              </div>
+          {/* Resume Upload Summary - Now moved down */}
+          <div className="resumehelp-summary-section">
+            <div className="resumehelp-steps-container">
+              <h2 className="resumehelp-summary-title">Resume Upload Summary</h2>
+              <ul className="resumehelp-steps-list">
+                {resumeUploadSteps.map((step, index) => (
+                  <li key={index}>{step}</li>
+                ))}
+              </ul>
             </div>
           </div>
 
-          <div className="profilehelp-detailed-steps">
+          <div className="resumehelp-detailed-steps">
             <h2>Step-by-Step Resume Guidelines:</h2>
             
             <div className="detailed-step">

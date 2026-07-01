@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Reportsubmitted from '../assets/Report_Submitted.png'
 import './RaiseTicket.css';
@@ -24,6 +24,7 @@ export const RaiseTicket = () => {
     const [showCategory, setShowCategory] = useState(false);
     const [showSubject, setShowSubject] = useState(false);
     const [errors, setErrors] = useState({});
+    const [countdown, setCountdown] = useState(5);
 
     const subjects = [
         "Broken 'Apply' Button/Application Failure",
@@ -55,6 +56,15 @@ export const RaiseTicket = () => {
 
     // Max file size (10MB)
     const MAX_FILE_SIZE = 10 * 1024 * 1024;
+    const MAX_NAME_LENGTH = 50;
+
+    // Scroll to top function
+    const scrollToTop = () => {
+        window.scrollTo({
+            top: 0,
+            behavior: 'smooth'
+        });
+    };
 
     // Validate file
     const validateFile = (file) => {
@@ -109,8 +119,6 @@ export const RaiseTicket = () => {
             errors.phone = "Phone number is required";
         } else if (!/^[6-9][0-9]{9}$/.test(formData.phone)) {
             errors.phone = "Phone must be exactly 10 digits";
-        } else if (/^(\d)\1{9}$/.test(formData.phone)) {
-            errors.phone = "Phone cannot be all same digits";
         }
 
         if (!formData.subject) {
@@ -144,6 +152,7 @@ export const RaiseTicket = () => {
     const handleConfirm = async () => {
         try {
             setStep('loading');
+            scrollToTop(); // Scroll to top when loading starts
             const data = new FormData();
             data.append("category", formData.category);
             data.append("subject", formData.subject);
@@ -156,18 +165,33 @@ export const RaiseTicket = () => {
             }
             const response = await api.post("raise-ticket/", data);
             console.log("SUCCESS:", response.data);
-            setTimeout(() => {
-                setStep('success');
-                setTimeout(() => {
-                    navigate('/Job-portal/jobseeker/help-center');
-                }, 2000);
-            }, 1500);
+            setStep('success');
+            setCountdown(5); // Reset countdown
+            scrollToTop(); // Scroll to top on success
         } catch (error) {
             console.error("ERROR:", error.response?.data || error);
             alert("Ticket submission failed");
             setStep('form');
         }
     };
+
+    // UseEffect to handle countdown and navigation
+    useEffect(() => {
+        if (step === 'success') {
+            const timer = setInterval(() => {
+                setCountdown((prev) => {
+                    if (prev <= 1) {
+                        clearInterval(timer);
+                        navigate('/Job-portal/jobseeker/help-center');
+                        return 0;
+                    }
+                    return prev - 1;
+                });
+            }, 1000);
+
+            return () => clearInterval(timer);
+        }
+    }, [step, navigate]);
 
     const handleFileChange = (e) => {
         const file = e.target.files[0];
@@ -194,19 +218,43 @@ export const RaiseTicket = () => {
         }
     };
 
+    const handleRemoveFile = () => {
+        setFormData({ ...formData, attachment: null });
+        setFileError('');
+        // Clear the file input
+        const fileInput = document.getElementById('file-upload');
+        if (fileInput) {
+            fileInput.value = '';
+        }
+        // Clear any attachment error
+        if (errors.attachment) {
+            setErrors(prev => ({ ...prev, attachment: null }));
+        }
+    };
+
     if (step === 'success') {
         return (
             <div>
                 <FHeader />
                 <div className="Raiseticket-status-container">
-                    {step === 'loading' ? (
-                        <div className="Raiseticket-loader"></div>
-                    ) : (
-                        <div className="Raiseticket-success-msg">
-                            <img src={Reportsubmitted} alt="ReportSubmitted" />
-                            <h2>Ticket Raised successfully</h2>
-                        </div>
-                    )}
+                    <div className="Raiseticket-success-msg">
+                        <img src={Reportsubmitted} alt="ReportSubmitted" className="Raiseticket-success-image" />
+                        <h2>Ticket Raised successfully</h2>
+                        <p className="Raiseticket-countdown">Redirecting in {countdown} seconds...</p>
+                    </div>
+                </div>
+                <Footer />
+            </div>
+        );
+    }
+
+    if (step === 'loading') {
+        return (
+            <div>
+                <FHeader />
+                <div className="Raiseticket-status-container">
+                    <div className="Raiseticket-loader"></div>
+                    <p className="Raiseticket-loading-text">Submitting your ticket...</p>
                 </div>
                 <Footer />
             </div>
@@ -267,13 +315,22 @@ export const RaiseTicket = () => {
                                     type="text"
                                     placeholder="Enter full name"
                                     value={formData.name}
+                                    maxLength={MAX_NAME_LENGTH}
                                     onChange={(e) => {
                                         const value = e.target.value;
                                         if (/^[A-Za-z\s]*$/.test(value)) {
                                             setFormData({ ...formData, name: value });
+                                            if (value.length >= MAX_NAME_LENGTH) {
+                                                setErrors(prev => ({ ...prev, name: `Name cannot exceed ${MAX_NAME_LENGTH} characters` }));
+                                            } else {
+                                                setErrors(prev => ({ ...prev, name: '' }));
+                                            }
                                         }
                                     }}
                                 />
+                                <span style={{ fontSize: '12px', color: formData.name.length >= MAX_NAME_LENGTH ? '#dc2626' : '#999', float: 'right' }}>
+                                    {formData.name.length}/{MAX_NAME_LENGTH}
+                                </span>
                                 {errors.name && <span className='form-group-err'>{errors.name}</span>}
                             </div>
 
@@ -325,8 +382,19 @@ export const RaiseTicket = () => {
                                     className={`${errors.message ? 'Raiseticket-form-group-err' : ''}`}
                                     maxLength={500}
                                     value={formData.message}
-                                    onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+                                    onChange={(e) => {
+                                        const value = e.target.value;
+                                        setFormData({ ...formData, message: value });
+                                        if (value.length >= 500) {
+                                            setErrors(prev => ({ ...prev, message: 'Message cannot exceed 500 characters' }));
+                                        } else {
+                                            setErrors(prev => ({ ...prev, message: '' }));
+                                        }
+                                    }}
                                 />
+                                <span style={{ fontSize: '12px', color: formData.message.length >= 500 ? '#dc2626' : '#999', float: 'right' }}>
+                                    {formData.message.length}/500
+                                </span>
                                 {errors.message && <span className='form-group-err'>{errors.message}</span>}
                             </div>
 
@@ -339,16 +407,28 @@ export const RaiseTicket = () => {
                                     onChange={handleFileChange}
                                     accept=".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg"
                                 />
-                                <div
-                                    className={`Raiseticket-file-input ${fileError ? 'Raiseticket-file-input-error' : ''}`}
-                                    onClick={() => document.getElementById('file-upload').click()}
-                                >
-                                    {formData.attachment ? (
-                                        <span style={{ color: '#2563eb', fontWeight: '500' }}>
-                                            {formData.attachment.name}
-                                        </span>
-                                    ) : (
-                                        "Click to attach a file (Optional)"
+                                <div className="Raiseticket-file-wrapper">
+                                    <div
+                                        className={`Raiseticket-file-input ${fileError ? 'Raiseticket-file-input-error' : ''}`}
+                                        onClick={() => document.getElementById('file-upload').click()}
+                                    >
+                                        {formData.attachment ? (
+                                            <span style={{ color: '#2563eb', fontWeight: '500' }}>
+                                                {formData.attachment.name}
+                                            </span>
+                                        ) : (
+                                            "Click to attach a file (Optional)"
+                                        )}
+                                    </div>
+                                    {formData.attachment && (
+                                        <button
+                                            type="button"
+                                            className="Raiseticket-remove-file"
+                                            onClick={handleRemoveFile}
+                                            title="Remove file"
+                                        >
+                                            ✕
+                                        </button>
                                     )}
                                 </div>
                                 {(fileError || errors.attachment) && (
@@ -357,7 +437,7 @@ export const RaiseTicket = () => {
                                     </span>
                                 )}
                                 <small className="file-info">
-                                    Accepted formats: PDF, DOC, DOCX, TXT, PNG, JPG, JPEG (Max 10MB)
+                                    Accepted formats: PDF, DOC, DOCX, TXT, PNG, JPG, JPEG
                                 </small>
                             </div>
 

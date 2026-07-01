@@ -46,16 +46,54 @@ const EditableListItem = ({ title, onEdit }) => (
 const FilterableDropdown = ({ options, selectedValue, onSelect, placeholder }) => {
     const [searchTerm, setSearchTerm] = useState("");
     const [isOpen, setIsOpen] = useState(false);
+    const triggerRef = useRef(null);
 
     const filteredOptions = options.filter(opt =>
         opt.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
+    const closeDropdown = (refocusTrigger = false) => {
+        setIsOpen(false);
+        setSearchTerm("");
+        if (refocusTrigger && triggerRef.current) {
+            triggerRef.current.focus();
+        }
+    };
+
+    const handleOptionSelect = (opt) => {
+        onSelect(opt);
+        closeDropdown(true);
+    };
+
     return (
         <div className="jobpost-dropdown" style={{ position: 'relative', width: '100%' }}>
             <div
+                // className="jobpost-dropdown-trigger"
+                // onClick={() => setIsOpen(!isOpen)}
+                ref={triggerRef}
+
                 className="jobpost-dropdown-trigger"
+                role="button"
+                tabIndex={0}
+                aria-haspopup="listbox"
+                aria-expanded={isOpen}
                 onClick={() => setIsOpen(!isOpen)}
+                onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        setIsOpen(!isOpen);
+                    } else if (e.key === "Escape") {
+                        closeDropdown();
+                    } else if (e.key === "ArrowDown") {
+                        e.preventDefault();
+                        setIsOpen(true);
+                    }
+                }}
+                onBlur={(e) => {
+                    if (!e.currentTarget.parentElement.contains(e.relatedTarget)) {
+                        closeDropdown();
+                    }
+                }}
                 style={{ height: '44px', border: '1px solid #E5E7EB', borderRadius: '6px', padding: '0 16px', display: 'flex', alignItems: 'center', cursor: 'pointer', background: '#fff' }}
             >
                 {selectedValue || placeholder}
@@ -76,11 +114,24 @@ const FilterableDropdown = ({ options, selectedValue, onSelect, placeholder }) =
                     <div className="jobpost-options-grid" style={{ gridTemplateColumns: '1fr', maxHeight: '150px', overflowY: 'auto' }}>
                         {filteredOptions.length > 0 ? (
                             filteredOptions.map(opt => (
+                                // <div
+                                //     key={opt}
+                                //     className="jobpost-option-item"
+                                //     onClick={() => { onSelect(opt); setIsOpen(false); setSearchTerm(""); }}
+                                //     style={{ padding: '8px', cursor: 'pointer' }}
+                                // >
                                 <div
-                                    key={opt}
                                     className="jobpost-option-item"
-                                    onClick={() => { onSelect(opt); setIsOpen(false); setSearchTerm(""); }}
-                                    style={{ padding: '8px', cursor: 'pointer' }}
+                                    role="option"
+                                    aria-selected={opt === selectedValue}
+                                    tabIndex={0}
+                                    onClick={() => handleOptionSelect(opt)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === "Enter" || e.key === " ") {
+                                            e.preventDefault();
+                                            handleOptionSelect(opt);
+                                        }
+                                    }}
                                 >
                                     {opt}
                                 </div>
@@ -3755,6 +3806,7 @@ export const MyProfile = () => {
             preferred_locations: allData.currentDetails.prefLocation,
 
             phone: allData.contact.mobile,
+            email: allData.contact.email,
             alternate_phone: allData.contact.altMobile || null,
             alternate_email: allData.contact.altEmail || null,
             full_address: allData.contact.address,

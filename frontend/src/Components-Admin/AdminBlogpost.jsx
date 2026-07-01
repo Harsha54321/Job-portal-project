@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './AdminBlogpost.css';
 import Trash from '../assets/AdminAssets/TrashIcon.png';
 import Filter from '../assets/AdminAssets/Filter.png';
@@ -17,6 +17,8 @@ export const AdminBlogPost = () => {
     const [mode, setmode] = useState("list");
     const [searchQuery, setSearchQuery] = useState("");
     const [activeSearch, setActiveSearch] = useState("");
+
+    const dropdownRefs = useRef({});
 
     const [selectedBlog, setSelectedBlog] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -38,6 +40,29 @@ export const AdminBlogPost = () => {
     const draftsCount = blogStats.drafts;
     const trashCount = blogStats.trash;
 
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            let isOutsideAllDropdowns = true;
+            Object.values(dropdownRefs.current).forEach(ref => {
+                if (ref && ref.contains(event.target)) {
+                    isOutsideAllDropdowns = false;
+                }
+            });
+            const isThreeDotsClick = event.target.closest('.admin-Blog-li-threedots-icon');
+            if (isOutsideAllDropdowns && !isThreeDotsClick) {
+                setOpenMenu(null);
+            }
+        };
+        if (openMenu !== null) {
+            document.addEventListener('mousedown', handleClickOutside);
+        } else {
+            document.removeEventListener('mousedown', handleClickOutside);
+        }
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [openMenu]);
+
     // Fetch categories on mount
     useEffect(() => {
         const fetchCategories = async () => {
@@ -51,7 +76,6 @@ export const AdminBlogPost = () => {
         fetchCategories();
     }, []);
 
-    // Click outside handler for dropdowns
     useEffect(() => {
         const handleClickOutside = (event) => {
             if (!event.target.closest('.modal-input-group') &&
@@ -297,6 +321,7 @@ export const AdminBlogPost = () => {
                 return updated;
             });
             fetchBlogStats();
+            alert("Changes saved successfully!");
 
             setIsModalOpen(false);
             setIsEditMode(false);
@@ -358,6 +383,11 @@ export const AdminBlogPost = () => {
     };
 
     const hasEditErrors = Object.values(editErrors).some(err => err !== '');
+
+    const toggleDropdown = (blogId, event) => {
+        event.stopPropagation();
+        setOpenMenu(openMenu === blogId ? null : blogId);
+    };
 
     return (
         <>
@@ -458,12 +488,26 @@ export const AdminBlogPost = () => {
                                                         src={threedots}
                                                         alt="Menu"
                                                         className="admin-Blog-li-threedots-icon"
-                                                        onClick={() => { setOpenMenu(openMenu === blog.id ? null : blog.id); }}
+                                                        onClick={(e) => toggleDropdown(blog.id, e)}
                                                     />
                                                     {openMenu === blog.id && (
-                                                        <div className="admin-Blog-li-dropdown-menu">
-                                                            <div onClick={() => handleViewClick(blog.mappedCategoryName, blog)} className="admin-Blog-li-dropdown-item">View & Edit</div>
-                                                            <div onClick={() => handleDelete(blog.mappedCategoryName, blog.id)} className="admin-Blog-li-dropdown-item">Delete</div>
+                                                        <div
+                                                            className="admin-Blog-li-dropdown-menu"
+                                                            ref={el => dropdownRefs.current[blog.id] = el}
+                                                            onClick={(e) => e.stopPropagation()}
+                                                        >
+                                                            <div
+                                                                className="admin-Blog-li-dropdown-item"
+                                                                onClick={() => handleViewClick(blog.mappedCategoryName, blog)}
+                                                            >
+                                                                View & Edit
+                                                            </div>
+                                                            <div
+                                                                className="admin-Blog-li-dropdown-item"
+                                                                onClick={() => handleDelete(blog.mappedCategoryName, blog.id)}
+                                                            >
+                                                                Delete
+                                                            </div>
                                                         </div>
                                                     )}
                                                 </td>

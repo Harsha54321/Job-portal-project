@@ -58,6 +58,24 @@ export const Esignup = () => {
   });
 
   useEffect(() => {
+    if (showEmailOtp) {
+      const t = setTimeout(() => {
+        document.getElementById('otp-email-0')?.focus();
+      }, 150);
+      return () => clearTimeout(t);
+    }
+  }, [showEmailOtp]);
+
+  useEffect(() => {
+    if (showMobileOtp) {
+      const t = setTimeout(() => {
+        document.getElementById('otp-mobile-0')?.focus();
+      }, 150);
+      return () => clearTimeout(t);
+    }
+  }, [showMobileOtp]);
+
+  useEffect(() => {
     const fetchRegSettings = async () => {
       try {
         const res = await api.get("employer-registration-settings/");
@@ -573,9 +591,15 @@ export const Esignup = () => {
                       if (e.key === "Backspace" && !otpValues[otpKey]?.[index] && index > 0) {
                         document.getElementById(`otp-${type}-${index - 1}`).focus();
                       }
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const currentOtp = otpValues[otpKey] || "";
+                        if (currentOtp.length === 6) {
+                          isEmail ? verifyEmailOtp(e) : verifyMobileOtp(e);
+                        }
+                      }
                     }}
-                    autoFocus={index === 0}
-                    disabled={isLoading}
                   />
                 ))}
               </div>

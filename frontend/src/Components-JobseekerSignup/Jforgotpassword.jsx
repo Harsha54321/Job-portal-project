@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link,useNavigate } from 'react-router-dom'
 import './Jforgotpassword.css'
 import forgot from "../assets/Forgot.png"
 import api from '../api/axios'
@@ -10,6 +10,7 @@ export const Jforgotpassword = () => {
   const [errors, setErrors] = useState({})
   const [loading, setLoading] = useState(false)
   const [apiError, setApiError] = useState("")
+  const navigate = useNavigate();
 
   const handleForm = (e) => {
     const { name, value } = e.target
@@ -80,6 +81,13 @@ export const Jforgotpassword = () => {
         <div className="forgot-password-illustration">
           <img src={forgot} alt="Forgot password Illustration" />
         </div>
+        <button
+              type="button"
+              className="back-to-login"
+              onClick={() => navigate(-1)}
+            >
+              ← Back
+            </button>
         <form onSubmit={handleSubmit} className="forgot-password-form">
           <h2>Forgot Your Password?</h2>
 

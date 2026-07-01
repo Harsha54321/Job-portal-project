@@ -45,13 +45,59 @@
   color: #131a24;
 }
 
+.sort-select-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 10px 0;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.sort-label {
+  font-weight: 400;
+  color: #2d3748;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
 .sort-select {
-  border: none;
-  background: transparent;
-  font-weight: 600;
+  display: flex;
+  align-items: center;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  font-weight: 500;
   color: #2d3748;
   cursor: pointer;
   outline: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  min-width: 150px;
+  transition: all 0.2s ease;
+}
+
+.sort-select:hover {
+  border-color: #4a90e2;
+}
+
+.sort-select:focus {
+  border-color: #4a90e2;
+  box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
+}
+
+.sort-select option {
+  padding: 8px;
+  font-weight: normal;
+}
+
+.sort-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  padding: 12px 0;
 }
 
 /* 3. The Table Container */
@@ -523,13 +569,15 @@
 
 .status-pill.highlighted {
 
-    background: #fef3c7;   /* amber-100 */
+  background: #fef3c7;
+  /* amber-100 */
 
-   color: #92400e;         /* amber-800 */
+  color: #92400e;
+  /* amber-800 */
 
-   border: 1px solid #fcd34d;
+  border: 1px solid #fcd34d;
 
-    font-weight: 500;
+  font-weight: 500;
 
 }
 
@@ -544,19 +592,23 @@
   background-color: #fffbeb;
   border-left: 4px solid #f59e0b;
 }
+
 /* Container Box for Logo or Fallback Letter */
 .job-preview-logo-box {
   width: 60px;
   height: 60px;
-  min-width: 60px; /* Prevents compression inside flex containers */
+  min-width: 60px;
+  /* Prevents compression inside flex containers */
   min-height: 60px;
-  background-color: #f0f4f8; /* Soft background tint for fallback letter text */
+  background-color: #f0f4f8;
+  /* Soft background tint for fallback letter text */
   border: 1px solid #e2e8f0;
   border-radius: 12px;
   display: flex;
   justify-content: center;
   align-items: center;
-  overflow: hidden; /* Clips breaking image borders */
+  overflow: hidden;
+  /* Clips breaking image borders */
   position: relative;
 }
 
@@ -564,7 +616,8 @@
 .job-logo-fallback-text {
   font-size: 24px;
   font-weight: 700;
-  color: #1e88e5; /* Primary brand blue coloring accent */
+  color: #1e88e5;
+  /* Primary brand blue coloring accent */
   text-transform: uppercase;
   user-select: none;
 }
@@ -573,8 +626,10 @@
 .job-preview-logo-img {
   width: 100%;
   height: 100%;
-  object-fit: contain; /* Preserves brand icon structural aspect ratio */
-  background-color: #ffffff; /* Ensures contrast backgrounds behind custom logos */
+  object-fit: contain;
+  /* Preserves brand icon structural aspect ratio */
+  background-color: #ffffff;
+  /* Ensures contrast backgrounds behind custom logos */
   position: absolute;
   top: 0;
   left: 0;

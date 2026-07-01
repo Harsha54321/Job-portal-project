@@ -239,7 +239,9 @@
     cursor: pointer;
     font-size: 16px;
 }
-
+.reset-link:hover {
+    opacity: 0.6;
+}
 .profile-layout {
     display: flex;
     gap: 2rem;

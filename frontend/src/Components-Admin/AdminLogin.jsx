@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from "react-router-dom";
 import manSitting from '../assets/Illustration_1.png';
 import eye from '../assets/show_password.png';
@@ -28,6 +28,7 @@ export const AdminLogin = () => {
     const [canResend, setCanResend] = useState(true);
     const [otpSent, setOtpSent] = useState(false); // Track if OTP has been sent for current method
     const [isSendingOTP, setIsSendingOTP] = useState(false); // Loading state for send OTP button
+    const otpInputRef = useRef(null);
     // =================================================
 
     // useEffect(() => {
@@ -73,6 +74,15 @@ export const AdminLogin = () => {
         setErrors({ ...errors, [name]: "" });
         setServerError("");
     };
+
+    useEffect(() => {
+        if (showOTPModal && otpSent) {
+            const t = setTimeout(() => {
+                otpInputRef.current?.focus();
+            }, 150);
+            return () => clearTimeout(t);
+        }
+    }, [showOTPModal, otpSent]);
 
     // const handleRememberMe = (e) => {
     //     const checked = e.target.checked;
@@ -607,11 +617,21 @@ export const AdminLogin = () => {
                             </label>
                             <input
                                 type="text"
+                                ref={otpInputRef}
                                 value={otpValue}
                                 onChange={(e) => {
                                     const value = e.target.value.replace(/\D/g, '').slice(0, 6);
                                     setOtpValue(value);
                                     setOtpError("");
+                                }}
+                                onKeyDown={(e) => {
+                                    if (e.key === "Enter") {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        if (otpValue.length === 6 && otpSent && !is2FALoading) {
+                                            handleVerifyOTP();
+                                        }
+                                    }
                                 }}
                                 placeholder="Enter 6-digit OTP"
                                 maxLength={6}

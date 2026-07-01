@@ -150,9 +150,23 @@ from .views import (
 )
 from .webhooks import razorpay_webhook
 from . import views 
+from rest_framework.response import Response
+from rest_framework.decorators import api_view
+from rest_framework.reverse import reverse
 
+@api_view(['GET'])
+def api_root(request, format=None):
+    data = {}
+    for p in urlpatterns[1:]:
+        try:
+            if getattr(p, "name", None):
+                data[p.name] = reverse(p.name, request=request, format=format)
+        except Exception:
+            pass
+    return Response(data)
 
 urlpatterns = [
+    path('', api_root, name='api-root'),
     # Registration (open to everyone)
     path('register/jobseeker/', JobSeekerRegistrationView.as_view(), name='jobseeker-register'),
     path('register/employer/', EmployerRegistrationView.as_view(), name='employer-register'),

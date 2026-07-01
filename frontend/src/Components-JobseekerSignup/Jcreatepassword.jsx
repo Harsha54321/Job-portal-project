@@ -35,7 +35,6 @@ export const Jcreatepassword = () => {
     setErrors({ ...errors, [name]: "" })
   }
 
-  // ✅ FIXED: Updated regex to require all 4 types
   const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*])[A-Za-z\d!@#$%^&*]{8,}$/
 
   const validateForm = () => {
@@ -64,7 +63,6 @@ export const Jcreatepassword = () => {
   
   const location = useLocation();
 
-  // for token validation
   useEffect(()=>{
     const queryParams = new URLSearchParams(location.search);
     const tokenFromURL = queryParams.get('token');

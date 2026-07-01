@@ -1,10 +1,13 @@
 .profilehelp-page {
     margin-top: 102px;
+    padding-bottom: 50px;
 }
  
 .profilehelp-container {
     background: #ffffff;
     padding: 40px 100px 100px;
+    max-width: 1200px;
+    margin: 0 auto;
 }
  
 .profilehelp-title {
@@ -12,6 +15,9 @@
     margin-bottom: 40px;
     display: flex;
     justify-content: center;
+    font-size: 32px;
+    font-weight: 700;
+    text-align: center;
 }
  
 .profilehelp-updated {
@@ -25,37 +31,43 @@
     line-height: 1.7;
     color: #334155;
     margin-bottom: 40px;
+    max-width: 800px;
+    margin-left: auto;
+    margin-right: auto;
+    text-align: center;
 }
  
-.profilehelp-layout {
+/* Centered Flowchart Section */
+.profilehelp-hero-section {
     display: flex;
-    gap: 60px;
+    justify-content: center;
     align-items: center;
-}
- 
-.profilehelp-left {
-    flex: 1.2;
-    min-width: 0;
-}
- 
-.profilehelp-right {
-    flex: 1;
-    max-width: 500px;
-}
- 
-.profilehelp-steps-container {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
+    margin-bottom: 50px;
     width: 100%;
+    overflow-x: auto;
 }
  
-.profilehelp-steps-container h2 {
-    font-size: 26px;
+.profilehelp-flowchart {
+    width: 100%;
+    max-width: 880px;
+    height: auto;
+    display: block;
+}
+ 
+/* Summary Section - Moved down */
+.profilehelp-summary-section {
+    margin-bottom: 60px;
+    max-width: 900px;
+    margin-left: auto;
+    margin-right: auto;
+}
+ 
+.profilehelp-summary-title {
+    font-size: 24px;
     font-weight: 700;
     color: #0f172a;
-    margin-bottom: 24px;
-    text-align: left;
+    margin-bottom: 20px;
+    text-align: center;
 }
  
 .profilehelp-steps-list {
@@ -71,10 +83,9 @@
 }
  
 .profilehelp-detailed-steps {
-    margin-top: 80px;
+    margin-top: 40px;
     display: flex;
     flex-direction: column;
-    align-items: flex-start;
     width: 100%;
     max-width: 900px;
     margin-left: auto;
@@ -88,12 +99,22 @@
     margin-bottom: 30px;
     padding-bottom: 12px;
     border-bottom: 2px solid #e2e8f0;
+    text-align: center;
     width: 100%;
 }
  
 .detailed-step {
     margin-bottom: 30px;
     width: 100%;
+    padding: 20px;
+    background: #f8fafc;
+    border-radius: 10px;
+    border-left: 4px solid #0f172a;
+    transition: all 0.2s ease;
+}
+ 
+.detailed-step:hover {
+    background: #f1f5f9;
 }
  
 .detailed-step h3 {
@@ -128,30 +149,101 @@
     font-weight: 600;
 }
  
+/* Responsive Design */
+@media (max-width: 1200px) {
+    .profilehelp-container {
+        padding: 40px 50px 60px;
+    }
+}
+ 
 @media (max-width: 1000px) {
     .profilehelp-container {
         padding: 40px 30px 60px;
     }
  
-    .profilehelp-layout {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 40px;
-    }
- 
-    .profilehelp-left,
-    .profilehelp-right {
-        max-width: 100%;
-        width: 100%;
-        flex: none;
-    }
- 
-    .profilehelp-left {
+    .profilehelp-hero-section {
         overflow-x: auto;
+        padding: 0 10px;
     }
  
-    .profilehelp-detailed-steps {
-        margin-top: 50px;
+    .profilehelp-flowchart {
+        min-width: 550px;
     }
 }
  
+@media (max-width: 768px) {
+    .profilehelp-container {
+        padding: 30px 20px 50px;
+    }
+ 
+    .profilehelp-title {
+        font-size: 26px;
+    }
+ 
+    .profilehelp-intro {
+        font-size: 14px;
+        padding: 0 10px;
+    }
+ 
+    .profilehelp-summary-title {
+        font-size: 20px;
+    }
+ 
+    .profilehelp-steps-list li {
+        font-size: 15px;
+    }
+ 
+    .profilehelp-detailed-steps h2 {
+        font-size: 22px;
+    }
+ 
+    .detailed-step {
+        padding: 16px;
+    }
+ 
+    .detailed-step h3 {
+        font-size: 17px;
+    }
+ 
+    .detailed-step h4 {
+        font-size: 16px;
+    }
+ 
+    .detailed-step li {
+        font-size: 14px;
+    }
+}
+ 
+@media (max-width: 480px) {
+    .profilehelp-title {
+        font-size: 22px;
+    }
+ 
+    .profilehelp-intro {
+        font-size: 13px;
+    }
+ 
+    .profilehelp-detailed-steps h2 {
+        font-size: 19px;
+    }
+ 
+    .detailed-step {
+        padding: 14px;
+    }
+ 
+    .detailed-step h3 {
+        font-size: 16px;
+    }
+ 
+    .detailed-step h4 {
+        font-size: 15px;
+    }
+ 
+    .profilehelp-steps-list {
+        padding-left: 18px;
+    }
+ 
+    .profilehelp-steps-list li {
+        font-size: 14px;
+    }
+}

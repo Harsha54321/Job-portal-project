@@ -388,6 +388,10 @@ export const FindTalent = ({ onUpgradeClick }) => {
           user.full_name || '',
           user.current_job_title || user.profile?.current_job_title || '',
           user.current_company || user.profile?.current_company || '',
+          // Added location fields based on your ProfileCard structure:
+          user.current_location || user.profile?.current_location || '',
+          user.city || user.profile?.city || '',
+          user.state || user.profile?.state || '',
           ...userSkills,
           ...userEducation
         ].join(' ').toLowerCase();

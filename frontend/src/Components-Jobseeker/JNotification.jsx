@@ -16,11 +16,13 @@ export const JNotification = ({ }) => {
         activeMenuId,
         setActiveMenuId,
         currentUserId,
-        fetchNotifications  // ← Add this
+        fetchNotifications
     } = useJobs()
 
     const navigate = useNavigate();
     const containerRef = useRef(null);
+    const firstFocusableRef = useRef(null);
+    const lastFocusableRef = useRef(null);
 
     const newNotificationsCount = notificationsData.filter(n => !n.isRead).length;
 
@@ -38,7 +40,6 @@ export const JNotification = ({ }) => {
             if (fetchNotifications) await fetchNotifications();
         } catch (err) {
             console.error("Error marking as read:", err);
-            // Fallback to local update
             setNotificationsData(prev =>
                 prev.map(n => n.id === id ? { ...n, isRead: true } : n)
             );
@@ -84,6 +85,75 @@ export const JNotification = ({ }) => {
         setActiveMenuId(null);
     };
 
+    // Focus trap and ESC key handler
+    useEffect(() => {
+        const handleKeyDown = (event) => {
+            // Close on ESC key
+            if (event.key === 'Escape') {
+                setShowNotification(false);
+                setActiveMenuId(null);
+                return;
+            }
+
+            // Focus trap for Tab key
+            if (event.key === 'Tab' && showNotification) {
+                const focusableElements = containerRef.current?.querySelectorAll(
+                    'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+                );
+                
+                if (!focusableElements || focusableElements.length === 0) return;
+
+                const firstElement = focusableElements[0];
+                const lastElement = focusableElements[focusableElements.length - 1];
+
+                // If Shift+Tab on first element, move to last
+                if (event.shiftKey && document.activeElement === firstElement) {
+                    event.preventDefault();
+                    lastElement.focus();
+                }
+                // If Tab on last element, move to first
+                else if (!event.shiftKey && document.activeElement === lastElement) {
+                    event.preventDefault();
+                    firstElement.focus();
+                }
+            }
+        };
+
+        // Add event listener when notification is shown
+        if (showNotification) {
+            document.addEventListener('keydown', handleKeyDown);
+            
+            // Focus the first focusable element after a small delay
+            setTimeout(() => {
+                const firstFocusable = containerRef.current?.querySelector(
+                    'button:not(.more-options-btn), .clear-all-btn, .notifications-close-btn'
+                );
+                if (firstFocusable) {
+                    firstFocusable.focus();
+                }
+            }, 100);
+        }
+
+        return () => {
+            document.removeEventListener('keydown', handleKeyDown);
+        };
+    }, [showNotification, setShowNotification, setActiveMenuId]);
+
+    // Handle menu keyboard navigation
+    useEffect(() => {
+        if (activeMenuId) {
+            const handleMenuKeyDown = (event) => {
+                if (event.key === 'Escape') {
+                    setActiveMenuId(null);
+                }
+            };
+            document.addEventListener('keydown', handleMenuKeyDown);
+            return () => {
+                document.removeEventListener('keydown', handleMenuKeyDown);
+            };
+        }
+    }, [activeMenuId, setActiveMenuId]);
+
     // CLOSE ON OUTSIDE CLICK
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -92,6 +162,7 @@ export const JNotification = ({ }) => {
                 !containerRef.current.contains(event.target)
             ) {
                 setShowNotification(false);
+                setActiveMenuId(null);
             }
         };
 
@@ -102,12 +173,15 @@ export const JNotification = ({ }) => {
         return () => {
             document.removeEventListener("mousedown", handleClickOutside);
         };
-    }, [showNotification, setShowNotification]);
+    }, [showNotification, setShowNotification, setActiveMenuId]);
 
     return (
         <div
             ref={containerRef}
             className={`notifications-container ${showNotification ? "show-notification" : "hide-notification"}`}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Notifications"
         >
             {/* HEADER */}
             <div className="notifications-header">
@@ -119,7 +193,11 @@ export const JNotification = ({ }) => {
                     />
                     <h2>Notifications</h2>
                 </div>
-                <button onClick={() => setShowNotification(false)} className="notifications-close-btn">
+                <button 
+                    onClick={() => setShowNotification(false)} 
+                    className="notifications-close-btn"
+                    aria-label="Close notifications"
+                >
                     &times;
                 </button>
             </div>
@@ -134,7 +212,11 @@ export const JNotification = ({ }) => {
                         </span>
                     )}
                 </div>
-                <button className="clear-all-btn" onClick={handleClearAll}>
+                <button 
+                    className="clear-all-btn" 
+                    onClick={handleClearAll}
+                    aria-label="Clear all notifications"
+                >
                     Clear all
                 </button>
             </div>
@@ -155,16 +237,23 @@ export const JNotification = ({ }) => {
                             <button
                                 className="more-options-btn"
                                 onClick={(e) => toggleMenu(notification.id, e)}
+                                aria-label="More options"
+                                aria-expanded={activeMenuId === notification.id}
                             >
                                 ⋮
                             </button>
 
                             {activeMenuId === notification.id && (
-                                <div className="overflow-menu">
+                                <div 
+                                    className="overflow-menu"
+                                    role="menu"
+                                    aria-label="Notification options"
+                                >
                                     {notification.isRead ? (
                                         <button
                                             className="menu-item"
                                             onClick={() => handleMarkAsUnread(notification.id)}
+                                            role="menuitem"
                                         >
                                             Mark as unread
                                         </button>
@@ -172,6 +261,7 @@ export const JNotification = ({ }) => {
                                         <button
                                             className="menu-item"
                                             onClick={() => handleMarkAsRead(notification.id)}
+                                            role="menuitem"
                                         >
                                             Mark as read
                                         </button>
@@ -179,6 +269,7 @@ export const JNotification = ({ }) => {
                                     <button
                                         onClick={() => handleDelete(notification.id)}
                                         className="menu-item delete-item"
+                                        role="menuitem"
                                     >
                                         Delete
                                     </button>

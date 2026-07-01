@@ -496,6 +496,8 @@ class JobSeekerProfileReadSerializer(serializers.ModelSerializer):
 class JobSeekerProfileWriteSerializer(WritableNestedModelSerializer):
 
     employment_status = serializers.CharField(required=False)
+    phone = serializers.CharField(source="user.phone", required=False)
+    email = serializers.EmailField(source="user.email", required=False)
     experiences = WorkExperienceEntrySerializer(many=True, required=False)
     skills = SkillSerializer(many=True, required=False)
     languages = LanguageKnownSerializer(many=True, required=False)
@@ -516,7 +518,7 @@ class JobSeekerProfileWriteSerializer(WritableNestedModelSerializer):
             'profile_photo',
             'current_job_title', 'current_company', 'total_experience_years',
             'notice_period', 'current_location', 'preferred_locations',
-            'alternate_phone', 'alternate_email', 'full_address',
+            'alternate_phone', 'alternate_email', 'phone', 'email','full_address',
             'street', 'city', 'state', 'pincode', 'country',
             'resume_file',
             'portfolio_link',
@@ -610,7 +612,18 @@ class JobSeekerProfileWriteSerializer(WritableNestedModelSerializer):
         
         print(f" Education data received: {educations_data}")
         
-        # Update simple fields
+        # Update User model
+        user_data = validated_data.pop("user", {})
+ 
+        if "phone" in user_data:
+            instance.user.phone = user_data["phone"]
+ 
+        if "email" in user_data:
+            instance.user.email = user_data["email"]
+ 
+        instance.user.save()
+ 
+        # Update JobSeekerProfile fields
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()
@@ -2287,13 +2300,13 @@ class ContactMessageSerializer(serializers.ModelSerializer):
             'contact',
             'message',
             'status',
+            'resolved_on',
             'created_at'
         ]
  
         read_only_fields = [
             'id',
             'user',
-            'status',
             'created_at'
         ]
  
@@ -2310,7 +2323,7 @@ class ContactMessageSerializer(serializers.ModelSerializer):
             )
  
         return value
- 
+
 
 # CompanyVerify Serializer
 class CompanyVerificationSerializer(serializers.ModelSerializer):

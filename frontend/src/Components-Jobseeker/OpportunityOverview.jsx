@@ -27,6 +27,7 @@ export const OpportunityOverview = () => {
   const [searchLocation, setSearchLocation] = useState("");
   const [searchExperience, setSearchExperience] = useState("");
   const [isLocationPopupOpen, setIsLocationPopupOpen] = useState(false);
+  const [isIndustryPopupOpen, setIsIndustryPopupOpen] = useState(false);
   const [similarLocationPopup, setSimilarLocationPopup] = useState({
     open: false,
     jobId: null,
@@ -67,6 +68,39 @@ export const OpportunityOverview = () => {
     return {
       display,
       allLocations: locationsArray,
+      hasMore,
+      remainingCount
+    };
+  };
+
+  const getIndustryDisplay = (industry, maxDisplay = 3) => {
+    if (!industry) return { display: "Not specified", allIndustries: [], hasMore: false };
+
+    let industryArray = [];
+    if (Array.isArray(industry)) {
+      industryArray = industry;
+    } else if (typeof industry === 'string') {
+      industryArray = industry.split(',').map(i => i.trim()).filter(i => i !== "");
+    } else {
+      return { display: "Not specified", allIndustries: [], hasMore: false };
+    }
+
+    if (industryArray.length === 0) {
+      return { display: "Not specified", allIndustries: [], hasMore: false };
+    }
+
+    const displayIndustries = industryArray.slice(0, maxDisplay);
+    const remainingCount = industryArray.length - maxDisplay;
+    const hasMore = remainingCount > 0;
+
+    let display = displayIndustries.join(", ");
+    if (hasMore) {
+      display += ` +${remainingCount} more`;
+    }
+
+    return {
+      display,
+      allIndustries: industryArray,
       hasMore,
       remainingCount
     };
@@ -194,6 +228,8 @@ export const OpportunityOverview = () => {
     }
   }
 
+  const industryDisplay = getIndustryDisplay(job.industry_type);
+  
   const locationDisplay = locationsList.length > 0 ? locationsList.join(", ") : "Location not specified";
   return (
     <>
@@ -349,7 +385,26 @@ export const OpportunityOverview = () => {
               </ul>
 
               <p><strong>Role:</strong> {job.job_title}</p>
-              <p><strong>Industry Type:</strong> {Array.isArray(job.industry_type) ? job.industry_type.join(", ") : job.industry_type}</p>
+              
+              {/* Updated Industry Type with truncation */}
+              <p><strong>Industry Type:</strong> 
+                <span className="location-text-wrap">
+                  {industryDisplay.hasMore ? (
+                    <>
+                      {industryDisplay.allIndustries.slice(0, 3).join(", ")}
+                      <span
+                        className="opp-show-more-link"
+                        onClick={() => setIsIndustryPopupOpen(true)}
+                      >
+                        {" +" + industryDisplay.remainingCount + " more"}
+                      </span>
+                    </>
+                  ) : (
+                    industryDisplay.display
+                  )}
+                </span>
+              </p>
+              
               <p><strong>Department:</strong> {Array.isArray(job.department) ? job.department.join(", ") : job.department}</p>
               <p><strong>Job Type:</strong> {job.work_type}</p>
               <p><strong>Location:</strong><span className="location-text-wrap">
@@ -393,7 +448,7 @@ export const OpportunityOverview = () => {
             </div>
           </div>
 
-          {/* Similar Jobs Section - Updated with location popup */}
+          {/* Similar Jobs Section */}
           <div className="opp-job-sidebar">
             <h3>Similar Jobs</h3>
             {limitedSimilarJob.length > 0 ? (
@@ -493,6 +548,23 @@ export const OpportunityOverview = () => {
             <div className="opp-loc-modal-body">
               {locationsList.map((loc, index) => (
                 <span key={index} className="opp-loc-chip">{loc}</span>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Industry Type Popup Modal */}
+      {isIndustryPopupOpen && (
+        <div className="opp-loc-modal-overlay" onClick={() => setIsIndustryPopupOpen(false)}>
+          <div className="opp-loc-modal-content" onClick={e => e.stopPropagation()}>
+            <div className="opp-loc-modal-header">
+              <h3>All Industries</h3>
+              <button className="opp-loc-modal-close" onClick={() => setIsIndustryPopupOpen(false)}>&times;</button>
+            </div>
+            <div className="opp-loc-modal-body">
+              {industryDisplay.allIndustries.map((industry, index) => (
+                <span key={index} className="opp-loc-chip">{industry}</span>
               ))}
             </div>
           </div>

@@ -607,13 +607,25 @@ export const Jlogin = () => {
                   disabled={loading}
                   autoComplete="current-password"
                 />
-                <span className="eye-icon" onClick={togglePasswordView}>
-                  <img
-                    src={passwordShow ? eyeHide : eye}
-                    className="show-icon"
-                    alt="show"
-                  />
-                </span>
+                <button
+                    type="button"
+                    className="eye-icon"
+                    onClick={togglePasswordView}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        togglePasswordView();
+                      }
+                    }}
+                    aria-label={passwordShow ? "Show password" : "Hide password"}
+                    disabled={loading}
+                  >
+                    <img
+                      src={passwordShow ? eyeHide : eye}
+                      className="show-icon"
+                      alt=""
+                    />
+                  </button>
               </div>
               {errors.password && <span className="error-msg">{errors.password}</span>}
 
@@ -623,6 +635,12 @@ export const Jlogin = () => {
                     type="checkbox"
                     checked={rememberMe}
                     onChange={(e) => setRememberMe(e.target.checked)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault(); // stop form submit
+                        setRememberMe(prev => !prev);
+                      }
+                    }}
                     disabled={loading}
                   />
                   Remember me

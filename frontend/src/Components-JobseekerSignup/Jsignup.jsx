@@ -85,6 +85,24 @@ export const Jsignup = () => {
     return () => clearInterval(interval);
   }, [timer, showEmailOtp, showMobileOtp]);
 
+  useEffect(() => {
+    if (showEmailOtp) {
+      const t = setTimeout(() => {
+        document.getElementById('otp-email-0')?.focus();
+      }, 150);
+      return () => clearTimeout(t);
+    }
+  }, [showEmailOtp]);
+
+  useEffect(() => {
+    if (showMobileOtp) {
+      const t = setTimeout(() => {
+        document.getElementById('otp-mobile-0')?.focus();
+      }, 150);
+      return () => clearTimeout(t);
+    }
+  }, [showMobileOtp]);
+
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -582,9 +600,15 @@ export const Jsignup = () => {
                       if (e.key === "Backspace" && !otpValues[otpKey]?.[index] && index > 0) {
                         document.getElementById(`otp-${type}-${index - 1}`).focus();
                       }
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const currentOtp = otpValues[otpKey] || "";
+                        if (currentOtp.length === 6) {
+                          isEmail ? verifyEmailOtp(e) : verifyMobileOtp(e);
+                        }
+                      }
                     }}
-                    autoFocus={index === 0}
-                    disabled={isOtpLoading}
                   />
                 ))}
               </div>
@@ -764,9 +788,19 @@ export const Jsignup = () => {
                 className={errors.password ? "input-error" : ""}
                 disabled={isSubmitting}
               />
-              <span className="eye-icon" onClick={togglePasswordView}>
+              {/* <span className="eye-icon" onClick={togglePasswordView}>
                 <img src={passwordShow ? eyeHide : eye} className='show-icon' alt='show' />
-              </span>
+              </span> */}
+              <button
+                type="button"
+                className="eye-icon"
+                onClick={togglePasswordView}
+                aria-label={passwordShow ? "Show password" : "Hide password"}
+                tabIndex={0}
+              >
+                <img src={passwordShow ? eyeHide : eye} className='show-icon' alt='' />
+              </button>
+
             </div>
             {errors.password && <span className="error-msg">{errors.password}</span>}
 
@@ -782,9 +816,18 @@ export const Jsignup = () => {
                 className={errors.confirmpassword ? "input-error" : ""}
                 disabled={isSubmitting}
               />
-              <span className="eye-icon" onClick={toggleConfirmPasswordView}>
+              {/* <span className="eye-icon" onClick={toggleConfirmPasswordView}>
                 <img src={confirmPasswordShow ? eyeHide : eye} className='show-icon' alt='show' />
-              </span>
+              </span> */}
+              <button
+                type="button"
+                className="eye-icon"
+                onClick={toggleConfirmPasswordView}
+                aria-label={confirmPasswordShow ? "Show confirm password" : "Hide confirm password"}
+                tabIndex={0}
+              >
+                <img src={confirmPasswordShow ? eyeHide : eye} className='show-icon' alt='' />
+              </button>
             </div>
             {errors.confirmpassword && <span className="error-msg">{errors.confirmpassword}</span>}
 

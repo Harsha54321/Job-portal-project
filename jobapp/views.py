@@ -1608,14 +1608,14 @@ class ApplyJobView(generics.CreateAPIView):
             "date_of_birth": profile.dob,
             "marital_status": profile.marital_status,
             "phone_number": (
-                profile.alternate_phone
-                or
                 user.phone
+                or
+                profile.alternate_phone
             ),
             "email": (
-                profile.alternate_email
-                or
                 user.email
+                or
+                profile.alternate_email
             ),
             "street": profile.street,
             "city": profile.city,
@@ -3364,7 +3364,7 @@ class ContactMessageListAPIView(APIView):
             status=status.HTTP_200_OK
         )
 
-    
+
 #for admin update status only
 class ContactMessageStatusUpdateAPIView(APIView):
  
@@ -3392,6 +3392,14 @@ class ContactMessageStatusUpdateAPIView(APIView):
             choice[0]
             for choice in ContactMessage.Status.choices
         ]
+       
+        if status_value == "Resolved" and message.status != "Resolved":
+            message.resolved_on = timezone.now().date()
+        elif status_value != "Resolved":
+            message.resolved_on = None
+ 
+        message.status = status_value
+        message.save()
  
         if status_value not in valid_status:
  
@@ -8949,6 +8957,9 @@ def _trend(today_val, yesterday_val):
 def _is_up(today_val, yesterday_val):
     return today_val >= yesterday_val
 
+from dateutil.relativedelta import relativedelta
+from django.db.models.functions import TruncMonth
+from django.utils import timezone
 
 class AdminDashboardOverviewNewView(APIView):
  
@@ -8970,18 +8981,22 @@ class AdminDashboardOverviewNewView(APIView):
         )
  
         nine_months_ago = (
-            now - timedelta(days=270)
+            now - relativedelta(months=9)
         )
  
         four_months_ago = (
-            now - timedelta(days=120)
+            now - relativedelta(months=4)
         )
  
+        # ──────────────────────────────────────────────
+        # CRITICAL FIX: Exclude admin users from ALL user counts
+        # ──────────────────────────────────────────────
        
-        # USER STATS
+        # USER STATS - FIXED: Exclude admin users
        
- 
-        user_stats = User.objects.aggregate(
+        user_stats = User.objects.exclude(
+            user_type=User.UserType.ADMIN  # FIX: Exclude admin users
+        ).aggregate(
  
             total_employers=Count(
                 "id",
@@ -9104,11 +9119,22 @@ class AdminDashboardOverviewNewView(APIView):
  
         total_companies = CompanyProfile.objects.count()
  
+        # Get counts excluding admin
+        total_employers = User.objects.filter(
+            user_type=User.UserType.EMPLOYER
+        ).count()
+ 
+        total_jobseekers = User.objects.filter(
+            user_type=User.UserType.JOBSEEKER
+        ).count()
+ 
+        total_jobs = job_stats["total_jobs"]
+ 
         overview_stats = [
  
             {
                 "label": "All Jobs",
-                "count": job_stats["total_jobs"],
+                "count": total_jobs,
                 "tabName": "Job Monitoring",
             },
  
@@ -9120,20 +9146,19 @@ class AdminDashboardOverviewNewView(APIView):
  
             {
                 "label": "Total Employers",
-                "count": user_stats["total_employers"],
+                "count": total_employers,
                 "query": "Employers",
             },
  
             {
                 "label": "Total Jobseekers",
-                "count": user_stats["total_jobseekers"],
+                "count": total_jobseekers,
                 "query": "Jobseeker",
             },
         ]
  
         # JOB POSTINGS CHART
-       
- 
+
         job_monthly_rows = list(
  
             PostAJob.objects
@@ -9143,7 +9168,7 @@ class AdminDashboardOverviewNewView(APIView):
             )
  
             .annotate(
-                month=TruncMonth("created_at")
+                month=TruncMonth("created_at", tzinfo=timezone.get_current_timezone())
             )
  
             .values("month")
@@ -9170,14 +9195,9 @@ class AdminDashboardOverviewNewView(APIView):
         }
  
         job_posting_months = []
- 
         for i in range(8, -1, -1):
- 
-            job_posting_months.append(
-                _month_label(
-                    now - timedelta(days=30 * i)
-                )
-            )
+            month_date = now - relativedelta(months=i)
+            job_posting_months.append(_month_label(month_date))
  
         job_postings_chart = [
  
@@ -9341,18 +9361,18 @@ class AdminDashboardOverviewNewView(APIView):
  
        
         # USER GROWTH CHART
-       
- 
+
         user_monthly_rows = list(
  
             User.objects
+            .exclude(user_type=User.UserType.ADMIN)
  
             .filter(
                 date_joined__gte=nine_months_ago
             )
  
             .annotate(
-                month=TruncMonth("date_joined")
+                month=TruncMonth("date_joined", tzinfo=timezone.get_current_timezone())
             )
  
             .values("month")
@@ -9379,14 +9399,9 @@ class AdminDashboardOverviewNewView(APIView):
         }
  
         user_growth_months = []
- 
         for i in range(8, -1, -1):
- 
-            user_growth_months.append(
-                _month_label(
-                    now - timedelta(days=30 * i)
-                )
-            )
+            month_date = now - relativedelta(months=i)
+            user_growth_months.append(_month_label(month_date))
  
         user_growth_chart = [
  
@@ -9430,7 +9445,7 @@ class AdminDashboardOverviewNewView(APIView):
                 )
  
                 .annotate(
-                    month=TruncMonth("start_date")
+                    month=TruncMonth("start_date", tzinfo=timezone.get_current_timezone())
                 )
  
                 .values("month")
@@ -9444,14 +9459,9 @@ class AdminDashboardOverviewNewView(APIView):
         }
  
         activity_months = []
- 
         for i in range(3, -1, -1):
- 
-            activity_months.append(
-                _month_label(
-                    now - timedelta(days=30 * i)
-                )
-            )
+            month_date = now - relativedelta(months=i)
+            activity_months.append(_month_label(month_date))
  
         activities_chart = [
  
@@ -9886,29 +9896,30 @@ class PlanDetailView(APIView):
                 {"error": "Plan not found."},
                 status=status.HTTP_404_NOT_FOUND
             )
-        
+    
         # If it's STARTER PLAN, force price fields to 0
         if plan.name.upper() == 'STARTER PLAN':
             data = request.data.copy() if hasattr(request, 'data') else {}
-            # Force price fields to 0 for Starter Plan
             data['monthly_price'] = 0
             data['tax'] = 0
             data['discount_halfyear'] = 0
             data['discount_annual'] = 0
-            # Keep features and other fields as they are
             request._full_data = data
-            print(f"[DEBUG] STARTER PLAN - Forcing price fields to 0, keeping features: {data.get('features', 'no features')}")
-        
+    
+        # IMPORTANT: Ensure color is included in validation
         serializer = PlanSerializer(plan, data=request.data, partial=True, context={'request': request})
         if serializer.is_valid():
             updated_plan = serializer.save()
+            # Refresh serializer to get updated data
+            fresh_serializer = PlanSerializer(updated_plan, context={'request': request})
             return Response(
                 {
                     "message": "Plan updated successfully.",
-                    "data": PlanSerializer(updated_plan, context={'request': request}).data,
+                    "data": fresh_serializer.data,
                 },
                 status=status.HTTP_200_OK,
             )
+        print(f"[DEBUG] Serializer errors: {serializer.errors}")
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request, pk):
@@ -10430,20 +10441,20 @@ class AdminAssignAccountManagerView(APIView):
 
 class AdminEmployerAssignmentsView(APIView):
     """
-    GET /api/admin/employer-assignments/
-    Get all employers with their assigned managers
+    GET /api/admin/employer-assignments/ - Get all employers with their assigned managers
+    DELETE /api/admin/employer-assignments/ - Remove a manager from an employer
     """
     permission_classes = [IsAdminUser]
-
+ 
     def get(self, request):
         employers = User.objects.filter(user_type='employer')
         result = []
-
+ 
         for employer in employers:
             assignments = EmployerAccountManagerAssignment.objects.filter(
                 employer=employer
             ).select_related('account_manager')
-
+ 
             manager_list = []
             for assignment in assignments:
                 manager = assignment.account_manager
@@ -10455,11 +10466,11 @@ class AdminEmployerAssignmentsView(APIView):
                     "department": manager.get_department_display(),
                     "is_primary": assignment.is_primary
                 })
-
+ 
             subscription = Subscription.objects.filter(
                 user=employer
             ).order_by('-start_date').first()
-
+ 
             result.append({
                 "employer_id": employer.id,
                 "employer_name": employer.username,
@@ -10468,8 +10479,79 @@ class AdminEmployerAssignmentsView(APIView):
                 "has_feature": subscription.plan.Account_Manager if subscription else False,
                 "assigned_managers": manager_list
             })
-
+ 
         return Response(result, status=status.HTTP_200_OK)
+ 
+    def delete(self, request):
+        """
+        DELETE /api/admin/employer-assignments/?employer_id=1&account_manager_id=1
+        Remove an account manager from an employer
+        """
+        employer_id = request.query_params.get('employer_id')
+        account_manager_id = request.query_params.get('account_manager_id')
+ 
+        if not employer_id or not account_manager_id:
+            return Response(
+                {"error": "employer_id and account_manager_id are required"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+ 
+        try:
+            employer = User.objects.get(id=employer_id, user_type='employer')
+        except User.DoesNotExist:
+            return Response(
+                {"error": "Employer not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+ 
+        try:
+            manager = AccountManager.objects.get(id=account_manager_id)
+        except AccountManager.DoesNotExist:
+            return Response(
+                {"error": "Account Manager not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+ 
+        assignment = EmployerAccountManagerAssignment.objects.filter(
+            employer=employer,
+            account_manager=manager
+        ).first()
+ 
+        if not assignment:
+            return Response(
+                {"error": "Assignment not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+ 
+        was_primary = assignment.is_primary
+        assignment.delete()
+ 
+        if was_primary:
+            # Assign first available manager as primary
+            next_manager = EmployerAccountManagerAssignment.objects.filter(
+                employer=employer
+            ).select_related('account_manager').first()
+           
+            if next_manager:
+                next_manager.is_primary = True
+                next_manager.save()
+ 
+        # Notify employer
+        NotificationService.create_notification(
+            recipient=employer,
+            title="Account Manager Removed",
+            message=f"'{manager.full_name}' has been removed from your account.",
+            category="alert",
+            event_type="account_manager_removed",
+            notification_type="system",
+            related_object_id=manager.id
+        )
+ 
+        return Response({
+            "message": "Account Manager removed successfully",
+            "employer": employer.email,
+            "account_manager": manager.full_name
+        })
 
 
 # ──────────────────────────────────────────────

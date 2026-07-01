@@ -5,10 +5,18 @@ import starIcon from '../assets/Star_icon.png';
 import time from '../assets/opportunity_time.png';
 import experience from '../assets/opportunity_bag.png';
 import place from '../assets/opportunity_location.png';
+import "./JobMonitorOverview.css"
 
 export const JobMonitorOverview = ({ jobId, setSelectedJobId }) => {
     const { jobs, setJobs, deleteJob } = useJobs();
-    const [actionLoading, setActionLoading] = useState(false);
+    const [loadingStates, setLoadingStates] = useState({
+        delete: false,
+        flag: false,
+        reject: false,
+        approve: false
+    });
+    const [isLocationPopupOpen, setIsLocationPopupOpen] = useState(false);
+    const [isIndustryPopupOpen, setIsIndustryPopupOpen] = useState(false);
     const currentId = jobId;
     const selectedJob = jobs.find(job => job.id === currentId);
 
@@ -16,11 +24,8 @@ export const JobMonitorOverview = ({ jobId, setSelectedJobId }) => {
         const confirmDelete = window.confirm("Are you sure you want to delete this job?");
         if (confirmDelete) {
             try {
-                setActionLoading(true);
-                // ✅ API call to backend
+                setLoadingStates(prev => ({ ...prev, delete: true }));
                 await api.delete(`/admin/jobs/${currentId}/delete/`);
-                
-                // Update frontend state
                 deleteJob(currentId);
                 if (typeof setSelectedJobId === 'function') {
                     setSelectedJobId(null);
@@ -30,7 +35,7 @@ export const JobMonitorOverview = ({ jobId, setSelectedJobId }) => {
                 console.error("Delete failed:", error);
                 alert(error.response?.data?.message || "Failed to delete job. Please try again.");
             } finally {
-                setActionLoading(false);
+                setLoadingStates(prev => ({ ...prev, delete: false }));
             }
         }
     };
@@ -46,12 +51,9 @@ export const JobMonitorOverview = ({ jobId, setSelectedJobId }) => {
     const handleApprove = async () => {
         if (window.confirm("Do you want to approve this job?")) {
             try {
-                setActionLoading(true);
-                // ✅ API call to backend
+                setLoadingStates(prev => ({ ...prev, approve: true }));
                 await api.patch(`/admin/jobs/${currentId}/approve/`);
-                
-                // Update frontend state
-                setJobs(prev => prev.map(j => 
+                setJobs(prev => prev.map(j =>
                     j.id === currentId ? { ...j, approval_status: 'approved', is_published: true } : j
                 ));
                 alert("Job approved successfully!");
@@ -59,7 +61,7 @@ export const JobMonitorOverview = ({ jobId, setSelectedJobId }) => {
                 console.error("Approval failed:", error);
                 alert(error.response?.data?.error || "Failed to approve job. Please try again.");
             } finally {
-                setActionLoading(false);
+                setLoadingStates(prev => ({ ...prev, approve: false }));
             }
         }
     };
@@ -67,12 +69,9 @@ export const JobMonitorOverview = ({ jobId, setSelectedJobId }) => {
     const handleReject = async () => {
         if (window.confirm("Do you want to reject this job?")) {
             try {
-                setActionLoading(true);
-                // ✅ API call to backend
+                setLoadingStates(prev => ({ ...prev, reject: true }));
                 await api.patch(`/admin/jobs/${currentId}/reject/`);
-                
-                // Update frontend state
-                setJobs(prev => prev.map(j => 
+                setJobs(prev => prev.map(j =>
                     j.id === currentId ? { ...j, approval_status: 'rejected', is_published: false } : j
                 ));
                 alert("Job rejected successfully!");
@@ -80,21 +79,17 @@ export const JobMonitorOverview = ({ jobId, setSelectedJobId }) => {
                 console.error("Rejection failed:", error);
                 alert(error.response?.data?.error || "Failed to reject job. Please try again.");
             } finally {
-                setActionLoading(false);
+                setLoadingStates(prev => ({ ...prev, reject: false }));
             }
         }
     };
 
     const handleToggleFlag = async () => {
         try {
-            setActionLoading(true);
+            setLoadingStates(prev => ({ ...prev, flag: true }));
             const newFlagStatus = !selectedJob.flagged;
-            
-            // ✅ API call to backend
             await api.patch(`/admin/jobs/${currentId}/flag/`);
-            
-            // Update frontend state
-            setJobs(prev => prev.map(j => 
+            setJobs(prev => prev.map(j =>
                 j.id === currentId ? { ...j, flagged: newFlagStatus } : j
             ));
             alert(newFlagStatus ? "Job flagged successfully!" : "Job unflagged successfully!");
@@ -102,7 +97,7 @@ export const JobMonitorOverview = ({ jobId, setSelectedJobId }) => {
             console.error("Flag update failed:", error);
             alert(error.response?.data?.error || "Failed to update flag status. Please try again.");
         } finally {
-            setActionLoading(false);
+            setLoadingStates(prev => ({ ...prev, flag: false }));
         }
     };
 
@@ -142,15 +137,61 @@ export const JobMonitorOverview = ({ jobId, setSelectedJobId }) => {
         return 0;
     };
 
-    // Get location as string
-    const getLocationString = () => {
+    // Get location as array
+    const getLocationArray = () => {
         if (Array.isArray(selectedJob.location)) {
-            return selectedJob.location.join(', ');
+            return selectedJob.location.filter(l => l && l.trim() !== '');
         }
         if (typeof selectedJob.location === 'string') {
-            return selectedJob.location;
+            return selectedJob.location.split(',').map(l => l.trim()).filter(l => l !== '');
         }
-        return 'N/A';
+        return [];
+    };
+
+    // Get location display with truncation
+    const getLocationDisplay = (maxDisplay = 3) => {
+        const locations = getLocationArray();
+        if (locations.length === 0) return { display: 'N/A', allLocations: [], hasMore: false };
+
+        const displayLocations = locations.slice(0, maxDisplay);
+        const remainingCount = locations.length - maxDisplay;
+        const hasMore = remainingCount > 0;
+
+        let display = displayLocations.join(", ");
+        if (hasMore) {
+            display += ` +${remainingCount} more`;
+        }
+
+        return { display, allLocations: locations, hasMore, remainingCount };
+    };
+
+    // Get industry type array
+    const getIndustryArray = () => {
+        const industryData = selectedJob.industry_type || selectedJob.IndustryType || [];
+        if (Array.isArray(industryData)) {
+            return industryData.filter(i => i && i.trim() !== '');
+        }
+        if (typeof industryData === 'string') {
+            return industryData.split(',').map(i => i.trim()).filter(i => i !== '');
+        }
+        return [];
+    };
+
+    // Get industry display with truncation
+    const getIndustryDisplay = (maxDisplay = 3) => {
+        const industries = getIndustryArray();
+        if (industries.length === 0) return { display: 'N/A', allIndustries: [], hasMore: false };
+
+        const displayIndustries = industries.slice(0, maxDisplay);
+        const remainingCount = industries.length - maxDisplay;
+        const hasMore = remainingCount > 0;
+
+        let display = displayIndustries.join(", ");
+        if (hasMore) {
+            display += ` +${remainingCount} more`;
+        }
+
+        return { display, allIndustries: industries, hasMore, remainingCount };
     };
 
     // Get salary
@@ -163,7 +204,6 @@ export const JobMonitorOverview = ({ jobId, setSelectedJobId }) => {
     const tags = selectedJob.industry_type || selectedJob.tags || [];
     const jobHighlights = selectedJob.job_highlights || selectedJob.JobHighlights || [];
     const responsibilities = selectedJob.responsibilities || selectedJob.Responsibilities || [];
-    const industryType = selectedJob.industry_type || selectedJob.IndustryType || [];
     const department = selectedJob.department || selectedJob.Department || [];
     const keySkills = selectedJob.key_skills || selectedJob.KeySkills || [];
 
@@ -181,6 +221,10 @@ export const JobMonitorOverview = ({ jobId, setSelectedJobId }) => {
     const isApproved = selectedJob.approval_status === 'approved' || selectedJob.status === 'Approved';
     const isRejected = selectedJob.approval_status === 'rejected' || selectedJob.status === 'Rejected';
     const isFlagged = selectedJob.flagged || selectedJob.isFlagged;
+
+    // Get display data
+    const locationData = getLocationDisplay();
+    const industryData = getIndustryDisplay();
 
     return (
         <div className='opp-overview-main'>
@@ -210,37 +254,51 @@ export const JobMonitorOverview = ({ jobId, setSelectedJobId }) => {
                             <img src={time} className='card-icons' alt="time" />
                             {selectedJob.work_duration || selectedJob.duration || 'N/A'}
                             <span className="Opportunities-divider">|</span>
-                            ₹ {getSalary()} Lpa
+                            ₹ {getSalary()}
                         </p>
                         <p className='Opportunities-detail-line'>
                             <img src={experience} className='card-icons' alt="exp" />
-                            {selectedJob.experience || '0'} years of experience
+                            {selectedJob.experience || '0'}
                         </p>
                         <p className='Opportunities-detail-line'>
                             <img src={place} className='card-icons' alt="loc" />
-                            {getLocationString()}
+                            <span className="location-text-wrap">
+                                {locationData.hasMore ? (
+                                    <>
+                                        {locationData.allLocations.slice(0, 3).join(", ")}
+                                        <span
+                                            className="opp-show-more-link"
+                                            onClick={() => setIsLocationPopupOpen(true)}
+                                        >
+                                            {" +" + locationData.remainingCount + " more"}
+                                        </span>
+                                    </>
+                                ) : (
+                                    locationData.display
+                                )}
+                            </span>
                         </p>
                     </div>
 
                     <div className='Opportunities-details-bottom'>
                         <div className="Opportunities-job-tags">
-                            {tags.length > 0 ? tags.map((tag, index) => (
-                                <span key={index} className={`Opportunities-job-tag ${String(tag).toLowerCase()}`}>
-                                    {tag}
+                            {selectedJob.job_category && (
+                                <span className={`Opportunities-job-tag ${selectedJob.job_category.toLowerCase().replace(/\s+/g, '-')}`}>
+                                    {selectedJob.job_category}
                                 </span>
-                            )) : <span className="Opportunities-job-tag">No tags</span>}
+                            )}
                         </div>
                         <div className="Opportunities-job-type">
                             {selectedJob.work_type || selectedJob.WorkType || 'N/A'}
                         </div>
                     </div>
                     <hr className="Opportunities-separator" />
-                    
+
                     <div className="opp-job-highlights">
                         <h3>Job Highlights</h3>
                         <ul>
-                            {jobHighlights.length > 0 ? 
-                                jobHighlights.map((item, i) => <li key={i}>{item}</li>) : 
+                            {jobHighlights.length > 0 ?
+                                jobHighlights.map((item, i) => <li key={i}>{item}</li>) :
                                 <li>No highlights available</li>
                             }
                         </ul>
@@ -254,85 +312,156 @@ export const JobMonitorOverview = ({ jobId, setSelectedJobId }) => {
 
                     <h3>Responsibilities</h3>
                     <ul>
-                        {responsibilities.length > 0 ? 
-                            responsibilities.map((item, i) => <li key={i}>{item}</li>) : 
+                        {responsibilities.length > 0 ?
+                            responsibilities.map((item, i) => <li key={i}>{item}</li>) :
                             <li>No responsibilities listed</li>
                         }
                     </ul>
 
                     <h3>Key Details:</h3>
                     <p><strong>Role:</strong> {selectedJob.job_title || selectedJob.title || 'N/A'}</p>
-                    <p><strong>Industry Type:</strong> {industryType.length > 0 ? industryType.join(", ") : 'N/A'}</p>
+
+                    {/* Updated Industry Type with truncation */}
+                    <p><strong>Industry Type:</strong>
+                        <span className="location-text-wrap">
+                            {industryData.hasMore ? (
+                                <>
+                                    {industryData.allIndustries.slice(0, 3).join(", ")}
+                                    <span
+                                        className="opp-show-more-link"
+                                        onClick={() => setIsIndustryPopupOpen(true)}
+                                    >
+                                        {" +" + industryData.remainingCount + " more"}
+                                    </span>
+                                </>
+                            ) : (
+                                industryData.display
+                            )}
+                        </span>
+                    </p>
+
                     <p><strong>Department:</strong> {department.length > 0 ? department.join(", ") : 'N/A'}</p>
                     <p><strong>Job Type:</strong> {selectedJob.work_type || selectedJob.WorkType || 'N/A'}</p>
-                    <p><strong>Location:</strong> {getLocationString()}</p>
+
+                    {/* Updated Location with truncation */}
+                    <p><strong>Location:</strong>
+                        <span className="location-text-wrap">
+                            {locationData.hasMore ? (
+                                <>
+                                    {locationData.allLocations.slice(0, 3).join(", ")}
+                                    <span
+                                        className="opp-show-more-link"
+                                        onClick={() => setIsLocationPopupOpen(true)}
+                                    >
+                                        {" +" + locationData.remainingCount + " more"}
+                                    </span>
+                                </>
+                            ) : (
+                                locationData.display
+                            )}
+                        </span>
+                    </p>
+
                     <p><strong>Shift:</strong> {selectedJob.shift || selectedJob.Shift || 'General'}</p>
                     <p><strong>Openings:</strong> {selectedJob.openings || 'N/A'}</p>
                     <p><strong>Last Date to Apply:</strong> {selectedJob.last_date_to_apply || 'Not specified'}</p>
 
                     <h3>Key Skills</h3>
                     <div className="opp-key-skills-container">
-                        {keySkills.length > 0 ? 
-                            keySkills.map((item, i) => <span key={i}>{item}</span>) : 
+                        {keySkills.length > 0 ?
+                            keySkills.map((item, i) => (
+                                <span key={i} className="opp-key-skill-tag">{item}</span>
+                            )) :
                             <span>No skills listed</span>
                         }
                     </div>
-                    
-                    <div className='Monitoring-Overview-Action'>
-                        <button 
-                            onClick={handleDelete} 
-                            disabled={actionLoading}
-                            style={{ 
-                                background: "#f44d4d", 
-                                cursor: actionLoading ? "not-allowed" : "pointer", 
-                                color: "white",
-                                opacity: actionLoading ? 0.7 : 1
-                            }}
+
+                    {/* Action Buttons with improved styling */}
+                    <div className="monitoring-action-buttons">
+                        <button
+                            className="monitoring-btn monitoring-btn-delete"
+                            onClick={handleDelete}
+                            disabled={loadingStates.delete}
                         >
-                            {actionLoading ? "Deleting..." : "Delete"}
+                            {loadingStates.delete ? (
+                                <span className="monitoring-btn-spinner"></span>
+                            ) : (
+                                "Delete"
+                            )}
                         </button>
 
                         <button
+                            className={`monitoring-btn monitoring-btn-flag ${isFlagged ? 'flagged' : ''}`}
                             onClick={handleToggleFlag}
-                            disabled={actionLoading}
-                            style={{
-                                background: isFlagged ? "#d9a111" : "#fdc01b",
-                                cursor: actionLoading ? "not-allowed" : "pointer",
-                                fontWeight: isFlagged ? "bold" : "normal",
-                                opacity: actionLoading ? 0.7 : 1
-                            }}
+                            disabled={loadingStates.flag}
                         >
-                            {actionLoading ? "Updating..." : (isFlagged ? "Flagged" : "Flag")}
+                            {loadingStates.flag ? (
+                                <span className="monitoring-btn-spinner"></span>
+                            ) : (
+                                isFlagged ? "Flagged" : "Flag"
+                            )}
                         </button>
 
                         <button
+                            className={`monitoring-btn monitoring-btn-reject ${isRejected ? 'rejected' : ''}`}
                             onClick={handleReject}
-                            disabled={isRejected || actionLoading}
-                            style={{
-                                background: isRejected ? "#8c8c8b" : "#dc3545",
-                                color: "white",
-                                cursor: (isRejected || actionLoading) ? "not-allowed" : "pointer",
-                                opacity: (isRejected || actionLoading) ? 0.7 : 1
-                            }}
+                            disabled={isRejected || loadingStates.reject}
                         >
-                            {actionLoading ? "Processing..." : (isRejected ? "Rejected" : "Reject")}
+                            {loadingStates.reject ? (
+                                <span className="monitoring-btn-spinner"></span>
+                            ) : (
+                                isRejected ? "Rejected" : "Reject"
+                            )}
                         </button>
 
                         <button
+                            className={`monitoring-btn monitoring-btn-approve ${isApproved ? 'approved' : ''}`}
                             onClick={handleApprove}
-                            disabled={isApproved || actionLoading}
-                            style={{
-                                background: isApproved ? "#0f4a25" : "#166534",
-                                color: 'white',
-                                cursor: (isApproved || actionLoading) ? "not-allowed" : "pointer",
-                                opacity: (isApproved || actionLoading) ? 0.7 : 1
-                            }}
+                            disabled={isApproved || loadingStates.approve}
                         >
-                            {actionLoading ? "Processing..." : (isApproved ? "Approved" : "Approve")}
+                            {loadingStates.approve ? (
+                                <span className="monitoring-btn-spinner"></span>
+                            ) : (
+                                isApproved ? "Approved" : "Approve"
+                            )}
                         </button>
                     </div>
                 </div>
             </div>
+
+            {/* Location Popup Modal */}
+            {isLocationPopupOpen && (
+                <div className="opp-loc-modal-overlay" onClick={() => setIsLocationPopupOpen(false)}>
+                    <div className="opp-loc-modal-content" onClick={e => e.stopPropagation()}>
+                        <div className="opp-loc-modal-header">
+                            <h3>All Locations</h3>
+                            <button className="opp-loc-modal-close" onClick={() => setIsLocationPopupOpen(false)}>&times;</button>
+                        </div>
+                        <div className="opp-loc-modal-body">
+                            {locationData.allLocations.map((loc, index) => (
+                                <span key={index} className="opp-loc-chip">{loc}</span>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Industry Type Popup Modal */}
+            {isIndustryPopupOpen && (
+                <div className="opp-loc-modal-overlay" onClick={() => setIsIndustryPopupOpen(false)}>
+                    <div className="opp-loc-modal-content" onClick={e => e.stopPropagation()}>
+                        <div className="opp-loc-modal-header">
+                            <h3>All Industries</h3>
+                            <button className="opp-loc-modal-close" onClick={() => setIsIndustryPopupOpen(false)}>&times;</button>
+                        </div>
+                        <div className="opp-loc-modal-body">
+                            {industryData.allIndustries.map((industry, index) => (
+                                <span key={index} className="opp-loc-chip">{industry}</span>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

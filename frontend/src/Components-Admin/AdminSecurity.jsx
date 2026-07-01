@@ -451,7 +451,7 @@ export const AdminSecurity = () => {
     <div style={{ border: "1px solid #d1d5db", margin: "25px 0px", borderRadius: "10px" }}>
       {/* Password Change Section */}
       <div className="Ad-security-container">
-        <div className="Ad-security-header">
+        <div className="Ad-security-header" onClick={togglePasswordChange}>
           <div className="Ad-security-title-box">
             <img src={PasswordKey} width={35} alt="" />
             <span className="Ad-security-title">Change Password</span>
@@ -461,7 +461,6 @@ export const AdminSecurity = () => {
             alt=""
             width={10}
             className={isPasswordChange ? 'Ad-security-up' : 'Ad-security-down'}
-            onClick={togglePasswordChange}
           />
         </div>
         {isPasswordChange && (
@@ -590,7 +589,7 @@ export const AdminSecurity = () => {
 
       {/* 2FA Section */}
       <div className="Ad-security-container">
-        <div className="Ad-security-header">
+        <div className="Ad-security-header" onClick={toggle2FA}>
           <div className="Ad-security-title-box">
             <img src={Mfa} width={35} alt="" />
             <span className="Ad-security-title">Two-Factor Authentication</span>
@@ -599,7 +598,6 @@ export const AdminSecurity = () => {
             src={UpArrow}
             alt=""
             width={10}
-            onClick={toggle2FA}
             className={is2FAOpen ? 'Ad-security-up' : 'Ad-security-down'}
           />
         </div>
@@ -723,7 +721,7 @@ export const AdminSecurity = () => {
 
       {/* Admin Access Logs Section */}
       <div className="Ad-security-container">
-        <div className="Ad-security-header">
+        <div className="Ad-security-header" onClick={() => setisAdminopen(!isadminopen)}>
           <div className="Ad-security-title-box">
             <img src={AdminAccess} width={35} alt="" />
             <span className="Ad-security-title">Admin Access Logs</span>
@@ -734,7 +732,6 @@ export const AdminSecurity = () => {
               alt=""
               width={10}
               className={`Ad-Acc-arrow ${isadminopen ? 'Ad-security-up' : 'Ad-security-down'}`}
-              onClick={() => setisAdminopen(!isadminopen)}
             />
           </div>
         </div>

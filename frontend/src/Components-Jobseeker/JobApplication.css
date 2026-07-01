@@ -222,6 +222,12 @@
   font-size: 17px;
   background: #0d6efd;
   color: #fff;
+  transition: all 0.3s ease;
+}
+.apply-form-primary-btn:hover {
+  opacity: 0.92;
+  transform: scale(1.02);
+  cursor: pointer;
 }
 
 .apply-form-secondary-btn {
@@ -233,6 +239,12 @@
   font-size: 17px;
   background: rgb(244, 104, 104);
   color: #fff;
+  transition: all 0.3s ease;
+}
+.apply-form-secondary-btn:hover {
+  opacity: 0.8;
+  transform: scale(1.02);
+  cursor: pointer;
 }
 .error-text {
   color: #d32f2f;

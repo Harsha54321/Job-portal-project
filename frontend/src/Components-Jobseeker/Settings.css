@@ -135,3 +135,7 @@
     background: white;
     color: #333;
 }
+
+.JSettings-form > * {
+    margin-bottom: 25px;
+}

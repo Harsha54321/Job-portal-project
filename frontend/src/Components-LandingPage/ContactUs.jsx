@@ -10,6 +10,7 @@ export const ContactUs = () => {
   const [loadingAuth, setLoadingAuth] = useState(true);
 
   const initialValues = { name: "", email: "", contact: "", message: "" };
+  const MAX_MESSAGE_LENGTH = 500;
   const [formValues, setFormValues] = useState(initialValues);
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
@@ -28,7 +29,7 @@ export const ContactUs = () => {
       try {
         const response = await api.get('/users/me/');
         const user = response.data;
-        
+
         setIsAuthenticated(true);
         setFormValues(prev => ({
           ...prev,
@@ -50,14 +51,16 @@ export const ContactUs = () => {
 
     fetchUserData();
   }, []);
-
-  // Rest of the code remains same...
   const handleForm = (e) => {
     const { name, value } = e.target;
     setFormValues({ ...formValues, [name]: value });
-    setErrors({ ...errors, [name]: "" });
-  };
 
+    if (name === "message" && value.length >= MAX_MESSAGE_LENGTH) {
+      setErrors({ ...errors, message: `Message cannot exceed ${MAX_MESSAGE_LENGTH} characters` });
+    } else {
+      setErrors({ ...errors, [name]: "" });
+    }
+  };
   const validateForm = () => {
     const newErrors = {};
     const nameRegex = /^[A-Za-z\s]+$/;
@@ -84,6 +87,8 @@ export const ContactUs = () => {
 
     if (!formValues.message.trim()) {
       newErrors.message = "Message cannot be empty";
+    } else if (formValues.message.length > MAX_MESSAGE_LENGTH) {
+      newErrors.message = `Message cannot exceed ${MAX_MESSAGE_LENGTH} characters`;
     }
 
     setErrors(newErrors);
@@ -209,7 +214,11 @@ export const ContactUs = () => {
                 value={formValues.message}
                 onChange={handleForm}
                 className={errors.message ? "input-error" : ""}
+                maxLength={MAX_MESSAGE_LENGTH}
               />
+              <span className={`char-counter ${formValues.message.length >= MAX_MESSAGE_LENGTH ? "char-limit-reached" : ""}`}>
+                {formValues.message.length}/{MAX_MESSAGE_LENGTH}
+              </span>
               {errors.message && <span className="error-msg">{errors.message}</span>}
             </div>
             <div style={{ display: "flex", justifyContent: "center", marginTop: "20px" }}>
