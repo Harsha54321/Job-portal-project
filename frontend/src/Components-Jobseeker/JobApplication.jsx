@@ -21,6 +21,8 @@ export const JobApplication = () => {
   const [loading, setLoading] = useState(true);
   const [easyApplyEnabled, setEasyApplyEnabled] = useState(false);
   const { setAppliedJobs } = useJobs();
+  const [isSubmitting, setIsSubmitting] = useState(false); // New state for submission status
+  const [showSuccess, setShowSuccess] = useState(false); // New state for success message
 
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
@@ -193,12 +195,12 @@ export const JobApplication = () => {
     }
 
     if (name === "mobile" || name === "zip") {
-      val = value.replace(/\D/g, "");
+      val = val.replace(/\D/g, "");
       if (name === "mobile") val = val.slice(0, 10);
       if (name === "zip") val = val.slice(0, 6);
     }
     else if (["name", "city", "state", "country"].includes(name)) {
-      val = value.replace(/[^a-zA-Z\s]/g, "");
+      val = val.replace(/[^a-zA-Z\s]/g, "");
     }
 
     setFormData(prev => ({ ...prev, [name]: val }));
@@ -274,6 +276,9 @@ export const JobApplication = () => {
 
     if (!window.confirm("Are you sure want to apply?")) return;
 
+    // Set submitting state to true
+    setIsSubmitting(true);
+
     try {
       const payload = new FormData();
       payload.append("job", jobId);
@@ -298,7 +303,15 @@ export const JobApplication = () => {
         return [...filtered, res.data];
       });
 
-      navigate(`/Job-portal/jobseeker/submitted/${job.id}`);
+      // Show success state
+      setShowSuccess(true);
+      setIsSubmitting(false);
+
+      // Wait for 5 seconds before redirecting
+      setTimeout(() => {
+        navigate(`/Job-portal/jobseeker/submitted/${job.id}`);
+      }, 5000);
+
     } catch (error) {
       console.error("Full error object:", error);
       console.error("Response data:", error.response?.data);
@@ -326,6 +339,8 @@ export const JobApplication = () => {
         }
       }
       alert(errorMessage);
+      // Reset submitting state on error
+      setIsSubmitting(false);
     }
   }
 
@@ -349,11 +364,27 @@ export const JobApplication = () => {
     );
   }
 
+  // Success overlay component
+  const SuccessOverlay = () => (
+    <div className="success-overlay">
+      <div className="success-content">
+        <img src={application_success} alt="Success" className="success-icon" />
+        <h2>Application Submitted Successfully!</h2>
+        <p>Your application has been received. Redirecting in 5 seconds...</p>
+        <div className="success-progress-bar">
+          <div className="success-progress-fill"></div>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <>
       <Header />
 
       <div className="apply-form-page">
+        {showSuccess && <SuccessOverlay />}
+
         <div className="apply-form-job-header">
           <h1 className="apply-form-job-title">{job.job_title}</h1>
 
@@ -397,7 +428,7 @@ export const JobApplication = () => {
                   type="text"
                   className={`apply-form-text-input ${errors.name ? "error-border" : ""}`}
                   name="name"
-                  disabled={editableField !== "name"}
+                  disabled={editableField !== "name" || isSubmitting}
                   value={formData.name}
                   onChange={handleInputChange}
                 />
@@ -415,7 +446,7 @@ export const JobApplication = () => {
                   type="date"
                   className={`apply-form-text-input ${errors.dob ? "error-border" : ""}`}
                   name="dob"
-                  disabled={editableField !== "dob"}
+                  disabled={editableField !== "dob" || isSubmitting}
                   value={formData.dob}
                   max={new Date().toISOString().split("T")[0]}
                   onChange={handleInputChange}
@@ -433,7 +464,7 @@ export const JobApplication = () => {
                 <select
                   className={`apply-form-select-input ${errors.marital ? "error-border" : ""}`}
                   name="marital"
-                  disabled={editableField !== "marital"}
+                  disabled={editableField !== "marital" || isSubmitting}
                   value={formData.marital}
                   onChange={handleInputChange}
                 >
@@ -455,7 +486,7 @@ export const JobApplication = () => {
                   type="tel"
                   className={`apply-form-text-input ${errors.mobile ? "error-border" : ""}`}
                   name="mobile"
-                  disabled={editableField !== "mobile"}
+                  disabled={editableField !== "mobile" || isSubmitting}
                   value={formData.mobile}
                   onChange={handleInputChange}
                 />
@@ -473,7 +504,7 @@ export const JobApplication = () => {
                   type="email"
                   className={`apply-form-text-input ${errors.email ? "error-border" : ""}`}
                   name="email"
-                  disabled={editableField !== "email"}
+                  disabled={editableField !== "email" || isSubmitting}
                   value={formData.email}
                   onChange={handleInputChange}
                 />
@@ -489,11 +520,11 @@ export const JobApplication = () => {
               <div className="apply-form-info-box">
                 {editableField === "address" ? (
                   <>
-                    <input className="apply-form-text-input mb" name="street" placeholder="Street" value={formData.street} onChange={handleInputChange} />
-                    <input className="apply-form-text-input mb" name="city" placeholder="City" value={formData.city} onChange={handleInputChange} />
-                    <input className="apply-form-text-input mb" name="state" placeholder="State" value={formData.state} onChange={handleInputChange} />
-                    <input className="apply-form-text-input mb" name="zip" placeholder="Zip" value={formData.zip} onChange={handleInputChange} />
-                    <input className="apply-form-text-input" name="country" placeholder="Country" value={formData.country} onChange={handleInputChange} />
+                    <input className="apply-form-text-input mb" name="street" placeholder="Street" value={formData.street} onChange={handleInputChange} disabled={isSubmitting} />
+                    <input className="apply-form-text-input mb" name="city" placeholder="City" value={formData.city} onChange={handleInputChange} disabled={isSubmitting} />
+                    <input className="apply-form-text-input mb" name="state" placeholder="State" value={formData.state} onChange={handleInputChange} disabled={isSubmitting} />
+                    <input className="apply-form-text-input mb" name="zip" placeholder="Zip" value={formData.zip} onChange={handleInputChange} disabled={isSubmitting} />
+                    <input className="apply-form-text-input" name="country" placeholder="Country" value={formData.country} onChange={handleInputChange} disabled={isSubmitting} />
                   </>
                 ) : (
                   <>
@@ -522,6 +553,7 @@ export const JobApplication = () => {
                   onChange={handleInputChange}
                   rows={4}
                   maxLength={2000}
+                  disabled={isSubmitting}
                 />
                 {errors.coverLetter && (
                   <small className="error-text" style={{ display: 'block', marginTop: '5px' }}>
@@ -543,6 +575,7 @@ export const JobApplication = () => {
                       type="button"
                       className="apply-form-remove-btn"
                       onClick={removeResume}
+                      disabled={isSubmitting}
                     >
                       <img src={deleteIcon} alt="delete" />
                     </button>
@@ -552,6 +585,7 @@ export const JobApplication = () => {
                       accept="application/pdf"
                       ref={fileInputRef}
                       onChange={handleResumeUpload}
+                      disabled={isSubmitting}
                     />
                   </div>
                 ) : (
@@ -561,6 +595,7 @@ export const JobApplication = () => {
                     accept="application/pdf"
                     ref={fileInputRef}
                     onChange={handleResumeUpload}
+                    disabled={isSubmitting}
                   />
                 )}
                 {errors.resume && <small className="error-text">{errors.resume}</small>}
@@ -568,9 +603,15 @@ export const JobApplication = () => {
             </div>
 
             <div className="apply-form-action-buttons">
-              <button type="button" className="apply-form-secondary-btn" onClick={() => navigate(-1)}>Cancel</button>
-              <button type="submit" className="apply-form-primary-btn">
-                Apply
+              <button type="button" className="apply-form-secondary-btn" onClick={() => navigate(-1)} disabled={isSubmitting}>
+                Cancel
+              </button>
+              <button 
+                type="submit" 
+                className="apply-form-primary-btn" 
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? "Applying..." : "Apply"}
               </button>
             </div>
 

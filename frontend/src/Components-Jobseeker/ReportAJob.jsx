@@ -10,6 +10,9 @@ import './ReportAJob.css';
 // Named export to match your App.jsx import
 export const ReportAJob = () => {
     const navigate = useNavigate();
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [showSuccess, setShowSuccess] = useState(false);
+    
     const initialValues = {
         job_id: "",
         firstName: "",
@@ -161,42 +164,14 @@ export const ReportAJob = () => {
         if (errors[name]) setErrors({ ...errors, [name]: "" });
     };
 
-    // const handleSubmit = async (e) => {
-    //     e.preventDefault();
-    //     if (validate()) {
-    //         try {
-    //             console.log(formValues)
-    //             const responseData = await api.post('complaints/submit/', formValues)
-    //             console.log(responseData)
-    //             alert("Report submitted successfully!");
-    //             navigate("/Job-portal/jobseeker");
-    //             setFormValues(initialValues);
-    //         } catch (error) {
-    //             const errData = error.response?.data;
-
-    //             console.log(errData);
-
-    //             if (errData?.non_field_errors) {
-    //                 if (errData.non_field_errors[0]) {
-    //                     alert(errData.non_field_errors[0]);
-    //                 }
-    //             }
-
-    //             if (errData?.job_id && errData.job_id[0]) {
-    //                 alert(errData.job_id[0])
-    //             }
-    //         }
-    //     }
-    // }; 
-
-
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (validate()) {
+            setIsSubmitting(true);
+            
             try {
                 console.log("Submitting complaint for job:", formValues.job_id);
                 
-               
                 const responseData = await api.post(`complaints/submit/${formValues.job_id}/`, {
                     firstName: formValues.firstName,
                     lastName: formValues.lastName,
@@ -207,9 +182,17 @@ export const ReportAJob = () => {
                 });
                 
                 console.log("Response:", responseData);
-                alert("Report submitted successfully!");
-                navigate("/Job-portal/jobseeker");
-                setFormValues(initialValues);
+                
+                // Show success state
+                setShowSuccess(true);
+                setIsSubmitting(false);
+
+                // Wait for 5 seconds before redirecting
+                setTimeout(() => {
+                    navigate("/Job-portal/jobseeker");
+                    setFormValues(initialValues);
+                }, 5000);
+                
             } catch (error) {
                 const errData = error.response?.data;
                 console.log("Error:", errData);
@@ -227,6 +210,7 @@ export const ReportAJob = () => {
                 } else {
                     alert("Failed to submit report. Please try again.");
                 }
+                setIsSubmitting(false);
             }
         }
     };
@@ -242,10 +226,25 @@ export const ReportAJob = () => {
         }
     };
 
+    // Success overlay component
+    const SuccessOverlay = () => (
+        <div className="success-overlay">
+            <div className="success-content">
+                <h2>Report Submitted Successfully!</h2>
+                <p>Your complaint has been received. Redirecting in 5 seconds...</p>
+                <div className="success-progress-bar">
+                    <div className="success-progress-fill"></div>
+                </div>
+            </div>
+        </div>
+    );
+
     return (
         <>
             <Header />
             <div className="report-container">
+                {showSuccess && <SuccessOverlay />}
+                
                 <h2 className="report-title">Complaint Form</h2>
                 <form className="report-card" onSubmit={handleSubmit}>
                     <div className="report-row">
@@ -262,6 +261,7 @@ export const ReportAJob = () => {
                                         onChange={handleChange}
                                         onBlur={handleBlur}
                                         maxLength={15}
+                                        disabled={isSubmitting}
                                         className={errors.firstName ? "error-field" : ""}
                                     />
                                     {errors.firstName && <span className="error-text">{errors.firstName}</span>}
@@ -277,6 +277,7 @@ export const ReportAJob = () => {
                                         onChange={handleChange}
                                         onBlur={handleBlur}
                                         maxLength={15}
+                                        disabled={isSubmitting}
                                         className={errors.lastName ? "error-field" : ""}
                                     />
                                     {errors.lastName && <span className="error-text">{errors.lastName}</span>}
@@ -295,6 +296,7 @@ export const ReportAJob = () => {
                                 value={formValues.mobile}
                                 onChange={handleChange}
                                 maxLength={10}
+                                disabled={isSubmitting}
                                 className={errors.mobile ? "error-field" : ""}
                             />
                             {errors.mobile && <span className="error-text">{errors.mobile}</span>}
@@ -311,6 +313,7 @@ export const ReportAJob = () => {
                                 value={formValues.email}
                                 onChange={handleChange}
                                 maxLength={100}
+                                disabled={isSubmitting}
                                 className={errors.email ? "error-field" : ""}
                             />
                             {errors.email && <span className="error-text">{errors.email}</span>}
@@ -327,6 +330,7 @@ export const ReportAJob = () => {
                                 value={formValues.reason}
                                 onChange={handleChange}
                                 maxLength={100}
+                                disabled={isSubmitting}
                                 className={errors.reason ? "error-field" : ""}
                             />
                             {errors.reason && <span className="error-text">{errors.reason}</span>}
@@ -342,6 +346,7 @@ export const ReportAJob = () => {
                                 value={formValues.explanation}
                                 onChange={handleChange}
                                 maxLength={EXPLANATION_MAX_LENGTH}
+                                disabled={isSubmitting}
                                 placeholder="Please provide detailed explanation"
                                 className={errors.explanation ? "error-field" : ""}
                             />
@@ -351,12 +356,26 @@ export const ReportAJob = () => {
 
                             {errors.explanation && (
                                 <span className="error-text">{errors.explanation}</span>
-                            )}                        </div>
+                            )}
+                        </div>
                     </div>
 
                     <div className="report-actions">
-                        <button type="button" className="btn-cancel" onClick={() => navigate(-1)}>Cancel</button>
-                        <button type="submit" className="btn-submit">Submit</button>
+                        <button 
+                            type="button" 
+                            className="btn-cancel" 
+                            onClick={() => navigate(-1)}
+                            disabled={isSubmitting}
+                        >
+                            Cancel
+                        </button>
+                        <button 
+                            type="submit" 
+                            className="btn-submit"
+                            disabled={isSubmitting}
+                        >
+                            {isSubmitting ? "Submitting..." : "Submit"}
+                        </button>
                     </div>
                 </form>
             </div>

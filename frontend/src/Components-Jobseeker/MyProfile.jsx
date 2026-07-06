@@ -1083,6 +1083,7 @@ const ResumeSection = ({
 }) => {
     const [errors, setErrors] = useState({});
     const [existingResume, setExistingResume] = useState(null);
+    const fileInputRef = useRef(null); // Add ref for file input
 
     useEffect(() => {
         if (data.resume_file) {
@@ -1110,9 +1111,24 @@ const ResumeSection = ({
             return;
         }
 
+        // Check file size (optional - 5MB limit)
+        if (file.size > 5 * 1024 * 1024) {
+            alert("File size must be less than 5MB");
+            e.target.value = "";
+            return;
+        }
+
         setResumeFile(file);
         setExistingResume(null); // Clear existing resume when new file is uploaded
         setErrors((prev) => ({ ...prev, resumeFile: "" }));
+
+        // Update parent state
+        onChange({
+            target: {
+                name: "resume_file",
+                value: file,
+            },
+        });
     };
 
     const handleDeleteFile = (e) => {
@@ -1130,9 +1146,9 @@ const ResumeSection = ({
             setExistingResume(null);
             setErrors({ ...errors, resumeFile: "" });
 
-            const fileInput = document.getElementById("resumeInput");
-            if (fileInput) {
-                fileInput.value = "";
+            // Clear the file input
+            if (fileInputRef.current) {
+                fileInputRef.current.value = "";
             }
         }
     };
@@ -1150,6 +1166,13 @@ const ResumeSection = ({
             setTimeout(() => URL.revokeObjectURL(fileURL), 100);
         } else if (typeof fileToView === "string" && fileToView) {
             window.open(fileToView, "_blank");
+        }
+    };
+
+    const handleUploadClick = (e) => {
+        e.stopPropagation();
+        if (fileInputRef.current) {
+            fileInputRef.current.click();
         }
     };
 
@@ -1175,6 +1198,16 @@ const ResumeSection = ({
         }
     };
 
+    // Helper to get file name
+    const getFileName = () => {
+        if (existingResume instanceof File) {
+            return existingResume.name;
+        } else if (typeof existingResume === 'string') {
+            return existingResume.split('/').pop() || existingResume;
+        }
+        return "Resume";
+    };
+
     return (
         <form className="content-card" onSubmit={handleSubmit}>
             <div className="profile-header">
@@ -1187,9 +1220,8 @@ const ResumeSection = ({
                         setErrors({});
                         setResumeFile(null);
                         setExistingResume(null);
-                        const fileInput = document.getElementById("resumeInput");
-                        if (fileInput) {
-                            fileInput.value = "";
+                        if (fileInputRef.current) {
+                            fileInputRef.current.value = "";
                         }
                     }}
                 >
@@ -1201,9 +1233,11 @@ const ResumeSection = ({
                 <input
                     type="file"
                     id="resumeInput"
+                    ref={fileInputRef}
                     hidden
                     accept=".pdf,.doc,.docx"
                     onChange={handleResumeChange}
+                    aria-label="Upload resume file"
                 />
 
                 <div>
@@ -1211,20 +1245,14 @@ const ResumeSection = ({
                         <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
                             <div className="ResumeName">
                                 <img src={resumeIcon} className="resume-icon" alt="resume" />
-                                <h4>
-                                    {existingResume instanceof File
-                                        ? existingResume.name
-                                        : typeof existingResume === "string"
-                                            ? existingResume.split('/').pop() || existingResume
-                                            : "Resume"}
-                                </h4>
+                                <h4>{getFileName()}</h4>
                             </div>
-
                             <div className="ActionButtons">
                                 <button
                                     className="btn btn-primary btn-mini"
                                     type="button"
                                     onClick={handleViewResume}
+                                    aria-label="View resume"
                                 >
                                     View
                                 </button>
@@ -1232,6 +1260,7 @@ const ResumeSection = ({
                                     className="btn btn-danger btn-mini"
                                     type="button"
                                     onClick={handleDeleteFile}
+                                    aria-label="Remove resume"
                                 >
                                     Remove
                                 </button>
@@ -1240,8 +1269,17 @@ const ResumeSection = ({
                     ) : (
                         <div>
                             <div
-                                onClick={() => document.getElementById("resumeInput").click()}
+                                onClick={handleUploadClick}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter' || e.key === ' ') {
+                                        e.preventDefault();
+                                        handleUploadClick(e);
+                                    }
+                                }}
                                 className="upload-text"
+                                role="button"
+                                tabIndex={0}
+                                aria-label="Upload resume"
                             >
                                 <img
                                     className="upload-icon-btn"
@@ -1251,28 +1289,34 @@ const ResumeSection = ({
                                 Upload Resume
                             </div>
                             <div>
-                                <small>Allowed formats: PDF, DOC, DOCX</small>
+                                <small>Allowed formats: PDF, DOC, DOCX (Max 5MB)</small>
                             </div>
                         </div>
                     )}
                     {errors.resumeFile && (
-                        <span className="error-message">{errors.resumeFile}</span>
+                        <span className="error-message" role="alert">
+                            {errors.resumeFile}
+                        </span>
                     )}
                 </div>
             </div>
 
             <div className="form-group full-width">
-                <label>Portfolio/Website Link</label>
+                <label htmlFor="portfolioLink">Portfolio/Website Link (optional)</label>
                 <input
+                    id="portfolioLink"
                     type="url"
                     name="portfolio_link"
                     value={data.portfolio_link || ""}
                     onChange={onChange}
                     placeholder="e.g., https://yourportfolio.com"
                     className={errors.portfolio_link ? "input-error" : ""}
+                    aria-label="Portfolio website link"
                 />
                 {errors.portfolio_link && (
-                    <span className="error-message">{errors.portfolio_link}</span>
+                    <span className="error-message" role="alert">
+                        {errors.portfolio_link}
+                    </span>
                 )}
             </div>
 

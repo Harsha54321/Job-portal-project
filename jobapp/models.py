@@ -2293,9 +2293,8 @@ class EmployerPlatformSettings(models.Model):
  
             f"{self.account_status}"
         )
-    
 
- 
+
 class EmployerRegistrationSettings(models.Model):
  
     employer_registration = models.BooleanField(
@@ -2324,6 +2323,8 @@ class EmployerRegistrationSettings(models.Model):
     updated_at = models.DateTimeField(
         auto_now=True
     )
+    class Meta:
+        db_table = 'EmployerRegistrationSettings'
  
 
 class NotificationDeliveryLog(models.Model):
