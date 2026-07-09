@@ -17,11 +17,13 @@ import rightArrow from '../assets/right_arrow.png';
 import { JobMonitorOverview } from './JobMonitorOverview';
 
 export const Escalation = () => {
-    const { reports, setReports, fetchReports, reportsLoading } = useJobs();
+    const { reports, setReports, fetchReports, reportsLoading, jobs, fetchJobs } = useJobs();
     const [selectedReport, setSelectedReport] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [showJobOverviewId, setShowJobOverviewId] = useState(null);
     const [actionLoading, setActionLoading] = useState(false);
+    const [isJobsLoading, setIsJobsLoading] = useState(true);
+    const [jobExistsCache, setJobExistsCache] = useState({});
 
     // Search and Pagination states
     const [search, setSearch] = useState("");
@@ -29,7 +31,7 @@ export const Escalation = () => {
     const recordsPerPage = 10;
     const modalRef = useRef(null);
 
-    // Sync modal focus trap and body scroll lock configuration[cite: 4]
+    // Sync modal focus trap and body scroll lock configuration
     useEffect(() => {
         if (isModalOpen) {
             const handleTabKey = (e) => {
@@ -60,7 +62,7 @@ export const Escalation = () => {
                 if (firstBtn) firstBtn.focus();
             }, 100);
 
-            document.body.style.overflow = 'hidden'; //[cite: 4]
+            document.body.style.overflow = 'hidden';
             return () => {
                 document.removeEventListener('keydown', handleTabKey);
                 document.body.style.overflow = 'unset';
@@ -84,7 +86,15 @@ export const Escalation = () => {
     }, [selectedReport]);
 
     useEffect(() => {
-        fetchReports();
+        const loadData = async () => {
+            setIsJobsLoading(true);
+            await fetchReports();
+            if (fetchJobs) {
+                await fetchJobs();
+            }
+            setIsJobsLoading(false);
+        };
+        loadData();
     }, []);
 
     const formatToLocalTime = (dateString) => {
@@ -185,7 +195,25 @@ export const Escalation = () => {
         }
     };
 
-    // Filter pipeline tracking down dynamic matches across critical keys[cite: 4]
+    // Check if a job exists - first check cache, then context, then API
+    // In the table row, when checking if job exists:
+    const checkJobExists = async (jobId) => {
+        if (!jobId) return false;  // If no jobId, job doesn't exist
+
+        // Check in context
+        const existsInContext = jobs.some(job => String(job.id) === String(jobId));
+        if (existsInContext) return true;
+
+        // Check via API
+        try {
+            const response = await api.get(`/admin/jobs/${jobId}/detail/`);
+            return !!response.data && !!response.data.id;
+        } catch (err) {
+            return false;  // If API returns 404, job doesn't exist
+        }
+    };
+
+    // Filter pipeline tracking down dynamic matches across critical keys
     const filteredReports = reports.filter((item) => {
         const searchTerm = search.toLowerCase();
 
@@ -204,14 +232,14 @@ export const Escalation = () => {
             userCombined.includes(searchTerm);
     });
 
-    // Pagination calculations based on filtered records[cite: 4]
+    // Pagination calculations based on filtered records
     const indexOfLastRecord = currentPage * recordsPerPage;
     const indexOfFirstRecord = indexOfLastRecord - recordsPerPage;
     const currentRecords = filteredReports.slice(indexOfFirstRecord, indexOfLastRecord);
     const nPages = Math.ceil(filteredReports.length / recordsPerPage) || 1;
 
-    const prevPage = () => { if (currentPage !== 1) setCurrentPage(currentPage - 1); }; //[cite: 4]
-    const nextPage = () => { if (currentPage !== nPages) setCurrentPage(currentPage + 1); }; //[cite: 4]
+    const prevPage = () => { if (currentPage !== 1) setCurrentPage(currentPage - 1); };
+    const nextPage = () => { if (currentPage !== nPages) setCurrentPage(currentPage + 1); };
 
     if (reportsLoading && reports.length === 0) {
         return (
@@ -236,7 +264,11 @@ export const Escalation = () => {
                     </button>
                 </div>
                 <div style={{ background: '#fff', padding: '20px', borderRadius: '8px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}>
-                    <JobMonitorOverview jobId={showJobOverviewId} setSelectedJobId={setShowJobOverviewId} />
+                    <JobMonitorOverview
+                        jobId={showJobOverviewId}
+                        setSelectedJobId={setShowJobOverviewId}
+                        onJobLoaded={() => { }}
+                    />
                 </div>
             </div>
         );
@@ -245,6 +277,9 @@ export const Escalation = () => {
     if (selectedReport) {
         const currentStatus = selectedReport.status;
         const currentPriority = selectedReport.priority;
+        const jobId = selectedReport.JobId || selectedReport.jobId;
+        // Use the jobExists from the selectedReport (set when clicking View Details)
+        const jobExists = selectedReport.jobExists !== undefined ? selectedReport.jobExists : true;
 
         return (
             <div className="RepAJob-detail-container">
@@ -296,7 +331,7 @@ export const Escalation = () => {
                             <span style={{ paddingLeft: "15px" }} className="meta-label">JobId</span>
                             <span className="meta-separator">:</span>
                             <span className="meta-value-priority">
-                                {selectedReport.JobId || selectedReport.jobId || selectedReport.id}
+                                {jobId || selectedReport.id}
                             </span>
                         </div>
                     </div>
@@ -328,38 +363,83 @@ export const Escalation = () => {
                     <div className="detail-section-card">
                         <h3 className="detail-section-title">Report details</h3>
                         <p style={{ fontSize: '14px', margin: '0 0 10px 0', color: '#555' }}>
-                            Job Id: <strong>{selectedReport.JobId || selectedReport.jobId || selectedReport.id}</strong>
+                            Job Id: <strong>{jobId || selectedReport.id}</strong>
                         </p>
                         <div className="detail-report-textbox">
                             {selectedReport.explanation || selectedReport.message || 'No details provided'}
                         </div>
                     </div>
 
-                    <div className="detail-top-actions">
+                    <div className="detail-top-actions" style={{
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        gap: '12px',
+                        alignItems: 'center'
+                    }}>
                         <button
                             onClick={() => setIsModalOpen(!isModalOpen)}
                             className="detail-btn-action-edit"
                             disabled={actionLoading}
+                            style={{
+                                background: "#1E88E5",
+                                color: "white",
+                                borderRadius: "5px",
+                                padding: "10px 20px",
+                                outline: "none",
+                                border: "none",
+                                cursor: "pointer",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "8px"
+                            }}
                         >
                             <img src={pencil} alt="edit-icon" className="RepAJob-btn-icon-img" style={{ marginRight: '6px', filter: 'brightness(0) invert(1)' }} />
                             Edit Status
                         </button>
-                        {/* <button
-                            onClick={() => handleDeleteReport(selectedReport.id)}
-                            className="detail-btn-action detail-btn-delete"
-                            disabled={actionLoading}
-                        >
-                            <img src={deleteIcon} alt="delete-icon" className="RepAJob-btn-icon-img" style={{ marginRight: '6px', filter: 'brightness(0) invert(1)' }} />
-                            Delete
-                        </button> */}
-                        <button
-                            style={{ background: "#2b8bf9", borderColor: "#2b8bf9", color: "#ffffff" }}
-                            onClick={() => setShowJobOverviewId(selectedReport.JobId || selectedReport.jobId)}
-                            className="detail-btn-action-edit"
-                            disabled={actionLoading}
-                        >
-                            View this Job
-                        </button>
+
+                        {/* Show "View this Job" button only if job exists */}
+                        {jobExists && jobId && (
+                            <button
+                                style={{
+                                    background: "#2b8bf9",
+                                    borderColor: "#2b8bf9",
+                                    color: "#ffffff",
+                                    borderRadius: "5px",
+                                    padding: "10px 20px",
+                                    outline: "none",
+                                    border: "none",
+                                    cursor: "pointer",
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: "8px"
+                                }}
+                                onClick={() => setShowJobOverviewId(jobId)}
+                                className="detail-btn-action-edit"
+                                disabled={actionLoading}
+                            >
+                                View this Job
+                            </button>
+                        )}
+
+                        {/* Show job deleted message when job doesn't exist */}
+                        {!jobExists && jobId && (
+                            <div style={{
+                                padding: '12px 20px',
+                                background: '#fef2f2',
+                                border: '1px solid #fca5a5',
+                                borderRadius: '6px',
+                                color: '#991b1b',
+                                fontSize: '14px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '10px',
+                                flex: 1,
+                                minWidth: '250px'
+                            }}>
+                                <span style={{ fontSize: '18px' }}>ℹ️</span>
+                                <span>This job has been deleted by the administrator.</span>
+                            </div>
+                        )}
                     </div>
                 </div>
 
@@ -400,7 +480,7 @@ export const Escalation = () => {
                 </div>
             </div>
 
-            {/* Search Module bridging styles from UserManagement[cite: 4] */}
+            {/* Search Module bridging styles from UserManagement */}
             <div className="um-search-container">
                 <div className="search-wrapper">
                     <span className="search-icon"><img src={Searchicon} alt="Search" /></span>
@@ -424,9 +504,9 @@ export const Escalation = () => {
                             <th>SUBJECT</th>
                             <th>JOB ID</th>
                             <th>USER</th>
-                            <th>CATEGORY</th>
+                            {/* <th>CATEGORY</th> */}
                             <th style={{ paddingLeft: "40px" }}>PRIORITY</th>
-                            <th>RECEIVED AT</th>
+                            <th>RECEIVED ON</th>
                             <th>STATUS</th>
                             <th>ACTION</th>
                         </tr>
@@ -435,13 +515,15 @@ export const Escalation = () => {
                         {currentRecords.length > 0 ? (
                             currentRecords.map((item, index) => {
                                 const itemPriority = item.priority || 'Medium';
+                                const jobId = item.JobId || item.jobId;
+
                                 return (
                                     <tr key={item.id || index}>
                                         <td>{item.RepId || `REP-${item.id}`}</td>
                                         <td className="subject-column">{item.reason || "Progress, project & status reports"}</td>
-                                        <td>{item.JobId || item.jobId || item.id}</td>
+                                        <td>{jobId || item.id}</td>
                                         <td>{item.firstName || item.name || 'N/A'} {item.lastName || ''}</td>
-                                        <td>{item.category || 'Report'}</td>
+                                        {/* <td>{item.category || 'Report'}</td> */}
                                         <td>
                                             <span
                                                 style={{ display: "flex", justifyContent: "center" }}
@@ -463,7 +545,30 @@ export const Escalation = () => {
                                                     border: "none",
                                                     cursor: "pointer"
                                                 }}
-                                                onClick={() => setSelectedReport(item)}
+                                                onClick={async () => {
+                                                    // Check if job exists when clicking View Details
+                                                    let jobExists = true;
+                                                    if (jobId) {
+                                                        // First check in context
+                                                        const existsInContext = jobs.some(job => String(job.id) === String(jobId));
+                                                        if (existsInContext) {
+                                                            jobExists = true;
+                                                        } else {
+                                                            // Check via API
+                                                            try {
+                                                                const response = await api.get(`/admin/jobs/${jobId}/detail/`);
+                                                                jobExists = !!response.data && !!response.data.id;
+                                                            } catch (err) {
+                                                                jobExists = false;
+                                                            }
+                                                        }
+                                                    }
+
+                                                    setSelectedReport({
+                                                        ...item,
+                                                        jobExists: jobExists
+                                                    });
+                                                }}
                                             >
                                                 View Details
                                             </button>
@@ -481,7 +586,7 @@ export const Escalation = () => {
                     </tbody>
                 </table>
 
-                {/* Footnotes pagination frame sync[cite: 4] */}
+                {/* Footnotes pagination frame sync */}
                 <div className="pagination-footer">
                     <p>Page {currentPage} of {nPages}</p>
                     <div className="pagination-btns">

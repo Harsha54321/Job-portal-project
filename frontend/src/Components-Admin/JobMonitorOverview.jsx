@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useJobs } from '../JobContext';
 import api from '../api/axios';
 import starIcon from '../assets/Star_icon.png';
@@ -8,7 +8,7 @@ import place from '../assets/opportunity_location.png';
 import "./JobMonitorOverview.css"
 
 export const JobMonitorOverview = ({ jobId, setSelectedJobId }) => {
-    const { jobs, setJobs, deleteJob } = useJobs();
+    const { jobs, setJobs, deleteJob, fetchJobs } = useJobs();
     const [loadingStates, setLoadingStates] = useState({
         delete: false,
         flag: false,
@@ -17,8 +17,68 @@ export const JobMonitorOverview = ({ jobId, setSelectedJobId }) => {
     });
     const [isLocationPopupOpen, setIsLocationPopupOpen] = useState(false);
     const [isIndustryPopupOpen, setIsIndustryPopupOpen] = useState(false);
+    const [jobData, setJobData] = useState(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState(null);
     const currentId = jobId;
-    const selectedJob = jobs.find(job => job.id === currentId);
+
+    // Fetch job data directly if not available in context
+    useEffect(() => {
+        const loadJobData = async () => {
+            setIsLoading(true);
+            setError(null);
+
+            // First check if job exists in context
+            let job = jobs.find(job => String(job.id) === String(currentId));
+
+            if (job) {
+                setJobData(job);
+                setIsLoading(false);
+                return;
+            }
+
+            // If not in context, fetch directly from API
+            try {
+                console.log(`🔄 Fetching job ${currentId} directly from API...`);
+                const response = await api.get(`/admin/jobs/${currentId}/detail/`);
+                const fetchedJob = response.data;
+                
+                // Add to context if possible
+                if (setJobs && fetchedJob) {
+                    setJobs(prev => {
+                        const exists = prev.some(j => String(j.id) === String(fetchedJob.id));
+                        if (!exists) {
+                            return [...prev, fetchedJob];
+                        }
+                        return prev;
+                    });
+                }
+                
+                setJobData(fetchedJob);
+            } catch (err) {
+                console.error("Failed to fetch job:", err);
+                setError(err.response?.data?.error || "Failed to load job details. Please try again.");
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        if (currentId) {
+            loadJobData();
+        }
+
+        // Refresh data when jobId changes
+    }, [currentId, jobs]);
+
+    // Also refresh if jobs context changes
+    useEffect(() => {
+        if (jobs.length > 0 && jobData) {
+            const updatedJob = jobs.find(job => String(job.id) === String(currentId));
+            if (updatedJob && JSON.stringify(updatedJob) !== JSON.stringify(jobData)) {
+                setJobData(updatedJob);
+            }
+        }
+    }, [jobs, currentId, jobData]);
 
     const handleDelete = async () => {
         const confirmDelete = window.confirm("Are you sure you want to delete this job?");
@@ -40,13 +100,92 @@ export const JobMonitorOverview = ({ jobId, setSelectedJobId }) => {
         }
     };
 
-    if (!selectedJob) {
+    // Show loading state
+    if (isLoading) {
         return (
             <div className='opp-overview-main'>
-                <p style={{ marginTop: '20px' }}>Job is deleted or not found.</p>
+                <div style={{ 
+                    textAlign: 'center', 
+                    padding: '40px 20px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '15px'
+                }}>
+                    <div style={{
+                        width: '40px',
+                        height: '40px',
+                        border: '4px solid #e2e8f0',
+                        borderTop: '4px solid #2b8bf9',
+                        borderRadius: '50%',
+                        animation: 'spin 1s linear infinite'
+                    }}></div>
+                    <p style={{ color: '#64748b', margin: 0 }}>Loading job details...</p>
+                </div>
+                <style>{`
+                    @keyframes spin {
+                        0% { transform: rotate(0deg); }
+                        100% { transform: rotate(360deg); }
+                    }
+                `}</style>
             </div>
         );
     }
+
+    // Show error state
+    if (error) {
+        return (
+            <div className='opp-overview-main'>
+                <div style={{ 
+                    textAlign: 'center', 
+                    padding: '40px 20px',
+                    color: '#dc3545'
+                }}>
+                    <p style={{ fontSize: '16px', marginBottom: '15px' }}>{error}</p>
+                    <button 
+                        onClick={() => {
+                            setIsLoading(true);
+                            setError(null);
+                            // Trigger reload
+                            const loadJobData = async () => {
+                                try {
+                                    const response = await api.get(`/admin/jobs/${currentId}/detail/`);
+                                    setJobData(response.data);
+                                    setIsLoading(false);
+                                } catch (err) {
+                                    setError(err.response?.data?.error || "Failed to load job details.");
+                                    setIsLoading(false);
+                                }
+                            };
+                            loadJobData();
+                        }}
+                        style={{
+                            padding: '8px 24px',
+                            background: '#2b8bf9',
+                            color: '#fff',
+                            border: 'none',
+                            borderRadius: '6px',
+                            cursor: 'pointer'
+                        }}
+                    >
+                        Retry
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
+    if (!jobData) {
+        return (
+            <div className='opp-overview-main'>
+                <p style={{ marginTop: '20px', textAlign: 'center', color: '#64748b' }}>
+                    Job not found or has been deleted.
+                </p>
+            </div>
+        );
+    }
+
+    const selectedJob = jobData;
 
     const handleApprove = async () => {
         if (window.confirm("Do you want to approve this job?")) {
@@ -56,6 +195,8 @@ export const JobMonitorOverview = ({ jobId, setSelectedJobId }) => {
                 setJobs(prev => prev.map(j =>
                     j.id === currentId ? { ...j, approval_status: 'approved', is_published: true } : j
                 ));
+                // Update local jobData
+                setJobData(prev => ({ ...prev, approval_status: 'approved', is_published: true }));
                 alert("Job approved successfully!");
             } catch (error) {
                 console.error("Approval failed:", error);
@@ -74,6 +215,8 @@ export const JobMonitorOverview = ({ jobId, setSelectedJobId }) => {
                 setJobs(prev => prev.map(j =>
                     j.id === currentId ? { ...j, approval_status: 'rejected', is_published: false } : j
                 ));
+                // Update local jobData
+                setJobData(prev => ({ ...prev, approval_status: 'rejected', is_published: false }));
                 alert("Job rejected successfully!");
             } catch (error) {
                 console.error("Rejection failed:", error);
@@ -92,6 +235,8 @@ export const JobMonitorOverview = ({ jobId, setSelectedJobId }) => {
             setJobs(prev => prev.map(j =>
                 j.id === currentId ? { ...j, flagged: newFlagStatus } : j
             ));
+            // Update local jobData
+            setJobData(prev => ({ ...prev, flagged: newFlagStatus }));
             alert(newFlagStatus ? "Job flagged successfully!" : "Job unflagged successfully!");
         } catch (error) {
             console.error("Flag update failed:", error);
@@ -107,6 +252,7 @@ export const JobMonitorOverview = ({ jobId, setSelectedJobId }) => {
         if (selectedJob.employer?.employer_profile?.company?.company_name) {
             return selectedJob.employer.employer_profile.company.company_name;
         }
+        if (selectedJob.company_name) return selectedJob.company_name;
         return 'N/A';
     };
 
@@ -115,6 +261,7 @@ export const JobMonitorOverview = ({ jobId, setSelectedJobId }) => {
         if (selectedJob.company?.company_logo) return selectedJob.company.company_logo;
         if (selectedJob.company_logo) return selectedJob.company_logo;
         if (selectedJob.logo) return selectedJob.logo;
+        if (selectedJob.company?.logo) return selectedJob.company.logo;
         return null;
     };
 

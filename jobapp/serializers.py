@@ -2504,33 +2504,18 @@ class VerifyEmailOTPSerializer(serializers.Serializer):
 
 from .utils import get_priority_from_reason
 
-class ComplaintSerializer(
-    serializers.ModelSerializer
-):
- 
-    firstName = serializers.CharField(
-        source='first_name'
-    )
- 
-    lastName = serializers.CharField(
-        source='last_name'
-    )
-    jobId = serializers.IntegerField(
-    source='reported_job.id',
-    read_only=True
-)
-    JobId = serializers.IntegerField(
-    source='reported_job.id',
-    read_only=True
-)
+class ComplaintSerializer(serializers.ModelSerializer):
+    firstName = serializers.CharField(source='first_name')
+    lastName = serializers.CharField(source='last_name')
+    
+    # Use stored original_job_id, fallback to reported_job.id
+    jobId = serializers.SerializerMethodField()
+    JobId = serializers.SerializerMethodField()
+    
     date = serializers.SerializerMethodField()
- 
     status = serializers.SerializerMethodField()
- 
     priority = serializers.SerializerMethodField()
-
     RepId = serializers.SerializerMethodField()
-
     resolvedon = serializers.SerializerMethodField()
  
     class Meta:
@@ -2560,8 +2545,24 @@ class ComplaintSerializer(
             'resolvedon',
         ]
 
+    def get_jobId(self, obj):
+        # First try the stored original_job_id (even if job is deleted)
+        if obj.original_job_id:
+            return obj.original_job_id
+        # Fallback to reported_job.id if available
+        if obj.reported_job:
+            return obj.reported_job.id
+        return None
+
+    def get_JobId(self, obj):
+        # Same as above
+        if obj.original_job_id:
+            return obj.original_job_id
+        if obj.reported_job:
+            return obj.reported_job.id
+        return None
+
     def get_RepId(self, obj):
-        # Formats as REP-0001, REP-0002, etc.
         return f"REP-{obj.id:04d}"
 
     def get_resolvedon(self, obj):
@@ -2576,7 +2577,6 @@ class ComplaintSerializer(
  
     def get_date(self, obj):
         if obj.created_at:
-            # Make timezone aware if it's naive
             from django.utils import timezone
             dt = obj.created_at
             if timezone.is_naive(dt):
@@ -2586,61 +2586,38 @@ class ComplaintSerializer(
         return None
  
     def get_status(self, obj):
- 
         mapping = {
             Complaint.Status.PENDING: "Pending",
             Complaint.Status.INVESTIGATING: "In Progress",
             Complaint.Status.RESOLVED: "Resolved",
             Complaint.Status.REJECTED: "Rejected"
         }
- 
-        return mapping.get(
-            obj.status,
-            obj.status
-        )
+        return mapping.get(obj.status, obj.status)
  
     def get_priority(self, obj):
- 
-        return get_priority_from_reason(
-            obj.reason
-        )
+        from .utils import get_priority_from_reason
+        return get_priority_from_reason(obj.reason)
  
     def validate_mobile(self, value):
- 
         if not value.isdigit() or len(value) != 10:
- 
             raise serializers.ValidationError(
                 "Enter valid 10-digit mobile number"
             )
- 
         return value
  
     def validate(self, data):
- 
         request = self.context.get('request')
- 
         if not request:
             return data
- 
         user = request.user
- 
-        reported_job = data.get(
-            'reported_job'
-        )
- 
-        if (
-            reported_job and
-            Complaint.objects.filter(
-                user=user,
-                reported_job=reported_job
-            ).exists()
-        ):
- 
+        reported_job = data.get('reported_job')
+        if reported_job and Complaint.objects.filter(
+            user=user,
+            reported_job=reported_job
+        ).exists():
             raise serializers.ValidationError(
-                "You already submitted "
-                "complaint for this job"
+                "You already submitted complaint for this job"
             )
- 
         return data
     
 class JobDetailSerializer(serializers.ModelSerializer):
@@ -3023,6 +3000,7 @@ class PaymentMethodSerializer(serializers.ModelSerializer):
            
         return super().update(instance, validated_data)
     
+   
 class AdminCompanySerializer(serializers.ModelSerializer):
     name = serializers.SerializerMethodField()
     user = serializers.CharField(source='employer.username')
@@ -3035,12 +3013,15 @@ class AdminCompanySerializer(serializers.ModelSerializer):
         fields = ['id', 'name', 'user', 'date', 'certificate', 'verification']
  
     def get_date(self, obj):
-        return obj.created_at.strftime("%d %B %Y")
+        return obj.created_at.strftime("%d %B %Y") if obj.created_at else None
  
     def get_certificate(self, obj):
         return "Yes" if obj.incorporation_certificate else "No"
  
     def get_name(self, obj):
+        # Prioritize customized company profile configurations over registration legal names
+        if hasattr(obj.employer, 'employer_profile') and obj.employer.employer_profile.company:
+            return obj.employer.employer_profile.company.company_name
         return obj.legal_name
 
 class AdminCompanyDetailSerializer(serializers.ModelSerializer):
@@ -3072,6 +3053,8 @@ class AdminCompanyDetailSerializer(serializers.ModelSerializer):
         return "Yes" if obj.incorporation_certificate else "No"
 
     def get_name(self, obj):
+        if hasattr(obj.employer, 'employer_profile') and obj.employer.employer_profile.company:
+            return obj.employer.employer_profile.company.company_name
         return obj.legal_name
 
     def get_company_profile(self, obj):
@@ -4081,8 +4064,18 @@ class UserDetailSerializer(serializers.ModelSerializer):
 
     def get_contact(self, obj):
         # 1. Grab the main registered phone number directly from the User model
-
-        mobile = obj.phone or ""
+ 
+        mobile = ""
+        if obj.user_type == User.UserType.EMPLOYER:
+            try:
+                company = obj.employer_profile.company
+                if company and company.contact_number:
+                    mobile = company.contact_number
+            except Exception:
+                pass
+       
+        if not mobile:
+            mobile = obj.phone or ""
 
         city = ""
 
@@ -4180,12 +4173,19 @@ class UserDetailSerializer(serializers.ModelSerializer):
         try:
             ep = obj.employer_profile
             company = ep.company
-            if not company:
-                return {}
+           
+            # Auto-update logic for Active Membership Plan:
+            plan_name = "Free Plan"
+            try:
+                active_sub = Subscription.objects.filter(user=obj, status='active').select_related('plan').first()
+                if active_sub and active_sub.plan:
+                    plan_name = active_sub.plan.name
+            except Exception:
+                pass
             return {
-                "companyName": company.company_name or "",
+                "companyName": company.company_name if company else "",
                 "companyId": ep.employee_id or "",
-                "planName": "Free Plan",
+                "planName": plan_name,
                 "planLevel": "1",
             }
         except EmployerProfile.DoesNotExist:

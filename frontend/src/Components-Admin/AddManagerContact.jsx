@@ -598,7 +598,7 @@ export const AddManagerContact = () => {
             {renderFormFields(true)}
             <div className="admin-form-actions">
               <button type="submit" className="admin-btn-submit" tabIndex={backgroundTabIndex} disabled={loading}>
-                {loading ? 'Saving...' : '+ Create Manager'}
+                {loading ? 'Saving...' : 'Create Manager'}
               </button>
             </div>
           </form>
@@ -782,9 +782,9 @@ export const AddManagerContact = () => {
           )}
 
           {successMessage && (
-            <div style={{ marginTop: '10px' }}
+            <div
               className="admin-status-alert admin-alert-success"
-              style={{ borderColor: successMessage.toLowerCase().includes('delet') || successMessage.toLowerCase().includes('remov') ? '#dc3545' : '#2e7d32' }}
+              style={{marginTop: '10px', borderColor: successMessage.toLowerCase().includes('delet') || successMessage.toLowerCase().includes('remov') ? '#dc3545' : '#2e7d32' }}
             >
               <span
                 className="admin-status-dot admin-animate-pulse"

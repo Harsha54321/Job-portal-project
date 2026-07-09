@@ -391,10 +391,10 @@ export const Enquiries = () => {
                 <table className="Enquiries-table">
                     <thead>
                         <tr>
-                            <th className="enq-col-id">Ticket ID</th>
+                            <th className="enq-col-id">Enquiry ID</th>
                             <th className="enq-col-enquiry">Enquiry</th>
                             <th className="enq-col-user">User</th>
-                            <th className="enq-col-received">Received at</th>
+                            <th className="enq-col-received">Received On</th>
                             <th className="enq-col-status">Status</th>
                             <th className="enq-col-action">Action</th>
                         </tr>

@@ -1448,13 +1448,22 @@ class Complaint(models.Model):
         related_name="complaints"
     )
    
-    # The job being reported (now using PostAJob)
+    # The job being reported
     reported_job = models.ForeignKey(
         'PostAJob',
-        on_delete=models.CASCADE,
+        on_delete=models.SET_NULL,  # Changed from CASCADE to SET_NULL
         related_name="complaints",
         null=True,
         blank=True
+    )
+   
+    # NEW: Store job ID permanently even after job is deleted
+    # Using a different name to avoid clash with auto-generated _id field
+    original_job_id = models.IntegerField(
+        null=True,
+        blank=True,
+        db_index=True,
+        help_text="Stores the job ID even if the job is deleted"
     )
    
     # Denormalized fields for quick access
@@ -1466,14 +1475,14 @@ class Complaint(models.Model):
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
     mobile = models.CharField(
-    max_length=10,
-    validators=[
-        RegexValidator(
-            regex=r'^\d{10}$',
-            message='Enter valid 10-digit mobile number'
-        )
-    ]
-)
+        max_length=10,
+        validators=[
+            RegexValidator(
+                regex=r'^\d{10}$',
+                message='Enter valid 10-digit mobile number'
+            )
+        ]
+    )
     email = models.EmailField()
    
     # Complaint details
@@ -1510,15 +1519,19 @@ class Complaint(models.Model):
             models.Index(fields=['status', 'created_at']),
             models.Index(fields=['reported_job', 'status']),
             models.Index(fields=['user', 'reported_job']),
+            models.Index(fields=['original_job_id']),  # Add index for new field
         ]
    
     def __str__(self):
         if self.reported_job:
             return f"{self.first_name} reported '{self.reported_job.job_title}' (Job ID: {self.reported_job.id}) - {self.reason}"
-        return f"{self.first_name} reported a job - {self.reason}"
+        job_id = self.original_job_id or 'Unknown'
+        return f"{self.first_name} reported a job (Job ID: {job_id}) - {self.reason}"
    
     def save(self, *args, **kwargs):
+        # Store the job ID permanently
         if self.reported_job:
+            self.original_job_id = self.reported_job.id
             self.reported_job_title = self.reported_job.job_title
             if hasattr(self.reported_job.employer, 'employer_profile'):
                 if self.reported_job.employer.employer_profile.company:

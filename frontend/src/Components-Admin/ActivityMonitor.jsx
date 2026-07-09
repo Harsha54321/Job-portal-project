@@ -13,21 +13,27 @@ import RedProfile from '../assets/AdminAssets/RedBGProfile.png'
 import SupportTicket from '../assets/AdminAssets/SupportTicket.png'
 import Msgsent from '../assets/AdminAssets/Msgsent.png'
 import EmailsSent from '../assets/AdminAssets/EmailsSent.png'
+import Searchicon from '../assets/icon_search.png'
+import leftArrow from '../assets/left_arrow.png'
+import rightArrow from '../assets/right_arrow.png'
 import api from '../api/axios'
 
 export const ActivityMonitor = ({ currentTab, onTabChange }) => {
-  // Local state fallback only used if component is rendered without props
   const [localActiveTab, setLocalActiveTab] = useState("AdminMonitor");
   const [openDropdownId, setOpenDropdownId] = useState(null);
 
-  // Derive active view tab seamlessly from parent or fallback local state
+  // Search & Pagination States for Company Approval Tab
+  const [search, setSearch] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const recordsPerPage = 10;
+
   const activeSubTab = currentTab || localActiveTab;
 
   const handleSubTabClick = (tabName) => {
     if (onTabChange) {
       onTabChange(tabName);
     } else {
-      setLocalActiveTab(tabName); 
+      setLocalActiveTab(tabName);
     }
   };
 
@@ -161,7 +167,37 @@ export const ActivityMonitor = ({ currentTab, onTabChange }) => {
     }
   };
 
-  // Helpers to safely read nested stats
+  const prevPage = () => { if (currentPage !== 1) setCurrentPage(currentPage - 1) };
+  const nextPage = () => { if (currentPage !== nPages) setCurrentPage(currentPage + 1) };
+
+  const filteredCompanies = companyData
+    .filter(company => {
+      const searchTerm = search.toLowerCase().trim();
+      if (!searchTerm) return true; // If search is empty, show all rows
+
+      // Resolve the exact visible company name strings from the grid row matching paths
+      const visibleCompanyName = (company.name || "").toLowerCase();
+      const embeddedProfileName = (company.company_profile?.company_name || "").toLowerCase();
+      const rootCompanyName = (company.company_name || "").toLowerCase();
+
+      // Other column fields
+      const submittedBy = (company.user || "").toLowerCase();
+      const statusText = (company.verification || "").toLowerCase();
+
+      return visibleCompanyName.includes(searchTerm) ||
+        embeddedProfileName.includes(searchTerm) ||
+        rootCompanyName.includes(searchTerm) ||
+        submittedBy.includes(searchTerm) ||
+        statusText.includes(searchTerm);
+    })
+    .sort((a, b) => b.id - a.id);
+
+  // Pagination bounds
+  const indexOfLastRecord = currentPage * recordsPerPage;
+  const indexOfFirstRecord = indexOfLastRecord - recordsPerPage;
+  const currentRecords = filteredCompanies.slice(indexOfFirstRecord, indexOfLastRecord);
+  const nPages = Math.ceil(filteredCompanies.length / recordsPerPage);
+
   const s = (section, subsection, key) => {
     try { return stats[section][subsection][key] ?? 0; }
     catch { return 0; }
@@ -541,91 +577,126 @@ export const ActivityMonitor = ({ currentTab, onTabChange }) => {
             <div className="C-Approval-container">
               <h2 className="C-Approval-title">Company Approval</h2>
 
-              {companyLoading && <p style={{ color: 'var(--color-text-secondary)' }}>Loading companies...</p>}
-              {companyError && <p style={{ color: 'red' }}>{companyError}</p>}
+              <div className="C-Approval-content-constrained">
 
-              {!companyLoading && !companyError && (
-                <div className="C-Approval-table-wrapper">
-                  <div className="C-Approval-header-row">
-                    <div className="C-Approval-col">Company Name</div>
-                    <div className="C-Approval-col">Submitted By</div>
-                    <div className="C-Approval-col">Date of submission</div>
-                    <div className="C-Approval-col">Certificate</div>
-                    <div className="C-Approval-col">Status</div>
-                    <div className="C-Approval-col">Actions</div>
+                {/* Integrated Search Box - Styled dynamically to look same as User Management */}
+                <div className="um-search-container" style={{ margin: "0px 0px 20px 0px" }}>
+                  <div className="search-wrapper">
+                    <span className="search-icon"><img src={Searchicon} alt="Search" /></span>
+                    <input
+                      type="text"
+                      placeholder="Search by company name, profile username or status"
+                      value={search}
+                      onChange={(e) => {
+                        setSearch(e.target.value);
+                        setCurrentPage(1);
+                      }}
+                    />
                   </div>
-                  {companyData.length === 0 && (
-                    <p style={{ textAlign: 'center', padding: '20px', color: 'gray' }}>No companies found.</p>
-                  )}
-                  {companyData.map((company) => (
-                    <div className="C-Approval-data-row" key={company.id}>
-                      <div className="C-Approval-col C-Approval-name">
-                        {company.name || company.company_name}
-                      </div>
-                      <div className="C-Approval-col">
-                        <div className="C-Approval-user-info">
-                          <div className="C-Approval-avatar"></div>
-                          <span>{company.user}</span>
-                        </div>
-                      </div>
-                      <div className="C-Approval-col">{company.date}</div>
-                      <div className="C-Approval-col">
-                        <span className={company.certificate === "Yes" ? "C-Approval-badge-yes" : "C-Approval-badge-no"}>
-                          {company.certificate}
-                        </span>
-                      </div>
-                      <div className="C-Approval-col">
-                        <span className={`C-Approval-${company.verification}`}>
-                          {company.verification}
-                        </span>
-                      </div>
-                      <div className="C-Approval-col C-Approval-dots">
-                        {updatingId === company.id ? (
-                          <span style={{ fontSize: '12px', color: 'gray' }}>Updating...</span>
-                        ) : (
-                          <>
-                            <span
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setOpenDropdownId(openDropdownId === company.id ? null : company.id);
-                              }}
-                              style={{ cursor: 'pointer', padding: '5px' }}
-                            >
-                              ...
-                            </span>
-                            {openDropdownId === company.id && (
-                              <div
-                                className="C-Approval-dropdown"
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                <div
-                                  onClick={() => {
-                                    setOpenDropdownId(null);
-                                    handleCompanyNameClick(company);
-                                  }}
-                                >
-                                  Quick View
-                                </div>
+                </div>
 
-                                {["Pending", "Hold", "Reject", "Verified"]
-                                  .filter((status) => status !== company.verification)
-                                  .map((status) => (
+                {companyLoading && <p style={{ color: 'var(--color-text-secondary)' }}>Loading companies...</p>}
+                {companyError && <p style={{ color: 'red' }}>{companyError}</p>}
+
+                {!companyLoading && !companyError && (
+                  <>
+                    <div className="C-Approval-table-wrapper">
+                      <div className="C-Approval-header-row">
+                        <div className="C-Approval-col">Company Name</div>
+                        <div className="C-Approval-col">Submitted By</div>
+                        <div className="C-Approval-col">Date of submission</div>
+                        <div className="C-Approval-col">Certificate</div>
+                        <div className="C-Approval-col">Status</div>
+                        <div className="C-Approval-col">Actions</div>
+                      </div>
+                      {currentRecords.length === 0 && (
+                        <p style={{ textAlign: 'center', padding: '20px', color: 'gray' }}>No companies found.</p>
+                      )}
+                      {currentRecords.map((company) => (
+                        <div className="C-Approval-data-row" key={company.id}>
+                          {/* Displaying configured Company Name instead of backend Legal Name fields */}
+                          <div className="C-Approval-col C-Approval-name">
+                            {company.company_profile?.company_name || company.company_name || company.name || "N/A"}
+                          </div>
+                          <div className="C-Approval-col">
+                            <div className="C-Approval-user-info">
+                              {/* <div className="C-Approval-avatar"></div> */}
+                              <span>{company.user}</span>
+                            </div>
+                          </div>
+                          <div className="C-Approval-col">{company.date}</div>
+                          <div className="C-Approval-col">
+                            <span className={company.certificate === "Yes" ? "C-Approval-badge-yes" : "C-Approval-badge-no"}>
+                              {company.certificate}
+                            </span>
+                          </div>
+                          <div className="C-Approval-col">
+                            <span className={`C-Approval-${company.verification}`}>
+                              {company.verification}
+                            </span>
+                          </div>
+                          <div className="C-Approval-col C-Approval-dots">
+                            {updatingId === company.id ? (
+                              <span style={{ fontSize: '12px', color: 'gray' }}>Updating...</span>
+                            ) : (
+                              <>
+                                <span
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setOpenDropdownId(openDropdownId === company.id ? null : company.id);
+                                  }}
+                                  style={{ cursor: 'pointer', padding: '5px' }}
+                                >
+                                  ...
+                                </span>
+                                {openDropdownId === company.id && (
+                                  <div
+                                    className="C-Approval-dropdown"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
                                     <div
-                                      key={status}
-                                      onClick={() => handleStatusChange(company.id, status)}
+                                      onClick={() => {
+                                        setOpenDropdownId(null);
+                                        handleCompanyNameClick(company);
+                                      }}
                                     >
-                                      {status}
+                                      Quick View
                                     </div>
-                                  ))}
-                              </div>
+
+                                    {["Pending", "Hold", "Reject", "Verified"]
+                                      .filter((status) => status !== company.verification)
+                                      .map((status) => (
+                                        <div
+                                          key={status}
+                                          onClick={() => handleStatusChange(company.id, status)}
+                                        >
+                                          {status}
+                                        </div>
+                                      ))}
+                                  </div>
+                                )}
+                              </>
                             )}
-                          </>
-                        )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Integrated Pagination Footer Footer matching User Management design pattern */}
+                    <div className="pagination-footer" style={{ marginTop: "20px" }}>
+                      <p>Page {currentPage} of {nPages || 1}</p>
+                      <div className="pagination-btns">
+                        <button onClick={prevPage} disabled={currentPage === 1 || nPages === 0}>
+                          <img src={leftArrow} alt="prev" className="nav-arrow" />
+                        </button>
+                        <button onClick={nextPage} disabled={currentPage === nPages || nPages === 0}>
+                          <img src={rightArrow} alt="next" className="nav-arrow" />
+                        </button>
                       </div>
                     </div>
-                  ))}
-                </div>
-              )}
+                  </>
+                )}
+              </div>
             </div>
           )}
         </div>
@@ -642,7 +713,8 @@ export const ActivityMonitor = ({ currentTab, onTabChange }) => {
           >
             <div className="company-details-header">
               <h3>
-                {selectedCompany.company_name ||
+                {selectedCompany.company_profile?.company_name ||
+                  selectedCompany.company_name ||
                   selectedCompany.name ||
                   "Company Details"}
               </h3>
@@ -896,6 +968,7 @@ export const ActivityMonitor = ({ currentTab, onTabChange }) => {
                     </p>
                   </div>
 
+                  {/* Enhanced Verification Certificate File Lookups resolving historical links mapping */}
                   {(selectedCompany.verification_details?.incorporation_certificate ||
                     selectedCompany.incorporation_certificate) && (
                       <div className="company-details-full">

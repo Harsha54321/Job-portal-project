@@ -303,7 +303,8 @@ class ComplaintAdmin(admin.ModelAdmin):
         'mobile',
         'reason',
         'status',
-        'created_at'
+        'created_at',
+        'original_job_id'  # Add this to display the stored job ID
     )
     list_filter = ('status', 'created_at')
     search_fields = (
@@ -311,10 +312,11 @@ class ComplaintAdmin(admin.ModelAdmin):
         'last_name',
         'email',
         'mobile',
-        'reason'
+        'reason',
+        'original_job_id',  # Add this for searching by job ID
     )
     ordering = ('-created_at',)
-    readonly_fields = ('created_at', 'user')
+    readonly_fields = ('created_at', 'user', 'original_job_id')
     list_per_page = 20
 
     def full_name(self, obj):

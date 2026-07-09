@@ -195,7 +195,7 @@ export const AdminTickets = () => {
                                     <th>USER</th>
                                     <th>CATEGORY</th>
                                     <th style={{ paddingLeft: "40px" }}>PRIORITY</th>
-                                    <th>RECEIVED at</th>
+                                    <th>RECEIVED On</th>
                                     <th>STATUS</th>
                                     <th>ACTION</th>
                                 </tr>

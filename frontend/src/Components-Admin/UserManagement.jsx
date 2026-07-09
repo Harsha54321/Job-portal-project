@@ -4,7 +4,7 @@ import { useJobs } from '../JobContext'
 import Searchicon from '../assets/icon_search.png'
 import leftArrow from '../assets/left_arrow.png'
 import rightArrow from '../assets/right_arrow.png'
-import { useLocation } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import api from '../api/axios'
 
 export const UserManagement = () => {
@@ -17,17 +17,24 @@ export const UserManagement = () => {
   const firstButtonRef = useRef(null);
   const lastButtonRef = useRef(null);
   const location = useLocation();
-  const [isDetailView, setIsDetailView] = useState(() => {
-    return sessionStorage.getItem('umIsDetailView') === 'true';
-  });
-  const [selectedUser, setSelectedUser] = useState(() => {
-    const savedUser = sessionStorage.getItem('umSelectedUser');
-    return savedUser ? JSON.parse(savedUser) : null;
-  });
+  const navigate = useNavigate();
+
+  // Reset to list view by default on fresh entry / module switching
+  const [isDetailView, setIsDetailView] = useState(false);
+  const [selectedUser, setSelectedUser] = useState(null);
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [usersList, setUsersList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // Clear session storage and reset views on module mount
+  useEffect(() => {
+    sessionStorage.removeItem('umIsDetailView');
+    sessionStorage.removeItem('umSelectedUser');
+    setIsDetailView(false);
+    setSelectedUser(null);
+  }, []);
 
   useEffect(() => {
     if (isModalOpen) {
@@ -44,17 +51,14 @@ export const UserManagement = () => {
           const lastElement = focusableElements[focusableElements.length - 1];
           const activeElement = document.activeElement;
 
-          // If Shift+Tab on first element → move to last
           if (e.shiftKey && activeElement === firstElement) {
             e.preventDefault();
             lastElement.focus();
           }
-          // If Tab on last element → move to first
           else if (!e.shiftKey && activeElement === lastElement) {
             e.preventDefault();
             firstElement.focus();
           }
-          // If focus is outside modal → move to first
           else if (!modalRef.current?.contains(activeElement)) {
             e.preventDefault();
             firstElement.focus();
@@ -62,19 +66,15 @@ export const UserManagement = () => {
         }
       };
 
-      // Add event listener when modal opens
       document.addEventListener('keydown', handleTabKey);
 
-      // Focus first button when modal opens
       setTimeout(() => {
         const firstBtn = modalRef.current?.querySelector('button');
         if (firstBtn) firstBtn.focus();
       }, 100);
 
-      // Prevent body scroll
       document.body.style.overflow = 'hidden';
 
-      // Cleanup
       return () => {
         document.removeEventListener('keydown', handleTabKey);
         document.body.style.overflow = 'unset';
@@ -82,7 +82,7 @@ export const UserManagement = () => {
     }
   }, [isModalOpen]);
 
-
+  // Keep session synced ONLY while remaining inside the component actively
   useEffect(() => {
     sessionStorage.setItem('umIsDetailView', isDetailView);
     if (selectedUser) {
@@ -92,14 +92,16 @@ export const UserManagement = () => {
     }
   }, [isDetailView, selectedUser]);
 
-
   useEffect(() => {
     if (location.state?.filterRole) {
       setSearch(location.state.filterRole);
       setCurrentPage(1);
       setIsDetailView(false);
+      setSelectedUser(null);
+      // Clear route state to prevent unexpected behavior on reloads
+      navigate(location.pathname, { replace: true, state: {} });
     }
-  }, [location.state]);
+  }, [location.state, navigate, location.pathname]);
 
   // Fetch all users from API
   useEffect(() => {
@@ -133,10 +135,8 @@ export const UserManagement = () => {
 
   const handleStatusChange = async (id, newStatus) => {
     try {
-      // Update status via API
       await api.patch(`/users/${id}/status/`, { status: newStatus });
 
-      // Update local state
       setUsersList(prev => prev.map(u => u.id === id ? { ...u, status: newStatus } : u));
       setSelectedUser(prev => prev && prev.id === id ? { ...prev, status: newStatus } : prev);
 
@@ -156,7 +156,6 @@ export const UserManagement = () => {
     const confirmDelete = window.confirm("Are you sure you want to delete this user?");
     if (confirmDelete) {
       try {
-        // Delete user via API
         await api.delete(`users/${id}/delete/`);
 
         setUsersList(prev => prev.filter(u => u.id !== id));
@@ -175,7 +174,6 @@ export const UserManagement = () => {
 
   const handleViewDetails = async (user) => {
     try {
-      // Fetch full user details
       const userDetails = await fetchUserDetails(user.id);
       setSelectedUser(userDetails);
       setIsDetailView(true);
@@ -185,17 +183,27 @@ export const UserManagement = () => {
     }
   };
 
-  // Filter users based on search
-  const filteredUsers = usersList.filter(user => {
-    const searchTerm = search.toLowerCase();
-    const fullName = (user.profile?.fullName || "").toLowerCase();
-    const email = (user.contact?.email || "").toLowerCase();
-    const role = (user.role || "").toLowerCase();
+  const handleBackToList = () => {
+    setIsDetailView(false);
+    setSelectedUser(null);
+    fetchUsers(); // Auto-refresh user tables on view exit
+  };
 
-    return fullName.includes(searchTerm) ||
-      email.includes(searchTerm) ||
-      role.includes(searchTerm);
-  });
+  // Filter and globally sort users by ID descending (Latest Registered first)
+  const filteredUsers = usersList
+    .filter(user => {
+      const searchTerm = search.toLowerCase();
+      const fullName = (user.profile?.fullName || "").toLowerCase();
+      const email = (user.contact?.email || "").toLowerCase();
+      const role = (user.role || "").toLowerCase();
+
+      return fullName.includes(searchTerm) ||
+        email.includes(searchTerm) ||
+        role.includes(searchTerm);
+    })
+    .sort((a, b) => {
+      return b.id - a.id; // Sorts newest entries to top globally
+    });
 
   // Calculate statistics
   const totalUsers = usersList.length;
@@ -203,7 +211,7 @@ export const UserManagement = () => {
   const candidates = usersList.filter(user => user.role === 'candidate').length;
   const employers = usersList.filter(user => user.role === 'employer').length;
 
-  // Pagination
+  // Pagination setups
   const indexOfLastRecord = currentPage * recordsPerPage;
   const indexOfFirstRecord = indexOfLastRecord - recordsPerPage;
   const currentRecords = filteredUsers.slice(indexOfFirstRecord, indexOfLastRecord);
@@ -231,6 +239,8 @@ export const UserManagement = () => {
 
   if (isDetailView && selectedUser) {
     const isEmployer = selectedUser.role === 'employer';
+    // Fallback checks for real-time mobile alterations
+    const mobileNumber = selectedUser.contact?.mobile || selectedUser.phone || "N/A";
 
     return (
       <div className="detail-page-wrapper">
@@ -239,26 +249,25 @@ export const UserManagement = () => {
             <h3 className="detail-section-title" style={{ margin: 0 }}>
               {isEmployer ? "Employer Information" : "User Information"}
             </h3>
-            <button onClick={() => setIsDetailView(false)} className="detail-btn-action" style={{ background: '#f1f5f9' }}>
+            <button onClick={handleBackToList} className="detail-btn-action" style={{ background: '#f1f5f9' }}>
               Back to List
             </button>
           </div>
 
           <div className="detail-form-group">
-
             <div className="detail-field-row">
               <label>Id :</label>
               <input type="text" readOnly value={selectedUser.id || "N/A"} />
             </div>
 
             <div className="detail-field-row">
-              <label>{isEmployer ? "HR Name :" : "Name :"}</label>
+              <label>Name :</label>
               <input type="text" readOnly value={selectedUser.profile?.fullName || "N/A"} />
             </div>
 
             <div className="detail-field-row">
               <label>Mobile number :</label>
-              <input type="text" readOnly value={selectedUser.contact?.mobile || "N/A"} />
+              <input type="text" readOnly value={mobileNumber} />
             </div>
 
             <div className="detail-field-row">
@@ -285,7 +294,11 @@ export const UserManagement = () => {
 
                 <div className="detail-field-row">
                   <label>Membership Plan :</label>
-                  <input type="text" readOnly value={selectedUser.companyDetails?.planName || "Basic Plan"} />
+                  <input
+                    type="text"
+                    readOnly
+                    value={selectedUser.companyDetails?.planName || selectedUser.plan_name || "Basic Plan"}
+                  />
                 </div>
               </>
             ) : (
@@ -319,13 +332,27 @@ export const UserManagement = () => {
           </div>
         </div>
 
-        <div className="detail-section-card">
-          <h3 className="detail-section-title">Details</h3>
-          <div className="detail-report-textbox">
+        <div className="detail-section-card summary-card">
+          <div className="detail-section-header">
+            <h3 className="detail-section-title" title='Overview Details'>Overview Details</h3>
+            <span className={`badge-pill ${isEmployer ? 'badge-employer' : 'badge-candidate'}`}>
+              {isEmployer ? 'Corporate Profile' : 'Professional Summary'}
+            </span>
+          </div>
+
+          <div className="detail-report-textbox card-message-body">
             {isEmployer ? (
-              `This employer registered on ${selectedUser.joinDate} and is currently managing corporate postings.`
+              <div className="info-flex-wrapper">
+                <p>
+                  This employer officially registered on <strong className="highlight-text">{selectedUser.joinDate}</strong> and is currently authorized to manage corporate postings, configure active membership plans, and review platform applications.
+                </p>
+              </div>
             ) : (
-              `An online job profile is like your own shop window. You can show employers what you have to offer, and make it easy for them to find you.`
+              <div className="info-flex-wrapper">
+                <p>
+                  An online job profile acts as your personal digital storefront. It allows you to effectively present your key skillsets, highlight top technical competencies to prospective employers, and optimize your overall search discoverability.
+                </p>
+              </div>
             )}
           </div>
         </div>
@@ -417,7 +444,7 @@ export const UserManagement = () => {
             </tr>
           </thead>
           <tbody>
-            {[...currentRecords].reverse().map((user) => {
+            {currentRecords.map((user) => {
               const isEmployer = user.role === "employer"
 
               return (

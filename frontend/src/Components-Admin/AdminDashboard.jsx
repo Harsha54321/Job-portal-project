@@ -486,7 +486,7 @@ export const AdminDashboard = () => {
                         <div>
                             <div className='Admin-Welcome-Container'>
                                 <p className='Admin-Welcome-Note'>Welcome Back, Admin</p>
-                                <p className='Admin-Welcome-para'>Your team's success start here. lets make progress together!</p>
+                                <p className='Admin-Welcome-para'>Your team's success starts here. Let's make progress together!</p>
                             </div><br></br>
 
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>

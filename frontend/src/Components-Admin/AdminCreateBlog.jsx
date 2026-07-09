@@ -28,7 +28,7 @@ export const AdminCreateBlog = ({ setmode }) => {
     blogTitle: '',
     blogDescription: '',
     selectedCategory: '',
-    thumbnail: null,  
+    thumbnail: null,
     previewUrl: '',
     modalHeading: '',
     modalDescription: ''
@@ -69,20 +69,20 @@ export const AdminCreateBlog = ({ setmode }) => {
       const validTypes = ['image/jpeg', 'image/jpg', 'image/png'];
       if (!validTypes.includes(file.type)) {
         alert("Unsupported image format. Please upload a JPG, JPEG, or PNG file.");
-        e.target.value = ''; 
+        e.target.value = '';
         return;
       }
 
       if (file.size > 5 * 1024 * 1024) {
         alert("Image size must be 5MB or less!");
-        e.target.value = ''; 
+        e.target.value = '';
         return;
       }
 
       setFormData(prev => ({
         ...prev,
-        thumbnail: file, 
-        previewUrl: URL.createObjectURL(file) 
+        thumbnail: file,
+        previewUrl: URL.createObjectURL(file)
       }));
     }
   };
@@ -90,7 +90,7 @@ export const AdminCreateBlog = ({ setmode }) => {
   // TRIGGER 1: CATEGORY "ADD" BUTTON
   const handleAddNewCategory = async () => {
     const formattedName = newCategoryName.trim();
-    
+
     if (formattedName === '') {
       setCategoryError("Please enter a category name.");
       return;
@@ -148,7 +148,7 @@ export const AdminCreateBlog = ({ setmode }) => {
   // TRIGGER 2: MODAL "SAVE POINTS" BUTTON
   const handleSavePoints = (e) => {
     e.preventDefault(); // Native HTML5 required prompts happen before this line hits!
-    
+
     const headingTrimmed = formData.modalHeading.trim();
     const descTrimmed = formData.modalDescription.trim();
     let hasInlineError = false;
@@ -230,7 +230,7 @@ export const AdminCreateBlog = ({ setmode }) => {
 
     if (hasInlineError) {
       setFormErrors(errors);
-      return; 
+      return;
     }
 
     const selectedCategoryObj = categories.find(cat => cat.id === selectedCategory);
@@ -372,7 +372,7 @@ export const AdminCreateBlog = ({ setmode }) => {
       <div className="Admin-Blog-Cr-content-grid">
         <div className="Admin-Blog-Cr-form-column">
           <div className="Admin-Blog-Cr-card-panel">
-            
+
             {/* 1. BLOG TITLE */}
             <div className="Admin-Blog-Cr-form-group">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px' }}>
@@ -516,12 +516,61 @@ export const AdminCreateBlog = ({ setmode }) => {
 
             <div className="Admin-Blog-Cr-categories-list">
               {categories.map((category) => (
-                <label className="Admin-Blog-Cr-checkbox-item" key={category.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <div>
-                    <input type="radio" name="blog-category" checked={formData.selectedCategory === category.id} onChange={() => setFormData(prev => ({ ...prev, selectedCategory: category.id }))} />
-                    <span style={{ marginLeft: '6px' }}>{category.label}</span>
+                <label className="Admin-Blog-Cr-checkbox-item" key={category.id} style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '6px 6px',
+                  borderBottom: '1px solid #f0f0f0'
+                }}>
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    flex: 1
+                  }}>
+                    <input
+                      type="radio"
+                      name="blog-category"
+                      checked={formData.selectedCategory === category.id}
+                      onChange={() => setFormData(prev => ({ ...prev, selectedCategory: category.id }))}
+                      style={{
+                        width: '16px',
+                        height: '16px',
+                        accentColor: '#2563eb',
+                        cursor: 'pointer',
+                        flexShrink: 0,
+                        margin: 0
+                      }}
+                    />
+                    <span style={{
+                      fontSize: '13px',
+                      color: '#1e293b',
+                      fontWeight: formData.selectedCategory === category.id ? '500' : '400'
+                    }}>
+                      {category.label}
+                    </span>
                   </div>
-                  <button type="button" onClick={() => handleDeleteCategory(category.id, category.label)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '16px', padding: '0 4px' }} title="Delete category">✕</button>
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteCategory(category.id, category.label)}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: '#ef4444',
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                      padding: '4px 8px',
+                      borderRadius: '4px',
+                      flexShrink: 0,
+                      transition: 'background 0.2s'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = '#fee2e2'}
+                    onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                    title="Delete category"
+                  >
+                    ✕
+                  </button>
                 </label>
               ))}
             </div>

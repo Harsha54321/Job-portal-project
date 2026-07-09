@@ -6,6 +6,7 @@ import { Footer } from '../Components-LandingPage/Footer';
 import { FHeader } from '../Components-Jobseeker/FHeader';
 import axios from 'axios';
 import api from '../api/axios';
+import deleteIcon from '../assets/DeleteIcon.png'; // Import delete icon
 
 export const RaiseTicket = () => {
     const navigate = useNavigate();
@@ -68,7 +69,7 @@ export const RaiseTicket = () => {
 
     // Validate file
     const validateFile = (file) => {
-        if (!file) return true; // No file is valid (optional field)
+        if (!file) return true;
 
         // Check file size
         if (file.size > MAX_FILE_SIZE) {
@@ -78,7 +79,6 @@ export const RaiseTicket = () => {
 
         // Check file type by MIME type
         if (!allowedFileTypes.includes(file.type)) {
-            // Also check by extension as fallback
             const fileName = file.name.toLowerCase();
             const hasValidExtension = allowedExtensions.some(ext => fileName.endsWith(ext));
 
@@ -125,7 +125,6 @@ export const RaiseTicket = () => {
             errors.subject = "Subject is required";
         }
 
-        // Validate attachment if present
         if (formData.attachment) {
             const isValid = validateFile(formData.attachment);
             if (!isValid) {
@@ -152,7 +151,7 @@ export const RaiseTicket = () => {
     const handleConfirm = async () => {
         try {
             setStep('loading');
-            scrollToTop(); // Scroll to top when loading starts
+            scrollToTop();
             const data = new FormData();
             data.append("category", formData.category);
             data.append("subject", formData.subject);
@@ -166,8 +165,8 @@ export const RaiseTicket = () => {
             const response = await api.post("raise-ticket/", data);
             console.log("SUCCESS:", response.data);
             setStep('success');
-            setCountdown(5); // Reset countdown
-            scrollToTop(); // Scroll to top on success
+            setCountdown(5);
+            scrollToTop();
         } catch (error) {
             console.error("ERROR:", error.response?.data || error);
             alert("Ticket submission failed");
@@ -175,7 +174,6 @@ export const RaiseTicket = () => {
         }
     };
 
-    // UseEffect to handle countdown and navigation
     useEffect(() => {
         if (step === 'success') {
             const timer = setInterval(() => {
@@ -193,6 +191,7 @@ export const RaiseTicket = () => {
         }
     }, [step, navigate]);
 
+    // Handle file upload - similar to JobApplication page
     const handleFileChange = (e) => {
         const file = e.target.files[0];
 
@@ -202,31 +201,27 @@ export const RaiseTicket = () => {
             return;
         }
 
-        // Validate file
         const isValid = validateFile(file);
 
         if (isValid) {
             setFormData({ ...formData, attachment: file });
-            // Clear any existing file error from errors state
             if (errors.attachment) {
                 setErrors(prev => ({ ...prev, attachment: null }));
             }
         } else {
             setFormData({ ...formData, attachment: null });
-            // Clear the file input
             e.target.value = '';
         }
     };
 
+    // Handle remove file - similar to JobApplication page
     const handleRemoveFile = () => {
         setFormData({ ...formData, attachment: null });
         setFileError('');
-        // Clear the file input
         const fileInput = document.getElementById('file-upload');
         if (fileInput) {
             fileInput.value = '';
         }
-        // Clear any attachment error
         if (errors.attachment) {
             setErrors(prev => ({ ...prev, attachment: null }));
         }
@@ -398,6 +393,7 @@ export const RaiseTicket = () => {
                                 {errors.message && <span className='form-group-err'>{errors.message}</span>}
                             </div>
 
+                            {/* Updated Attachment field with new style */}
                             <div className="Raiseticket-form-group">
                                 <label>Attachment (Optional)</label>
                                 <input
@@ -407,30 +403,36 @@ export const RaiseTicket = () => {
                                     onChange={handleFileChange}
                                     accept=".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg"
                                 />
-                                <div className="Raiseticket-file-wrapper">
-                                    <div
-                                        className={`Raiseticket-file-input ${fileError ? 'Raiseticket-file-input-error' : ''}`}
-                                        onClick={() => document.getElementById('file-upload').click()}
-                                    >
-                                        {formData.attachment ? (
-                                            <span style={{ color: '#2563eb', fontWeight: '500' }}>
-                                                {formData.attachment.name}
-                                            </span>
-                                        ) : (
-                                            "Click to attach a file (Optional)"
-                                        )}
-                                    </div>
-                                    {formData.attachment && (
+                                {formData.attachment ? (
+                                    <div className={`apply-form-resume-box ${fileError ? "error-border" : ""}`}>
+                                        <span>
+                                            {formData.attachment.name}
+                                        </span>
                                         <button
                                             type="button"
-                                            className="Raiseticket-remove-file"
+                                            className="apply-form-remove-btn"
                                             onClick={handleRemoveFile}
                                             title="Remove file"
                                         >
-                                            ✕
+                                            <img src={deleteIcon} alt="delete" />
                                         </button>
-                                    )}
-                                </div>
+                                        <input
+                                            type="file"
+                                            hidden
+                                            id="file-upload-hidden"
+                                            accept=".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg"
+                                            onChange={handleFileChange}
+                                        />
+                                    </div>
+                                ) : (
+                                    <div
+                                        className={`apply-form-file-input ${fileError ? 'error-border' : ''}`}
+                                        onClick={() => document.getElementById('file-upload').click()}
+                                        style={{ cursor: 'pointer' }}
+                                    >
+                                        Click to attach a file (Optional)
+                                    </div>
+                                )}
                                 {(fileError || errors.attachment) && (
                                     <span className='form-group-err' style={{ color: '#dc2626', fontSize: '12px', marginTop: '5px', display: 'block' }}>
                                         {fileError || errors.attachment}

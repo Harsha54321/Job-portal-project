@@ -74,37 +74,27 @@ export const HighligtedJobs = ({ highlightedJobsData = [], onBack }) => {
     };
 
     const prePage = () => {
-        if (currentPage !== 1) setCurrentPage(currentPage - 1);
-    }
+        if (currentPage <= 1) return;
+        setCurrentPage(prev => prev - 1);
+    };
 
     const changeCPage = (id) => {
         setCurrentPage(id);
     }
 
     const nextPage = () => {
-        if (currentPage !== npage) setCurrentPage(currentPage + 1);
-    }
+        if (currentPage >= npage) return;
+        setCurrentPage(prev => prev + 1);
+    };
 
     return (
 
         <div style={{ display: 'flex', flexDirection: 'column', minHeight: '600px', justifyContent: 'space-between', border: "0.5px solid #adadad", marginTop: "5px", borderRadius: "10px" }}>
             <div>
-                <div style={{ padding: "15px 15px 0 15px" }}>
+                <div className="back-button-container" style={{ margin: "10px" }}>
                     <button
+                        className="Adm-tic-btn-back"
                         onClick={onBack}
-                        style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "6px",
-                            background: "none",
-                            border: "1px solid #adadad",
-                            borderRadius: "8px",
-                            padding: "6px 14px",
-                            cursor: "pointer",
-                            fontSize: "14px",
-                            fontWeight: "500",
-                            color: "#333"
-                        }}
                     >
                         ← Back
                     </button>
@@ -150,7 +140,11 @@ export const HighligtedJobs = ({ highlightedJobsData = [], onBack }) => {
             <div style={{ display: 'flex', justifyContent: 'center', paddingBottom: '20px', marginTop: "auto" }}>
                 <ul style={{ display: 'flex', listStyle: 'none', gap: '10px', alignItems: 'center', visibility: jobAds.length > 0 ? 'visible' : 'hidden' }}>
                     <li>
-                        <button onClick={prePage} disabled={currentPage === 1} className='Navigation-btn'>
+                        <button
+                            onClick={prePage}
+                            disabled={currentPage <= 1}
+                            className="Navigation-btn"
+                        >
                             Prev
                         </button>
                     </li>
@@ -173,7 +167,11 @@ export const HighligtedJobs = ({ highlightedJobsData = [], onBack }) => {
                         {renderPageNumbers()}
                     </div>
                     <li>
-                        <button onClick={nextPage} disabled={currentPage === npage || npage === 0} className='Navigation-btn'>
+                        <button
+                            onClick={nextPage}
+                            disabled={currentPage >= npage || npage <= 1}
+                            className="Navigation-btn"
+                        >
                             Next
                         </button>
                     </li>

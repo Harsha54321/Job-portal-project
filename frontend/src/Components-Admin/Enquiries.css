@@ -9,6 +9,8 @@
 
 .Enquiries-header {
     margin-bottom: 24px;
+    padding: 0 4px;
+    /* Added for alignment */
 }
 
 .Enquiries-header h2 {
@@ -25,11 +27,15 @@
     color: #6b7280;
     overflow-wrap: break-word;
     word-break: break-word;
+    margin: 0;
+    /* Remove default margin */
 }
 
 /* ===== SEARCH ===== */
 .enq-search-container {
     margin-bottom: 24px;
+    padding: 0 4px;
+    /* Added for alignment */
 }
 
 .enq-search-wrapper {
@@ -77,6 +83,8 @@
     overflow-x: auto;
     border-radius: 14px;
     border: 1px solid #e5e7eb;
+    margin: 0;
+    /* Reset margin */
 }
 
 .Enquiries-table {
@@ -84,6 +92,8 @@
     border-collapse: collapse;
     min-width: 750px;
     table-layout: fixed;
+    margin: 0;
+    /* Reset margin */
 }
 
 .Enquiries-table thead {
@@ -91,7 +101,7 @@
 }
 
 .Enquiries-table th {
-    padding: 16px;
+    padding: 16px 14px;
     text-align: left;
     font-size: 13px;
     font-weight: 600;
@@ -100,8 +110,17 @@
     white-space: nowrap;
 }
 
+/* Align first column padding with header */
+.Enquiries-table th:first-child {
+    padding-left: 20px;
+}
+
+.Enquiries-table th:last-child {
+    padding-right: 20px;
+}
+
 .Enquiries-table td {
-    padding: 16px;
+    padding: 16px 14px;
     font-size: 14px;
     color: #111827;
     border-bottom: 1px solid #f3f4f6;
@@ -111,6 +130,15 @@
     word-break: break-word;
 }
 
+/* Align first column padding with header */
+.Enquiries-table td:first-child {
+    padding-left: 20px;
+}
+
+.Enquiries-table td:last-child {
+    padding-right: 20px;
+}
+
 .Enquiries-table tbody tr:hover {
     background: #fafafa;
 }
@@ -118,7 +146,8 @@
 /* Column Widths */
 .enq-col-id {
     width: 12%;
-    text-align: center;
+    text-align: left;
+    /* Changed from center to left for alignment */
 }
 
 .enq-col-enquiry {
@@ -135,16 +164,19 @@
 
 .enq-col-status {
     width: 15%;
-    text-align: center;
+    text-align: left;
+    /* Changed from center to left for alignment */
 }
 
 .enq-col-action {
     width: 15%;
-    text-align: center;
+    text-align: left;
+    /* Changed from center to left for alignment */
 }
 
 .enq-cell-id {
-    text-align: center;
+    text-align: left;
+    /* Changed from center to left for alignment */
     font-weight: 400;
 }
 
@@ -153,11 +185,13 @@
 }
 
 .enq-cell-status {
-    text-align: center;
+    text-align: left;
+    /* Changed from center to left for alignment */
 }
 
 .enq-cell-action {
-    text-align: center;
+    text-align: left;
+    /* Changed from center to left for alignment */
 }
 
 /* Received Date */
@@ -283,6 +317,8 @@
     align-items: center;
     margin-bottom: 20px;
     gap: 15px;
+    padding: 0 4px;
+    /* Added for alignment */
 }
 
 .enq-back-to-contact-btn {
@@ -317,6 +353,8 @@
     align-items: flex-start;
     margin-top: 10px;
     width: 100%;
+    padding: 0 4px;
+    /* Added for alignment */
 }
 
 .enq-details-left-pane {
@@ -480,7 +518,8 @@
     display: flex;
     align-items: center;
     gap: 16px;
-    padding: 10px 0;
+    padding: 10px 4px;
+    /* Updated for alignment */
     margin-top: 25px;
 }
 
@@ -499,9 +538,7 @@
     display: flex;
     align-items: center;
     gap: 6px;
-
 }
-
 
 .enq-details-btn-edit-status:hover {
     background: #1e88e5;
@@ -586,8 +623,6 @@
     font-weight: 600;
     color: #1e293b;
 }
-
-
 
 .enq-status-modal-current {
     color: #6b7280;
@@ -700,10 +735,12 @@
     .enq-details-main-content {
         flex-direction: column;
         gap: 20px;
+        padding: 0 4px;
     }
 
     .enq-details-actions-bottom {
         flex-wrap: wrap;
+        padding: 10px 4px;
     }
 
     .enq-details-btn-edit-status,
@@ -719,8 +756,28 @@
         padding: 16px;
     }
 
+    .Enquiries-header {
+        padding: 0 2px;
+    }
+
     .Enquiries-header h2 {
         font-size: 22px;
+    }
+
+    .enq-search-container {
+        padding: 0 2px;
+    }
+
+    .enq-details-actions-bar {
+        padding: 0 2px;
+    }
+
+    .enq-details-main-content {
+        padding: 0 2px;
+    }
+
+    .enq-details-actions-bottom {
+        padding: 10px 2px;
     }
 
     .enq-details-grid-row {
@@ -755,5 +812,16 @@
     .enq-status-modal-content {
         margin: 0 16px;
         padding: 20px;
+    }
+
+    /* Table padding adjustment for mobile */
+    .Enquiries-table th:first-child,
+    .Enquiries-table td:first-child {
+        padding-left: 12px;
+    }
+
+    .Enquiries-table th:last-child,
+    .Enquiries-table td:last-child {
+        padding-right: 12px;
     }
 }
