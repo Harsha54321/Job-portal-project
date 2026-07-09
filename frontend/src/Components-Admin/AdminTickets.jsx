@@ -9,6 +9,7 @@ import dwd from '../assets/AdminAssets/Download.png';
 import Searchicon from '../assets/icon_search.png';
 import leftArrow from '../assets/left_arrow.png';
 import rightArrow from '../assets/right_arrow.png';
+import pencil from '../assets/AdminAssets/Edit.png';
 import { useJobs } from '../JobContext';
 import api from '../api/axios';
 
@@ -194,9 +195,9 @@ export const AdminTickets = () => {
                                     <th>SUBJECT</th>
                                     <th>USER</th>
                                     <th>CATEGORY</th>
-                                    <th style={{ paddingLeft: "40px" }}>PRIORITY</th>
+                                    <th style={{ paddingLeft: "30px" }}>PRIORITY</th>
                                     <th>RECEIVED On</th>
-                                    <th>STATUS</th>
+                                    <th style={{ paddingLeft: "30px" }}>STATUS</th>
                                     <th>ACTION</th>
                                 </tr>
                             </thead>
@@ -208,13 +209,18 @@ export const AdminTickets = () => {
                                         <td>{ticket.subject}</td>
                                         <td>{ticket.name}</td>
                                         <td>{ticket.category}</td>
-                                        <td>
-                                            <span style={{ display: "flex", justifyContent: "center" }} className={`Escalation-priority ${ticket.priority}`}>
+                                        <td style={{ textAlign: 'center' }}>
+                                            <span className={`Escalation-priority ${ticket.priority}`}>
                                                 {ticket.priority}
                                             </span>
                                         </td>
                                         <td>{ticket.date}</td>
-                                        <td>{ticket.status} {ticket.resolvedon ? `(${ticket.resolvedon})` : ''}</td>
+                                        <td style={{ textAlign: 'center' }}>
+                                            <span className={`AdminTickets-status-pill ${ticket.status.replace(/\s/g, "")}`}>
+                                                {ticket.status}
+                                                {/* {ticket.resolvedon ? ` (${ticket.resolvedon})` : ''} */}
+                                            </span>
+                                        </td>
                                         <td>
                                             <button style={{
                                                 background: "#1E88E5", color: "white", borderRadius: "5px",
@@ -275,7 +281,9 @@ export const AdminTickets = () => {
                             <div className="Adm-tic-meta-row">
                                 <img src={AdminStatus} width={15} height={15} alt="AdminStatus" />
                                 <span style={{ paddingLeft: "15px" }} className="Adm-tic-meta-label"> Status :</span>
-                                <span className={`AdminTickets-status ${selectedTickets.status.replace(/\s/g, "")}`}>{selectedTickets.status}</span>
+                                <span className={`AdminTickets-status-pill ${selectedTickets.status.replace(/\s/g, "")}`}>
+                                    {selectedTickets.status}
+                                </span>
                             </div>
                         </div>
                     </div>
@@ -356,6 +364,12 @@ export const AdminTickets = () => {
 
                         <div className="detail-top-actions">
                             <button onClick={() => setIsModalOpen(!isModalOpen)} className="detail-btn-action-edit">
+                                <img
+                                    src={pencil}
+                                    alt="edit"
+                                    className="enq-details-btn-icon"
+                                    style={{ marginRight: '6px', filter: 'brightness(0) invert(1)' }}
+                                />
                                 Edit Status
                             </button>
                         </div>

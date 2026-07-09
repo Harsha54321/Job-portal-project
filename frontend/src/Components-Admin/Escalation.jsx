@@ -31,6 +31,14 @@ export const Escalation = () => {
     const recordsPerPage = 10;
     const modalRef = useRef(null);
 
+    // Helper function to get status class for styling
+    const getStatusClass = (status) => {
+        if (status === "Pending") return "Pending";
+        if (status === "In Progress") return "InProgress";
+        if (status === "Resolved") return "Resolved";
+        return "Pending";
+    };
+
     // Sync modal focus trap and body scroll lock configuration
     useEffect(() => {
         if (isModalOpen) {
@@ -209,7 +217,7 @@ export const Escalation = () => {
             const response = await api.get(`/admin/jobs/${jobId}/detail/`);
             return !!response.data && !!response.data.id;
         } catch (err) {
-            return false;  // If API returns 404, job doesn't exist
+            return false;
         }
     };
 
@@ -275,10 +283,9 @@ export const Escalation = () => {
     }
 
     if (selectedReport) {
-        const currentStatus = selectedReport.status;
+        const currentStatus = selectedReport.status || "Pending";
         const currentPriority = selectedReport.priority;
         const jobId = selectedReport.JobId || selectedReport.jobId;
-        // Use the jobExists from the selectedReport (set when clicking View Details)
         const jobExists = selectedReport.jobExists !== undefined ? selectedReport.jobExists : true;
 
         return (
@@ -321,9 +328,10 @@ export const Escalation = () => {
                             <img src={AdminStatus} width={15} height={15} alt="AdminStatus" />
                             <span style={{ paddingLeft: "15px" }} className="meta-label">Status</span>
                             <span className="meta-separator">:</span>
-                            <span className="meta-value status-text">
-                                <img src={docIcon} alt="status-doc" style={{ width: '14px', marginRight: '6px', verticalAlign: 'middle' }} />
-                                {currentStatus || "Pending"}
+                            <span className="status-text">
+                                <span className={`status-badge-detail ${getStatusClass(currentStatus)}`}>
+                                    {currentStatus}
+                                </span>
                             </span>
                         </div>
                         <div className="RepAJob-meta-row">
@@ -397,7 +405,6 @@ export const Escalation = () => {
                             Edit Status
                         </button>
 
-                        {/* Show "View this Job" button only if job exists */}
                         {jobExists && jobId && (
                             <button
                                 style={{
@@ -421,7 +428,6 @@ export const Escalation = () => {
                             </button>
                         )}
 
-                        {/* Show job deleted message when job doesn't exist */}
                         {!jobExists && jobId && (
                             <div style={{
                                 padding: '12px 20px',
@@ -450,7 +456,7 @@ export const Escalation = () => {
                     >
                         <div className="detail-status-modal-content">
                             <h3>Select Status</h3>
-                            <div className="detail-status-modal-options">
+                            <div className="Report-detail-status-modal-options">
                                 <button onClick={() => handleStatusChange(selectedReport.id, "Pending")} disabled={actionLoading}>
                                     Pending
                                 </button>
@@ -504,10 +510,9 @@ export const Escalation = () => {
                             <th>SUBJECT</th>
                             <th>JOB ID</th>
                             <th>USER</th>
-                            {/* <th>CATEGORY</th> */}
-                            <th style={{ paddingLeft: "40px" }}>PRIORITY</th>
+                            <th style={{ paddingLeft: "30px" }}>PRIORITY</th>
                             <th>RECEIVED ON</th>
-                            <th>STATUS</th>
+                            <th style={{ paddingLeft: "30px" }}>STATUS</th>
                             <th>ACTION</th>
                         </tr>
                     </thead>
@@ -516,6 +521,7 @@ export const Escalation = () => {
                             currentRecords.map((item, index) => {
                                 const itemPriority = item.priority || 'Medium';
                                 const jobId = item.JobId || item.jobId;
+                                const status = item.status || "Pending";
 
                                 return (
                                     <tr key={item.id || index}>
@@ -523,7 +529,6 @@ export const Escalation = () => {
                                         <td className="subject-column">{item.reason || "Progress, project & status reports"}</td>
                                         <td>{jobId || item.id}</td>
                                         <td>{item.firstName || item.name || 'N/A'} {item.lastName || ''}</td>
-                                        {/* <td>{item.category || 'Report'}</td> */}
                                         <td>
                                             <span
                                                 style={{ display: "flex", justifyContent: "center" }}
@@ -533,7 +538,11 @@ export const Escalation = () => {
                                             </span>
                                         </td>
                                         <td>{formatToLocalTime(item.created_at || item.date)}</td>
-                                        <td>{item.status || "Pending"}</td>
+                                        <td>
+                                            <span className={`enq-status-badge ${getStatusClass(status)}`}>
+                                                {status}
+                                            </span>
+                                        </td>
                                         <td>
                                             <button
                                                 style={{
@@ -546,15 +555,12 @@ export const Escalation = () => {
                                                     cursor: "pointer"
                                                 }}
                                                 onClick={async () => {
-                                                    // Check if job exists when clicking View Details
                                                     let jobExists = true;
                                                     if (jobId) {
-                                                        // First check in context
                                                         const existsInContext = jobs.some(job => String(job.id) === String(jobId));
                                                         if (existsInContext) {
                                                             jobExists = true;
                                                         } else {
-                                                            // Check via API
                                                             try {
                                                                 const response = await api.get(`/admin/jobs/${jobId}/detail/`);
                                                                 jobExists = !!response.data && !!response.data.id;
@@ -578,7 +584,7 @@ export const Escalation = () => {
                             })
                         ) : (
                             <tr>
-                                <td colSpan="9" style={{ textAlign: "center", padding: "20px", color: "#6b7280" }}>
+                                <td colSpan="8" style={{ textAlign: "center", padding: "20px", color: "#6b7280" }}>
                                     {reportsLoading ? "Loading reports..." : "No Reports Found"}
                                 </td>
                             </tr>

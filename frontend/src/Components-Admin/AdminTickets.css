@@ -120,46 +120,77 @@
   word-break: break-word;
 }
 
-.AdminTickets-status {
-  padding: 6px 5px;
-  border-radius: 10px;
-  font-size: 10px;
-  font-weight: 500;
-  margin: 0;
-  border: none;
-  outline: none;
-  box-sizing: border-box;
+/* Update the status styles to match priority pills */
+
+/* Status pill - same as priority pill */
+.AdminTickets-status-pill {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 6px 18px;
+    border-radius: 30px;
+    font-size: 12px;
+    font-weight: 600;
+    width: 90px;
+    box-sizing: border-box;
+    text-align: center;
+    min-width: 70px;
 }
 
-.AdminTickets-status.Pending {
-  background: #fef3c7;
-  color: #92400e;
-  width: 75px;
-  padding-left: 10px;
+.AdminTickets-status-pill.Pending {
+    background: #fef3c7;
+    color: #92400e;
 }
 
-.AdminTickets-status.Resolved {
-  background: #dcfce7;
-  color: #166534;
-  width: 75px;
-  padding-left: 10px;
+.AdminTickets-status-pill.Resolved {
+    background: #dcfce7;
+    color: #166534;
 }
 
-.AdminTickets-status.InProgress {
-  background: #dbeafe;
-  color: #1d4ed8;
+.AdminTickets-status-pill.InProgress {
+    background: #dbeafe;
+    color: #1d4ed8;
 }
 
-.AdminTickets-status.Hold {
-  background: #f5d72c;
-  color: #535249;
-  width: 75px;
-  padding-left: 10px;
+.AdminTickets-status-pill.Hold {
+    background: #f5d72c;
+    color: #535249;
 }
 
-.AdminTickets-status option {
-  background: #ffffff;
-  color: #1e3a8a;
+/* Priority pill - existing styles */
+.Escalation-priority {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 6px 20px;
+    border-radius: 30px;
+    font-size: 12px;
+    font-weight: 600;
+    width: 90px;
+    box-sizing: border-box;
+    text-align: center;
+}
+
+.Escalation-priority.High {
+    background: #fee2e2;
+    color: #b91c1c;
+}
+
+.Escalation-priority.Medium {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.Escalation-priority.Low {
+    background: #dcfce7;
+    color: #166534;
+}
+
+/* Table cell for status - remove old styles */
+.AdminTickets-table td .status-cell {
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
 .Adm-tic-container {

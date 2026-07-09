@@ -395,7 +395,7 @@ export const Enquiries = () => {
                             <th className="enq-col-enquiry">Enquiry</th>
                             <th className="enq-col-user">User</th>
                             <th className="enq-col-received">Received On</th>
-                            <th className="enq-col-status">Status</th>
+                            <th className="enq-col-status" style={{ paddingLeft: "30px" }}>Status</th>
                             <th className="enq-col-action">Action</th>
                         </tr>
                     </thead>

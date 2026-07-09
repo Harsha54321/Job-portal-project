@@ -4,6 +4,7 @@ import { useJobs } from '../JobContext'
 import Searchicon from '../assets/icon_search.png'
 import leftArrow from '../assets/left_arrow.png'
 import rightArrow from '../assets/right_arrow.png'
+import pencil from '../assets/AdminAssets/Edit.png';
 import { useLocation, useNavigate } from 'react-router-dom'
 import api from '../api/axios'
 
@@ -249,7 +250,7 @@ export const UserManagement = () => {
             <h3 className="detail-section-title" style={{ margin: 0 }}>
               {isEmployer ? "Employer Information" : "User Information"}
             </h3>
-            <button onClick={handleBackToList} className="detail-btn-action" style={{ background: '#f1f5f9' }}>
+            <button onClick={handleBackToList} className="RepAJob-btn-back">
               Back to List
             </button>
           </div>
@@ -359,11 +360,17 @@ export const UserManagement = () => {
 
         <div className="detail-top-actions">
           <button onClick={() => setIsModalOpen(!isModalOpen)} className="detail-btn-action-edit">
+            <img
+              src={pencil}
+              alt="edit"
+              className="enq-details-btn-icon"
+              style={{ marginRight: '6px', filter: 'brightness(0) invert(1)' }}
+            />
             Edit Status
           </button>
           <button onClick={() => handleDeleteReport(selectedUser.id)} className="detail-btn-action detail-btn-delete">
             Delete
-          </button>
+          </button>  
         </div>
 
         {isModalOpen && (

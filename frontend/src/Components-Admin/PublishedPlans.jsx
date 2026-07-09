@@ -255,7 +255,7 @@ export const PublishedPlans = () => {
     }
 
     if (field === "summary") {
-      if (/[^a-zA-Z\s.,!?\-]/.test(value)) return;
+      // if (/[^a-zA-Z\s.,!?\-]/.test(value)) return;
 
       // Check if value contains at least one alphabet character
       const hasAlphabet = /[a-zA-Z]/.test(value);

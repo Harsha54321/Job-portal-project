@@ -314,16 +314,71 @@ export const AddManagerContact = () => {
     setIsModalOpen(true);
   };
 
+  // const handleDelete = async (id) => {
+  //   if (!window.confirm('Are you sure you want to permanently delete this account manager?')) return;
+  //   try {
+  //     await api.delete(`/admin/account-managers/${id}/`);
+  //     triggerSuccess('Account manager deleted successfully!');
+  //     await fetchData(currentPage);
+  //   } catch (err) {
+  //     alert('Failed to delete user mapping configurations.');
+  //   }
+  // };
   const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to permanently delete this account manager?')) return;
-    try {
-      await api.delete(`/admin/account-managers/${id}/`);
-      triggerSuccess('Account manager deleted successfully!');
-      await fetchData(currentPage);
-    } catch (err) {
-      alert('Failed to delete user mapping configurations.');
+  // Find the manager to get their details
+  const manager = managers.find(m => m.id === id);
+  if (!manager) return;
+
+  // Get count of employers assigned to this manager
+  const assignedEmployers = getEmployersForManager(id);
+  const assignedCount = assignedEmployers.length;
+
+  // Build confirmation message
+  let confirmMessage = `Are you sure you want to permanently delete the account manager "${manager.full_name}"?`;
+
+  if (assignedCount > 0) {
+    confirmMessage += `\n\n This manager is currently assigned to ${assignedCount} employer(s).`;
+    confirmMessage += `\nDeleting this manager will remove all these assignments.`;
+  } else {
+    confirmMessage += `\n\nThis manager has no active assignments.`;
+  }
+
+  confirmMessage += `\n\nDo you want to continue?`;
+
+  if (!window.confirm(confirmMessage)) return;
+
+  setLoading(true);
+  try {
+    // First, remove all assignments for this manager
+    if (assignedCount > 0) {
+      for (const assign of assignedEmployers) {
+        try {
+          await api.delete(`/admin/employer-assignments/?employer_id=${assign.employer_id}&account_manager_id=${id}`);
+        } catch (err) {
+          try {
+            await api.delete('/admin/employer-assignments/', {
+              data: {
+                employer_id: parseInt(assign.employer_id),
+                account_manager_id: parseInt(id)
+              }
+            });
+          } catch (err2) {
+            console.error(`Failed to remove assignment:`, err2);
+          }
+        }
+      }
     }
-  };
+
+    // Then delete the manager
+    await api.delete(`/admin/account-managers/${id}/`);
+    triggerSuccess(`Account manager "${manager.full_name}" deleted successfully! ${assignedCount > 0 ? `Removed from ${assignedCount} employer(s).` : ''}`);
+    await fetchData(currentPage);
+  } catch (err) {
+    alert(err.response?.data?.error || 'Failed to delete account manager. Please try again.');
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleAssign = async (e) => {
     e.preventDefault();

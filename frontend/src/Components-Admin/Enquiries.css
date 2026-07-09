@@ -108,6 +108,9 @@
     color: #374151;
     border-bottom: 1px solid #e5e7eb;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+
 }
 
 /* Align first column padding with header */
@@ -125,12 +128,19 @@
     color: #111827;
     border-bottom: 1px solid #f3f4f6;
     vertical-align: middle;
-    white-space: normal;
-    overflow-wrap: break-word;
-    word-break: break-word;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    word-break: keep-all;
 }
 
-/* Align first column padding with header */
+.Enquiries-table td.enq-cell-status,
+.Enquiries-table td.enq-cell-action {
+    white-space: nowrap;
+    overflow: visible;
+    text-overflow: clip;
+}
+
 .Enquiries-table td:first-child {
     padding-left: 20px;
 }
@@ -154,6 +164,14 @@
     width: 28%;
 }
 
+.enq-cell-enquiry {
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    word-break: keep-all;
+}
+
 .enq-col-user {
     width: 15%;
 }
@@ -165,6 +183,7 @@
 .enq-col-status {
     width: 15%;
     text-align: left;
+    padding-left: 30px;
     /* Changed from center to left for alignment */
 }
 
@@ -176,11 +195,18 @@
 
 .enq-cell-id {
     text-align: left;
-    /* Changed from center to left for alignment */
     font-weight: 400;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .enq-cell-user {
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    word-break: keep-all;
     font-weight: 400;
 }
 
