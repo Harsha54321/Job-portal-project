@@ -3,9 +3,9 @@ import './TotalOverview.css';
 
 export const TotalOverview = ({ overviewData = {} }) => {
   const data = [
-    { label: 'Recommended', value: overviewData.recommended ?? 0, color: '#5b83ff' },
+    { label: 'Recruiter Review', value: overviewData.recommended ?? 0, color: '#5b83ff' },
     { label: 'Shortlisted', value: overviewData.shortlisted ?? 0, color: '#a67dff' },
-    { label: 'Applicants', value: overviewData.applicants ?? 0, color: '#4cc3e0' },
+    { label: 'Application Submitted', value: overviewData.applicants ?? 0, color: '#4cc3e0' },
     { label: 'Interview', value: overviewData.interview ?? 0, color: '#ffb36b' },
     { label: 'Rejected', value: overviewData.rejected ?? 0, color: '#ff7070' },
     { label: 'Hired', value: overviewData.hired ?? 0, color: '#cfd8dc' },
@@ -47,7 +47,7 @@ export const TotalOverview = ({ overviewData = {} }) => {
             );
           })}
           <text x="50%" y="50%" textAnchor="middle" className="Admin-total-count">{total}</text>
-          <text x="52%" y="60%" textAnchor="middle" className="Admin-total-label">Total Candidates</text>
+          <text x="52%" y="60%" textAnchor="middle" className="Admin-total-label">Total Applicants Count</text>
         </svg>
       </div>
 
