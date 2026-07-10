@@ -528,7 +528,11 @@ export const Escalation = () => {
                                         <td>{item.RepId || `REP-${item.id}`}</td>
                                         <td className="subject-column">{item.reason || "Progress, project & status reports"}</td>
                                         <td>{jobId || item.id}</td>
-                                        <td>{item.firstName || item.name || 'N/A'} {item.lastName || ''}</td>
+                                        <td>
+                                            <span className="RepAJob-user-name">
+                                                {item.firstName || item.name || 'N/A'} {item.lastName || ''}
+                                            </span>
+                                        </td>
                                         <td>
                                             <span
                                                 style={{ display: "flex", justifyContent: "center" }}

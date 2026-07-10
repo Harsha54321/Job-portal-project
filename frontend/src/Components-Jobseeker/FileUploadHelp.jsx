@@ -9,7 +9,7 @@ export const FileUploadHelp = () => {
     title: "File Upload Problems & Root Causes",
     updatedDate: "Updated 06 Feb 2026",
     intro: "Having trouble uploading your documents? Below is a comprehensive list of common upload issues and their technical root causes to help you troubleshoot effectively.",
-    
+
     summary: [
       "<strong>Check File Format:</strong> Ensure your file is in PDF or DOCX format.",
       "<strong>Verify File Size:</strong> Keep your file under the maximum size limit (usually 5MB or 10MB).",
@@ -20,7 +20,7 @@ export const FileUploadHelp = () => {
       "<strong>Check Permissions:</strong> Allow browser storage permissions.",
       "<strong>Rename File:</strong> Use a simple filename without special characters."
     ],
-    
+
     issues: [
       {
         problem: "Resume Upload Fails",
@@ -79,9 +79,10 @@ export const FileUploadHelp = () => {
     <>
       <FHeader />
       <div className="technicalhelp-page">
+        <p className="technicalhelp-updated">{uploadIssueData.updatedDate}</p>
+
         <div className="technicalhelp-container">
           <h1 className="technicalhelp-title">{uploadIssueData.title}</h1>
-          <p className="technicalhelp-updated">{uploadIssueData.updatedDate}</p>
           <p className="technicalhelp-intro">{uploadIssueData.intro}</p>
 
           {/* Centered Hero Image Section */}
@@ -99,9 +100,9 @@ export const FileUploadHelp = () => {
               <h2 className="technicalhelp-summary-title">Quick Troubleshooting Summary</h2>
               <ul className="technicalhelp-summary-list">
                 {uploadIssueData.summary.map((item, index) => (
-                  <li 
-                    key={index} 
-                    dangerouslySetInnerHTML={{ __html: item }} 
+                  <li
+                    key={index}
+                    dangerouslySetInnerHTML={{ __html: item }}
                   />
                 ))}
               </ul>

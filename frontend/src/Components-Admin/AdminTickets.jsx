@@ -111,7 +111,11 @@ export const AdminTickets = () => {
     });
 
     // Sort matching your original layout
-    const sortedTickets = [...filteredTickets].sort((a, b) => statusOrder[a.status] - statusOrder[b.status]);
+    const sortedTickets = [...filteredTickets].sort((a, b) => {
+        const dateA = new Date(a.date || a.created_at || a.updated_at);
+        const dateB = new Date(b.date || b.created_at || b.updated_at);
+        return dateB - dateA; // Latest first
+    });
 
     // Pagination splits
     const indexOfLastRecord = currentPage * recordsPerPage;

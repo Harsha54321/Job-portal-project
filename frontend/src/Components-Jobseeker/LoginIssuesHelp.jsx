@@ -9,7 +9,7 @@ export const LoginIssuesHelp = () => {
     title: "Common Login Issues & Root Causes",
     updatedDate: "Updated 06 Feb 2026",
     intro: "Having trouble accessing your account? Review these common login difficulties and their technical root causes to get back online quickly.",
-    
+
     summary: [
       "<strong>Incorrect Credentials:</strong> Double-check email and password for typos or caps lock.",
       "<strong>Account Verification:</strong> Ensure you've clicked the verification link in your email.",
@@ -20,7 +20,7 @@ export const LoginIssuesHelp = () => {
       "<strong>Social Login:</strong> Allow pop-ups and ensure your social account is verified.",
       "<strong>Access Restrictions:</strong> Complete your profile or contact support for role issues."
     ],
-    
+
     issues: [
       {
         problem: "Incorrect Email or Password",
@@ -79,9 +79,10 @@ export const LoginIssuesHelp = () => {
     <>
       <FHeader />
       <div className="technicalhelp-page">
+        <p className="technicalhelp-updated">{loginIssueData.updatedDate}</p>
+
         <div className="technicalhelp-container">
           <h1 className="technicalhelp-title">{loginIssueData.title}</h1>
-          <p className="technicalhelp-updated">{loginIssueData.updatedDate}</p>
           <p className="technicalhelp-intro">{loginIssueData.intro}</p>
 
           {/* Centered Hero Image Section */}
@@ -99,9 +100,9 @@ export const LoginIssuesHelp = () => {
               <h2 className="technicalhelp-summary-title">Quick Troubleshooting Summary</h2>
               <ul className="technicalhelp-summary-list">
                 {loginIssueData.summary.map((item, index) => (
-                  <li 
-                    key={index} 
-                    dangerouslySetInnerHTML={{ __html: item }} 
+                  <li
+                    key={index}
+                    dangerouslySetInnerHTML={{ __html: item }}
                   />
                 ))}
               </ul>

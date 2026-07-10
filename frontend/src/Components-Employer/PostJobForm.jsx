@@ -257,9 +257,12 @@ export const PostJobForm = ({ onCancel }) => {
     const expRegex = /^(\d{1,2})(\s*-\s*(\d{1,2}))?$/;
 
     // Job Title
-    if (!formData.job_title.trim()) {
+    const titleTrimmed = formData.job_title.trim();
+    if (!titleTrimmed) {
       newErrors.job_title = "Job title is required";
-    } else if (!jobTitleRegex.test(formData.job_title.trim())) {
+    } else if (titleTrimmed.length > 50) {
+      newErrors.job_title = "Job title cannot exceed 50 characters";
+    } else if (!jobTitleRegex.test(titleTrimmed)) {
       newErrors.job_title = "Minimum 3 characters; letters, numbers, and common symbols allowed)";
     }
 
@@ -389,6 +392,12 @@ export const PostJobForm = ({ onCancel }) => {
     const { name, value, type, checked } = e.target;
     setErrors({ ...errors, [name]: "" });
 
+    if (name === 'work_duration') {
+      setFormData((prev) => ({ ...prev, work_duration: value.replace(/\s{2,}/g, ' ') }));
+      return;
+    }
+
+
     if (type === 'checkbox') {
       if (name.includes('.')) {
         const [group, field] = name.split('.');
@@ -409,7 +418,7 @@ export const PostJobForm = ({ onCancel }) => {
 
       if (!newSkill) return;
 
-      
+
       if (skillsList.length >= 20) {
         setErrors({ ...errors, key_skills: "You can add a maximum of 20 skills." });
         return;
@@ -705,7 +714,7 @@ export const PostJobForm = ({ onCancel }) => {
               <div className="jobpost-form-row">
                 <label className="jobpost-label">Job title</label>
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-                  <input className={`jobpost-input ${errors.job_title ? "input-error" : ""}`} type="text" name="job_title" placeholder="e.g., Fullstack Developer" value={formData.job_title} onChange={handleChange} />
+                  <input className={`jobpost-input ${errors.job_title ? "input-error" : ""}`} type="text" name="job_title" placeholder="e.g., Fullstack Developer" value={formData.job_title} onChange={handleChange} maxLength="50" />
                   {errors.job_title && <span className="error-msg">{errors.job_title}</span>}
                 </div>
               </div>

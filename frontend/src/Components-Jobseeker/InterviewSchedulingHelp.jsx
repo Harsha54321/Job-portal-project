@@ -31,9 +31,10 @@ export const InterviewSchedulingHelp = () => {
     <>
       <FHeader />
       <div className="interviewSchedulingHelp-page">
+        <p className="interviewSchedulingHelp-updated">{interviewData.updatedDate}</p>
+
         <div className="interviewSchedulingHelp-container">
           <h1 className="interviewSchedulingHelp-title">{interviewData.title}</h1>
-          <p className="interviewSchedulingHelp-updated">{interviewData.updatedDate}</p>
           <p className="interviewSchedulingHelp-intro">{interviewData.intro}</p>
 
           {/* Centered Image Section - Flowchart */}

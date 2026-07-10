@@ -19,6 +19,10 @@ export const ViewApplicants = ({ job, onBack }) => {
   const [jobseekerProfile, setJobseekerProfile] = useState(null);
   const navigate = useNavigate();
 
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'auto' });
+  }, []);
+
   // Fetch applications for this job
   useEffect(() => {
     const fetchApplications = async () => {

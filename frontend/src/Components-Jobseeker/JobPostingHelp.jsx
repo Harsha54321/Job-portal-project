@@ -82,9 +82,10 @@ export const JobPostingHelp = () => {
     <>
       <FHeader />
       <div className="jobemployerhelp-page">
+        <p className="jobemployerhelp-updated">{employerData.updatedDate}</p>
+
         <div className="jobemployerhelp-container">
           <h1 className="jobemployerhelp-title">{employerData.title}</h1>
-          <p className="jobemployerhelp-updated">{employerData.updatedDate}</p>
           <p className="jobemployerhelp-intro">{employerData.intro}</p>
 
           {/* Centered Hero Image Section */}

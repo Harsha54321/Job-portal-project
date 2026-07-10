@@ -7,7 +7,7 @@
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
   cursor: pointer;
   text-decoration: none;
 }
@@ -123,14 +123,18 @@
   font-size: 16px;
   transition: all 0.3s ease;
 }
+
 .Opportunities-save-btn:hover {
   opacity: 0.8;
   background-color: #1E88E5;
-  color: white;transform: scale(1.05);
+  color: white;
+  transform: scale(1.05);
 }
+
 .Opportunities-save-btn:focus {
   transform: scale(1.06);
 }
+
 .Opportunities-apply-btn {
   background: #1E88E5;
   color: white;
@@ -141,13 +145,16 @@
   font-size: 16px;
   transition: all 0.3s ease;
 }
+
 .Opportunities-apply-btn:hover {
   opacity: 0.8;
   transform: scale(1.05);
 }
+
 .Opportunities-apply-btn:focus {
   transform: scale(1.06);
 }
+
 .Opportunities-separator {
   border: none;
   border-top: 2px solid #EDEDED;
@@ -165,7 +172,7 @@
 .Opportunities-details-bottom {
   display: flex;
   justify-content: space-between;
-  align-items:center;
+  align-items: center;
   margin-top: 10px;
 }
 

@@ -2,6 +2,19 @@ import razorpay
 from django.conf import settings
 from rest_framework_simplejwt.tokens import AccessToken
 from datetime import timedelta
+import uuid
+from datetime import timedelta
+ 
+from django.conf import settings
+from django.core.mail import EmailMultiAlternatives
+from django.template.loader import render_to_string
+from django.urls import reverse
+from django.utils import timezone
+from jobapp.models import (
+    PostAJob,
+    JobApplication,
+    Notification,
+)
 
 client = razorpay.Client(auth=(settings.RAZORPAY_KEY, settings.RAZORPAY_SECRET))
 
@@ -441,6 +454,372 @@ class Admin2FAService:
                 otp_obj.save()
         
         return True, "OTP verified successfully"
+
+import uuid
+
+from datetime import timedelta
+ 
+from django.conf import settings
+
+from django.core.mail import EmailMultiAlternatives
+
+from django.template.loader import render_to_string
+
+from django.urls import reverse
+
+from django.utils import timezone
+ 
+from jobapp.models import EmployerWeeklyReportToken
+
+@staticmethod
+def _get_weekly_report_context(employer):
+    """
+    Build the employer weekly report context.
+    Used for:
+        - Weekly HTML Email
+        - Employer Weekly Report Page
+    """
+ 
+    today = timezone.now()
+    week_ago = today - timedelta(days=7)
+ 
+    # ---------------------------------------
+    # Jobs
+    # ---------------------------------------
+ 
+    jobs = PostAJob.objects.filter(
+        employer=employer
+    )
+ 
+    active_jobs = jobs.filter(
+        last_date_to_apply__gte=today.date()
+    )
+ 
+    expired_jobs = jobs.filter(
+        last_date_to_apply__lt=today.date()
+    )
+ 
+    highlighted_jobs = jobs.filter(
+        is_highlighted=True
+    )
+ 
+    # ---------------------------------------
+    # Applications
+    # ---------------------------------------
+ 
+    applications = JobApplication.objects.filter(
+        job__employer=employer
+    ).select_related(
+        "user",
+        "job",
+    )
+ 
+    applications_this_week = applications.filter(
+        applied_date__gte=week_ago
+    )
+ 
+    # ---------------------------------------
+    # Notifications
+    # ---------------------------------------
+ 
+    notifications = Notification.objects.filter(
+        user=employer
+    )
+ 
+    unread_notifications = notifications.filter(
+        is_read=False
+    )
+ 
+    # ---------------------------------------
+    # Job Statistics
+    # ---------------------------------------
+ 
+    job_stats = []
+ 
+    for job in jobs:
+ 
+        job_applications = applications.filter(
+            job=job
+        )
+ 
+        job_stats.append({
+ 
+            "job_id": job.id,
+ 
+            "job_title": job.job_title,
+ 
+            "applications_count": job_applications.count(),
+ 
+            "shortlisted": job_applications.filter(
+                status="shortlisted"
+            ).count(),
+ 
+            "rejected": job_applications.filter(
+                status="rejected"
+            ).count(),
+ 
+            "hired": job_applications.filter(
+                status="hired"
+            ).count(),
+        })
+ 
+    # ---------------------------------------
+    # Recent Applications
+    # ---------------------------------------
+ 
+    recent_application_data = []
+ 
+    for app in applications.order_by(
+        "-applied_date"
+    )[:10]:
+ 
+        recent_application_data.append({
+ 
+            "candidate": app.user.email,
+ 
+            "job_title": app.job.job_title,
+ 
+            "status": app.status,
+ 
+            "applied_date": app.applied_date,
+        })
+ 
+    # ---------------------------------------
+    # Recent Notifications
+    # ---------------------------------------
+ 
+    notification_data = []
+ 
+    for notification in notifications.order_by(
+        "-created_at"
+    )[:10]:
+ 
+        notification_data.append({
+ 
+            "id": notification.id,
+ 
+            "message": notification.message,
+ 
+            "notification_type": notification.notification_type,
+ 
+            "created_at": notification.created_at,
+ 
+            "is_read": notification.is_read,
+        })
+ 
+    # ---------------------------------------
+    # Return Context
+    # ---------------------------------------
+ 
+    return {
+ 
+        "generated_date": today,
+ 
+        "summary": {
+ 
+            "total_jobs": jobs.count(),
+ 
+            "active_jobs": active_jobs.count(),
+ 
+            "expired_jobs": expired_jobs.count(),
+ 
+            "highlighted_jobs": highlighted_jobs.count(),
+ 
+            "total_applications": applications.count(),
+ 
+            "applications_this_week": applications_this_week.count(),
+ 
+            "unread_notifications": unread_notifications.count(),
+        },
+ 
+        "job_application_stats": job_stats,
+ 
+        "recent_notifications": notification_data,
+ 
+        "recent_applications": recent_application_data,
+    }
+ 
+@staticmethod
+
+def _send_weekly_report_email(
+
+    recipient,
+
+    subject,
+
+):
+
+    """
+
+    Send Weekly Employer Summary Email.
+ 
+    Steps:
+
+    1. Create/Update weekly report token.
+
+    2. Build report context.
+
+    3. Generate report URL.
+
+    4. Render HTML template.
+
+    5. Send HTML email.
+
+    """
+ 
+    # ---------------------------------------
+
+    # Create / Refresh Token
+
+    # ---------------------------------------
+ 
+    report_token, _ = EmployerWeeklyReportToken.objects.update_or_create(
+
+        employer=recipient,
+
+        defaults={
+
+            "token": uuid.uuid4(),
+
+            "expires_at": timezone.now() + timedelta(days=7),
+
+        },
+
+    )
+ 
+    # ---------------------------------------
+
+    # Weekly Report Data
+
+    # ---------------------------------------
+ 
+    context = _get_weekly_report_context(
+
+        recipient
+
+    )
+ 
+    # ---------------------------------------
+
+    # Report URL
+
+    # ---------------------------------------
+ 
+    report_url = (
+        f"{settings.SITE_URL}"
+        f"{reverse(
+            'employer-weekly-summary',
+            kwargs={
+                'token': report_token.token,
+            },
+        )}"
+    )
+ 
+    context["report_url"] = report_url
+ 
+    # ---------------------------------------
+
+    # Render Email HTML
+
+    # ---------------------------------------
+ 
+    html_content = render_to_string(
+
+        "employer_weekly_summary_email.html",
+
+        context,
+
+    )
+ 
+    # ---------------------------------------
+
+    # Send Email
+
+    # ---------------------------------------
+ 
+    email = EmailMultiAlternatives(
+
+        subject=subject,
+
+        body=(
+
+            "Your weekly employer report is ready."
+
+        ),
+
+        from_email=settings.DEFAULT_FROM_EMAIL,
+
+        to=[recipient.email],
+
+    )
+ 
+    email.attach_alternative(
+
+        html_content,
+
+        "text/html",
+
+    )
+ 
+    email.send(fail_silently=False)
+
+@staticmethod
+def _send_weekly_report_push(
+    recipient,
+    title,
+    message,
+):
+    """
+    Send Weekly Report Push Notification.
+    """
+ 
+    report_token = EmployerWeeklyReportToken.objects.filter(
+        employer=recipient
+    ).first()
+ 
+    if not report_token:
+        return
+ 
+    payload = {
+        "event_type": "weekly_report",
+        "category": "weekly_summary",
+        "token": str(report_token.token),
+        "url": reverse(
+            "employer-weekly-summary",
+            kwargs={
+                "token": str(report_token.token),
+            },
+        ),
+    }
+ 
+    NotificationService._send_push(
+        recipient=recipient,
+        title=title,
+        message=message,
+        data=payload,
+    )
+
+@staticmethod
+def _create_weekly_report_notification(
+    recipient,
+    title,
+    message,
+    category,
+    event_type,
+    notification_type,
+):
+    """
+    Create Weekly Report In-App Notification.
+    """
+ 
+    return Notification.objects.create(
+        user=recipient,
+        title=title,
+        message=message,
+        category=category,
+        event_type=event_type,
+        notification_type=notification_type,
+    )
 
 from django.conf import settings
 
@@ -900,13 +1279,19 @@ class NotificationService:
 
             try:
 
-                send_mail(
-                    subject=title,
-                    message=message,
-                    from_email=settings.DEFAULT_FROM_EMAIL,
-                    recipient_list=[recipient.email],
-                    fail_silently=False
-                )
+                if event_type == "weekly_report":
+                    _send_weekly_report_email(
+                        recipient=recipient,
+                        subject=title,
+                    )
+                else:
+                    send_mail(
+                        subject=title,
+                        message=message,
+                        from_email=settings.DEFAULT_FROM_EMAIL,
+                        recipient_list=[recipient.email],
+                        fail_silently=False
+                    )
 
                 NotificationService._log_delivery(
                     notification=notification,
@@ -1052,15 +1437,21 @@ class NotificationService:
             for token in tokens:
 
                 try:
-
-                    response_id = (
-                        send_push_notification(
-                            token=token,
+                    if event_type == "weekly_report":
+                        _send_weekly_report_push(
+                            recipient=recipient,
                             title=title,
-                            body=message,
-                            data=payload_data
+                            message=message,
                         )
-                    )
+                    else:
+                        response_id = (
+                            send_push_notification(
+                                token=token,
+                                title=title,
+                                body=message,
+                                data=payload_data
+                            )
+                        )
 
                     NotificationService._log_delivery(
                         notification=notification,

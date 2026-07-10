@@ -26,14 +26,15 @@ export const ProfileCreationHelp = () => {
     <>
       <FHeader />
       <div className="profilehelp-page">
+        <p className="profilehelp-updated">
+          {profileHelpData.updatedDate}
+        </p>
         <div className="profilehelp-container">
           <h1 className="profilehelp-title">
             How to create an online job profile
           </h1>
 
-          <p className="profilehelp-updated">
-            {profileHelpData.updatedDate}
-          </p>
+
           <p className="profilehelp-intro">
             {profileHelpData.intro}
           </p>

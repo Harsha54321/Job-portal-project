@@ -98,6 +98,185 @@ from .services import NotificationService
 User = get_user_model()
 logger = logging.getLogger(__name__)
 
+from datetime import timedelta
+ 
+from django.utils import timezone
+ 
+from jobapp.models import (
+    PostAJob,
+    JobApplication,
+    Notification,
+)
+ 
+ 
+@staticmethod
+def _get_weekly_report_context(employer):
+    """
+    Build the employer weekly report context.
+    Used for:
+        - Weekly HTML Email
+        - Employer Weekly Report Page
+    """
+ 
+    today = timezone.now()
+    week_ago = today - timedelta(days=7)
+ 
+    # ---------------------------------------
+    # Jobs
+    # ---------------------------------------
+ 
+    jobs = PostAJob.objects.filter(
+        employer=employer
+    )
+ 
+    active_jobs = jobs.filter(
+        last_date_to_apply__gte=today.date()
+    )
+ 
+    expired_jobs = jobs.filter(
+        last_date_to_apply__lt=today.date()
+    )
+ 
+    highlighted_jobs = jobs.filter(
+        is_highlighted=True
+    )
+ 
+    # ---------------------------------------
+    # Applications
+    # ---------------------------------------
+ 
+    applications = JobApplication.objects.filter(
+        job__employer=employer
+    ).select_related(
+        "user",
+        "job",
+    )
+ 
+    applications_this_week = applications.filter(
+        applied_date__gte=week_ago
+    )
+ 
+    # ---------------------------------------
+    # Notifications
+    # ---------------------------------------
+ 
+    notifications = Notification.objects.filter(
+        user=employer
+    )
+ 
+    unread_notifications = notifications.filter(
+        is_read=False
+    )
+ 
+    # ---------------------------------------
+    # Job Statistics
+    # ---------------------------------------
+ 
+    job_stats = []
+ 
+    for job in jobs:
+ 
+        job_applications = applications.filter(
+            job=job
+        )
+ 
+        job_stats.append({
+ 
+            "job_id": job.id,
+ 
+            "job_title": job.job_title,
+ 
+            "applications_count": job_applications.count(),
+ 
+            "shortlisted": job_applications.filter(
+                status="shortlisted"
+            ).count(),
+ 
+            "rejected": job_applications.filter(
+                status="rejected"
+            ).count(),
+ 
+            "hired": job_applications.filter(
+                status="hired"
+            ).count(),
+        })
+ 
+    # ---------------------------------------
+    # Recent Applications
+    # ---------------------------------------
+ 
+    recent_application_data = []
+ 
+    for app in applications.order_by(
+        "-applied_date"
+    )[:10]:
+ 
+        recent_application_data.append({
+ 
+            "candidate": app.user.email,
+ 
+            "job_title": app.job.job_title,
+ 
+            "status": app.status,
+ 
+            "applied_date": app.applied_date,
+        })
+ 
+    # ---------------------------------------
+    # Recent Notifications
+    # ---------------------------------------
+ 
+    notification_data = []
+ 
+    for notification in notifications.order_by(
+        "-created_at"
+    )[:10]:
+ 
+        notification_data.append({
+ 
+            "id": notification.id,
+ 
+            "message": notification.message,
+ 
+            "notification_type": notification.notification_type,
+ 
+            "created_at": notification.created_at,
+ 
+            "is_read": notification.is_read,
+        })
+ 
+    # ---------------------------------------
+    # Return Context
+    # ---------------------------------------
+ 
+    return {
+ 
+        "generated_date": today,
+ 
+        "summary": {
+ 
+            "total_jobs": jobs.count(),
+ 
+            "active_jobs": active_jobs.count(),
+ 
+            "expired_jobs": expired_jobs.count(),
+ 
+            "highlighted_jobs": highlighted_jobs.count(),
+ 
+            "total_applications": applications.count(),
+ 
+            "applications_this_week": applications_this_week.count(),
+ 
+            "unread_notifications": unread_notifications.count(),
+        },
+ 
+        "job_application_stats": job_stats,
+ 
+        "recent_notifications": notification_data,
+ 
+        "recent_applications": recent_application_data,
+    }
+
 
 # ============ REGISTRATION VIEWS ============
 
@@ -8635,198 +8814,73 @@ class CheckPlanExpiryView(APIView):
             "time_remaining_text": time_remaining_text,
             "message": message
         })
+    
+from django.shortcuts import get_object_or_404, render
+
+from django.utils import timezone
+ 
+from rest_framework.views import APIView
+
+from rest_framework.permissions import AllowAny
+
+from rest_framework.response import Response
+
+from rest_framework import status
+ 
+from jobapp.models import EmployerWeeklyReportToken
+
+from jobapp.services import NotificationService
+ 
+ 
 class EmployerWeeklySummaryView(APIView):
  
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
  
-    def get(self, request):
+    def get(self, request, token):
  
-        employer = request.user
- 
-        today = timezone.now()
- 
-        week_ago = today - timedelta(days=7)
- 
-        # ─────────────────────────────────────
-        # JOBS
-        # ─────────────────────────────────────
- 
-        jobs = PostAJob.objects.filter(
-            employer=employer
+        report_token = get_object_or_404(
+
+            EmployerWeeklyReportToken,
+
+            token=token,
+
         )
  
-        active_jobs = jobs.filter(
-            last_date_to_apply__gte=today.date()
-        )
- 
-        expired_jobs = jobs.filter(
-            last_date_to_apply__lt=today.date()
-        )
- 
-        highlighted_jobs = jobs.filter(
-            is_highlighted=True
-        )
- 
-        # ─────────────────────────────────────
-        # APPLICATIONS
-        # ─────────────────────────────────────
- 
-        applications = JobApplication.objects.filter(
-            job__employer=employer
-        )
- 
-        applications_this_week = applications.filter(
-            applied_date__gte=week_ago
-        )
- 
-        # ─────────────────────────────────────
-        # NOTIFICATIONS
-        # ─────────────────────────────────────
- 
-        notifications = Notification.objects.filter(
-            user=employer
-        )
- 
-        unread_notifications = notifications.filter(
-            is_read=False
-        )
- 
-        # ─────────────────────────────────────
-        # JOB APPLICATION STATS
-        # ─────────────────────────────────────
- 
-        job_stats = []
- 
-        for job in jobs:
- 
-            job_applications = JobApplication.objects.filter(
-                job=job
+        if report_token.expires_at < timezone.now():
+
+            return Response(
+
+                {
+
+                    "success": False,
+
+                    "message": "This weekly report link has expired.",
+
+                },
+
+                status=status.HTTP_400_BAD_REQUEST,
+
             )
  
-            job_stats.append({
+        employer = report_token.employer
  
-                "job_id": job.id,
- 
-                "job_title": job.job_title,
- 
-                "applications_count": (
-                    job_applications.count()
-                ),
- 
-                "shortlisted": (
-                    job_applications.filter(
-                        status='shortlisted'
-                    ).count()
-                ),
- 
-                "rejected": (
-                    job_applications.filter(
-                        status='rejected'
-                    ).count()
-                ),
- 
-                "hired": (
-                    job_applications.filter(
-                        status='hired'
-                    ).count()
-                ),
-            })
- 
-        # ─────────────────────────────────────
-        # RECENT APPLICATIONS
-        # ─────────────────────────────────────
- 
-        recent_applications = (
-            applications
-            .select_related(
-                'user',
-                'job'
-            )
-            .order_by('-applied_date')[:10]
+        context = _get_weekly_report_context(
+
+            employer
+
         )
  
-        recent_application_data = []
+        context["generated_date"] = timezone.now()
  
-        for app in recent_applications:
- 
-            recent_application_data.append({
- 
-                "candidate": app.user.email,
- 
-                "job_title": app.job.job_title,
- 
-                "status": app.status,
- 
-                "applied_date": app.applied_date
-            })
- 
-        # ─────────────────────────────────────
-        # RECENT NOTIFICATIONS
-        # ─────────────────────────────────────
- 
-        recent_notifications = (
-            notifications
-            .order_by('-created_at')[:10]
+        return render(
+
+            request,
+
+            "employer_weekly_report.html",
+
+            context,
+
         )
- 
-        notification_data = []
- 
-        for notification in recent_notifications:
- 
-            notification_data.append({
- 
-                "id": notification.id,
- 
-                "message": notification.message,
- 
-                "notification_type": (
-                    notification.notification_type
-                ),
- 
-                "created_at": notification.created_at,
- 
-                "is_read": notification.is_read
-            })
- 
-        # ─────────────────────────────────────
-        # FINAL RESPONSE
-        # ─────────────────────────────────────
- 
-        return Response({
- 
-            "summary": {
- 
-                "total_jobs": jobs.count(),
- 
-                "active_jobs": active_jobs.count(),
- 
-                "expired_jobs": expired_jobs.count(),
- 
-                "highlighted_jobs": (
-                    highlighted_jobs.count()
-                ),
- 
-                "total_applications": (
-                    applications.count()
-                ),
- 
-                "applications_this_week": (
-                    applications_this_week.count()
-                ),
- 
-                "unread_notifications": (
-                    unread_notifications.count()
-                )
-            },
- 
-            "job_application_stats": job_stats,
- 
-            "recent_notifications": notification_data,
- 
-            "recent_applications": (
-                recent_application_data
-            )
-        })
     
 # for push notification
 class RegisterDeviceTokenView(APIView):
@@ -9215,45 +9269,61 @@ class AdminDashboardOverviewNewView(APIView):
        
  
         highlighted_jobs_qs = (
- 
             PostAJob.objects
- 
             .filter(
                 is_highlighted=True
             )
- 
             .order_by("-highlighted_at")
- 
             .values(
                 "id",
                 "job_title",
                 "created_at",
-                "highlighted_at"
+                "highlighted_at",
+                "expiry_date",
+                "approved_at",
+                "employer__employer_profile__company__company_name"
             )
         )
- 
+
         highlighted_jobs = [
- 
             {
                 "id": job["id"],
- 
                 "title": job["job_title"],
- 
+                "company": job["employer__employer_profile__company__company_name"] or "N/A",
+                # If approved_at exists, use it; otherwise use created_at
+                "approved_at": (
+                    job["approved_at"].strftime("%d %b %Y")
+                    if job["approved_at"]
+                    else None
+                ),
                 "posted": (
                     job["created_at"].strftime("%d %b %Y")
                     if job["created_at"]
                     else "—"
                 ),
- 
+                "created_at": (
+                    job["created_at"].strftime("%d %b %Y")
+                    if job["created_at"]
+                    else "—"
+                ),
                 "highlightOn": (
                     job["highlighted_at"].strftime("%d %b %Y")
                     if job["highlighted_at"]
                     else "—"
                 ),
- 
+                "highlighted_at": (
+                    job["highlighted_at"].strftime("%d %b %Y")
+                    if job["highlighted_at"]
+                    else "—"
+                ),
+                "expiry_date": (
+                    job["expiry_date"].strftime("%d %b %Y")
+                    if job["expiry_date"]
+                    else "—"
+                ),
                 "isHighlighted": True,
+                "isApproved": job["approved_at"] is not None,  # Add this flag
             }
- 
             for job in highlighted_jobs_qs
         ]
  

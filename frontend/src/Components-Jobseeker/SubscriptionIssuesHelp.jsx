@@ -61,9 +61,10 @@ export const SubscriptionIssuesHelp = () => {
     <>
       <FHeader />
       <div className="jobemployerhelp-page">
+        <p className="jobemployerhelp-updated">{subscriptionData.updatedDate}</p>
+
         <div className="jobemployerhelp-container">
           <h1 className="jobemployerhelp-title">{subscriptionData.title}</h1>
-          <p className="jobemployerhelp-updated">{subscriptionData.updatedDate}</p>
           <p className="jobemployerhelp-intro">{subscriptionData.intro}</p>
 
           {/* Centered Hero Image Section */}

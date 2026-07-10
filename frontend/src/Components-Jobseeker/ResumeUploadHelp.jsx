@@ -28,23 +28,24 @@ export const ResumeUploadHelp = () => {
     <>
       <FHeader />
       <div className="resumehelp-page">
+        <p className="resumehelp-updated">
+          {resumeHelpData.updatedDate}
+        </p>
         <div className="resumehelp-container">
           <h1 className="resumehelp-title">
             Resume Upload
           </h1>
 
-          <p className="resumehelp-updated">
-            {resumeHelpData.updatedDate}
-          </p>
+
           <p className="resumehelp-intro">
             {resumeHelpData.intro}
           </p>
 
           {/* Centered Hero Image Section */}
           <div className="resumehelp-hero-section">
-            <img 
-              src={ResumeHelpImg} 
-              alt="Resume Upload Process" 
+            <img
+              src={ResumeHelpImg}
+              alt="Resume Upload Process"
               className="resumehelp-hero-img"
             />
           </div>
@@ -63,7 +64,7 @@ export const ResumeUploadHelp = () => {
 
           <div className="resumehelp-detailed-steps">
             <h2>Step-by-Step Resume Guidelines:</h2>
-            
+
             <div className="detailed-step">
               <h3>1. Accessing the Profile Area</h3>
               <ul>
@@ -74,13 +75,13 @@ export const ResumeUploadHelp = () => {
             <div className="detailed-step">
               <h3>2. Preparing the File (The "Pre-Upload" Check)</h3>
               <ul>
-                <li><strong>Naming Convention:</strong> Rename your file professionally before uploading. 
-                  <br/><em>Bad: resume_final_v2_updated.pdf</em>
-                  <br/><em>Good: Firstname_Lastname_Developer_Resume.pdf</em>
+                <li><strong>Naming Convention:</strong> Rename your file professionally before uploading.
+                  <br /><em>Bad: resume_final_v2_updated.pdf</em>
+                  <br /><em>Good: Firstname_Lastname_Developer_Resume.pdf</em>
                 </li>
-                <li><strong>Format Selection:</strong> 
-                  <br/><strong>PDF:</strong> Best for preserving layout and fonts across all devices.
-                  <br/><strong>DOCX:</strong> Best if the portal uses older parsing systems to extract text.
+                <li><strong>Format Selection:</strong>
+                  <br /><strong>PDF:</strong> Best for preserving layout and fonts across all devices.
+                  <br /><strong>DOCX:</strong> Best if the portal uses older parsing systems to extract text.
                 </li>
                 <li><strong>Size Constraint:</strong> Ensure your file is under 5MB. Use a PDF compressor if you have many images or icons to avoid rejection.</li>
               </ul>

@@ -462,7 +462,7 @@ export const PostJobPreview = () => {
             <div className="opp-job-details-card">
               <div className="opp-job-highlights">
                 <h4>Job highlights</h4>
-                <ul>
+                <ul className="jobpost-previous-description-list">
                   {job.job_highlights?.filter(h => h && h.trim() !== "").map((highlight, i) => (
                     <li key={i}>{highlight}</li>
                   ))}

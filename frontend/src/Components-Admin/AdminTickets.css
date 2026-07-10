@@ -124,73 +124,73 @@
 
 /* Status pill - same as priority pill */
 .AdminTickets-status-pill {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    padding: 6px 18px;
-    border-radius: 30px;
-    font-size: 12px;
-    font-weight: 600;
-    width: 90px;
-    box-sizing: border-box;
-    text-align: center;
-    min-width: 70px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 6px 18px;
+  border-radius: 30px;
+  font-size: 12px;
+  font-weight: 600;
+  width: 90px;
+  box-sizing: border-box;
+  text-align: center;
+  min-width: 70px;
 }
 
 .AdminTickets-status-pill.Pending {
-    background: #fef3c7;
-    color: #92400e;
+  background: #fef3c7;
+  color: #92400e;
 }
 
 .AdminTickets-status-pill.Resolved {
-    background: #dcfce7;
-    color: #166534;
+  background: #dcfce7;
+  color: #166534;
 }
 
 .AdminTickets-status-pill.InProgress {
-    background: #dbeafe;
-    color: #1d4ed8;
+  background: #dbeafe;
+  color: #1d4ed8;
 }
 
 .AdminTickets-status-pill.Hold {
-    background: #f5d72c;
-    color: #535249;
+  background: #f5d72c;
+  color: #535249;
 }
 
 /* Priority pill - existing styles */
 .Escalation-priority {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    padding: 6px 20px;
-    border-radius: 30px;
-    font-size: 12px;
-    font-weight: 600;
-    width: 90px;
-    box-sizing: border-box;
-    text-align: center;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 6px 20px;
+  border-radius: 30px;
+  font-size: 12px;
+  font-weight: 600;
+  width: 90px;
+  box-sizing: border-box;
+  text-align: center;
 }
 
 .Escalation-priority.High {
-    background: #fee2e2;
-    color: #b91c1c;
+  background: #fee2e2;
+  color: #b91c1c;
 }
 
 .Escalation-priority.Medium {
-    background: #fef3c7;
-    color: #92400e;
+  background: #fef3c7;
+  color: #92400e;
 }
 
 .Escalation-priority.Low {
-    background: #dcfce7;
-    color: #166534;
+  background: #dcfce7;
+  color: #166534;
 }
 
 /* Table cell for status - remove old styles */
 .AdminTickets-table td .status-cell {
-    display: flex;
-    justify-content: center;
-    align-items: center;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 .Adm-tic-container {
@@ -878,6 +878,52 @@
   font-size: 20px;
   font-weight: 600;
   color: #1e293b;
+}
+
+/* User column with ellipsis */
+.AdminTickets-table th:nth-child(3) {
+  width: 12%;
+  max-width: 120px;
+}
+
+.AdminTickets-table td:nth-child(3) {
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  word-break: keep-all;
+}
+
+.AdminTickets-user-name {
+  display: inline-block;
+  max-width: 110px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+/* Subject column with ellipsis */
+.AdminTickets-table th:nth-child(2) {
+  width: 25%;
+  max-width: 200px;
+}
+
+.AdminTickets-table td:nth-child(2) {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  word-break: keep-all;
+}
+
+.AdminTickets-subject-text {
+  display: inline-block;
+  max-width: 190px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: middle;
 }
 
 .detail-status-modal-options {

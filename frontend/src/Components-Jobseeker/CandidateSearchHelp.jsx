@@ -9,7 +9,7 @@ export const CandidateSearchHelp = () => {
     title: "How to Use Candidate Search",
     updatedDate: "Updated 27 Feb 2026",
     intro: "Finding the right talent requires a strategic approach. Use our search tools to identify, engage, and secure high-quality candidates for your team.",
-    
+
     summary: [
       "<strong>Define Needs:</strong> Outline roles, skills, and qualifications.",
       "<strong>Source Strategy:</strong> Choose the best channels for the role.",
@@ -67,9 +67,10 @@ export const CandidateSearchHelp = () => {
     <>
       <FHeader />
       <div className="jobemployerhelp-page">
+        <p className="jobemployerhelp-updated">{candidateData.updatedDate}</p>
+
         <div className="jobemployerhelp-container">
           <h1 className="jobemployerhelp-title">{candidateData.title}</h1>
-          <p className="jobemployerhelp-updated">{candidateData.updatedDate}</p>
           <p className="jobemployerhelp-intro">{candidateData.intro}</p>
 
           {/* Centered Hero Image Section */}
@@ -87,9 +88,9 @@ export const CandidateSearchHelp = () => {
               <h2 className="jobemployerhelp-summary-title">Search Summary</h2>
               <ul className="jobemployerhelp-steps-list">
                 {candidateData.summary.map((item, index) => (
-                  <li 
-                    key={index} 
-                    dangerouslySetInnerHTML={{ __html: item }} 
+                  <li
+                    key={index}
+                    dangerouslySetInnerHTML={{ __html: item }}
                   />
                 ))}
               </ul>

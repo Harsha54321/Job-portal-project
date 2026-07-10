@@ -421,7 +421,11 @@ urlpatterns = [
     #for employer setting 
 
     path("employer-settings/<int:plan_id>/<str:account_status>/",EmployerPlatformSettingsView.as_view()),
-    path('employer/weekly-summary/',EmployerWeeklySummaryView.as_view(),name='employer-weekly-summary'),
+    path(
+        "employer/weekly-summary/<uuid:token>/",
+        EmployerWeeklySummaryView.as_view(),
+        name="employer-weekly-summary",
+    ),
     path('employer-registration-settings/',EmployerRegistrationSettingsView.as_view(),name='employer-registration-settings'),
 
     # jobseekersetting

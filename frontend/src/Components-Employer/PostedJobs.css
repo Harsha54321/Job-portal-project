@@ -62,6 +62,10 @@
     margin: 0;
     font-size: 18px;
     color: #1a2a6c;
+    overflow-wrap: break-word;
+    word-break: break-word;
+    white-space: normal;
+    max-width: 100%;
 }
 
 .postedjobs-loc {

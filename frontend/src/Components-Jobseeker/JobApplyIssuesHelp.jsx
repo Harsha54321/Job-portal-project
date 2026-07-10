@@ -1,5 +1,5 @@
 import React from "react";
-import "./JobApplyIssuesHelp.css"; 
+import "./JobApplyIssuesHelp.css";
 import { Footer } from "../Components-LandingPage/Footer";
 import JobApplyImg from "../assets/Jobapply_issue_help.png";
 import { FHeader } from './FHeader';
@@ -23,16 +23,16 @@ export const JobApplyIssuesHelp = () => {
     <>
       <FHeader />
       <div className="jobApplyissuesHelp-page">
+        <p className="jobApplyissuesHelp-updated">{applyHelpData.updatedDate}</p>
         <div className="jobApplyissuesHelp-container">
           <h1 className="jobApplyissuesHelp-title">{applyHelpData.title}</h1>
-          <p className="jobApplyissuesHelp-updated">{applyHelpData.updatedDate}</p>
           <p className="jobApplyissuesHelp-intro">{applyHelpData.intro}</p>
 
           {/* Centered Image Section - Flowchart */}
           <div className="jobApplyissuesHelp-hero-section">
-            <img 
-              src={JobApplyImg} 
-              alt="Troubleshooting Job Applications" 
+            <img
+              src={JobApplyImg}
+              alt="Troubleshooting Job Applications"
               className="jobApplyissuesHelp-hero-img"
             />
           </div>
@@ -43,8 +43,8 @@ export const JobApplyIssuesHelp = () => {
               <h2 className="jobApplyissuesHelp-summary-title">Troubleshooting Summary</h2>
               <ul className="jobApplyissuesHelp-steps-list">
                 {applyHelpData.summary.map((item, index) => (
-                  <li 
-                    key={index} 
+                  <li
+                    key={index}
                     dangerouslySetInnerHTML={{ __html: item }}
                   />
                 ))}

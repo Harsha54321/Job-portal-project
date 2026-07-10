@@ -425,13 +425,17 @@
   overflow-wrap: break-word;
   word-break: break-word;  
   max-width: 100%;          
-  min-width: 0;            
+  min-width: 0; 
+  overflow: hidden;
+  text-overflow: ellipsis;           
 }
  
 .jobpost-previous-section-block {
   width: 100%;
   max-width: 100%;
   overflow-x: hidden;
+  box-sizing: border-box;
+  padding: 0 10px;
 }
 
 /* 
@@ -504,3 +508,9 @@
 
 
  */
+
+ .jobpost-job-main,
+.opp-job-details-card,
+.jobpost-previous-section-block {
+  min-width: 0;
+}

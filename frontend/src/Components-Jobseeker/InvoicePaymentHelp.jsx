@@ -61,9 +61,10 @@ export const InvoicePaymentHelp = () => {
     <>
       <FHeader />
       <div className="jobemployerhelp-page">
+        <p className="jobemployerhelp-updated">{paymentData.updatedDate}</p>
+
         <div className="jobemployerhelp-container">
           <h1 className="jobemployerhelp-title">{paymentData.title}</h1>
-          <p className="jobemployerhelp-updated">{paymentData.updatedDate}</p>
           <p className="jobemployerhelp-intro">{paymentData.intro}</p>
 
           {/* Centered Hero Image Section */}

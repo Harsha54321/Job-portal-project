@@ -393,7 +393,7 @@ export const ActivityMonitor = ({ currentTab, onTabChange }) => {
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 20px" }}>
                           <div style={{ display: "flex", gap: "5px", alignItems: "center" }}>
                             <img src={SuspAct} width={20} height={20} alt="" />
-                            <p style={{ margin: "0px 5px" }}>Suspicious Activity</p>
+                            <p style={{ margin: "0px 5px" }}>Report Inprogress Status</p>
                           </div>
                           <span className="admin-stat-number">
                             {s('platform_activity_overview', 'user_activity', 'suspicious_activity')}

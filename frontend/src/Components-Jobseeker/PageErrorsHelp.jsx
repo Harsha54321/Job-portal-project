@@ -9,7 +9,7 @@ export const PageErrorsHelp = () => {
     title: "Common Page Errors & Root Causes",
     updatedDate: "Updated 06 Feb 2026",
     intro: "Encountering an error while navigating the portal? Most page errors are temporary and can be resolved by understanding their underlying causes. Review the list below for troubleshooting guidance.",
-    
+
     summary: [
       "<strong>Refresh the Page:</strong> Many errors resolve with a simple page refresh (F5 or Ctrl+R).",
       "<strong>Check Internet Connection:</strong> Ensure you have a stable network connection.",
@@ -20,7 +20,7 @@ export const PageErrorsHelp = () => {
       "<strong>Update Your Browser:</strong> Ensure you're using the latest browser version.",
       "<strong>Contact Support:</strong> If issues persist, reach out to our help team."
     ],
-    
+
     issues: [
       {
         problem: "Job Not Found",
@@ -79,9 +79,10 @@ export const PageErrorsHelp = () => {
     <>
       <FHeader />
       <div className="technicalhelp-page">
+        <p className="technicalhelp-updated">{pageErrorData.updatedDate}</p>
+
         <div className="technicalhelp-container">
           <h1 className="technicalhelp-title">{pageErrorData.title}</h1>
-          <p className="technicalhelp-updated">{pageErrorData.updatedDate}</p>
           <p className="technicalhelp-intro">{pageErrorData.intro}</p>
 
           {/* Centered Hero Image Section */}
@@ -99,9 +100,9 @@ export const PageErrorsHelp = () => {
               <h2 className="technicalhelp-summary-title">Quick Troubleshooting Summary</h2>
               <ul className="technicalhelp-summary-list">
                 {pageErrorData.summary.map((item, index) => (
-                  <li 
-                    key={index} 
-                    dangerouslySetInnerHTML={{ __html: item }} 
+                  <li
+                    key={index}
+                    dangerouslySetInnerHTML={{ __html: item }}
                   />
                 ))}
               </ul>

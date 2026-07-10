@@ -315,7 +315,7 @@ export const AdminNotificationSettings = () => {
                     </div>
                   </td>
                   {mainChannels.map(channel => {
-                    const isDisabled = channel === 'SMS';
+                    const isDisabled = channel === 'SMS' || type.id === 'general';
                     const isGloballyEnabled = isChannelEnabled(channel);
 
                     return (

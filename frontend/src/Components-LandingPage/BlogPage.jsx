@@ -7,7 +7,8 @@ import { FHeader } from '../Components-Jobseeker/FHeader';
 import { useJobs } from '../JobContext';
 
 export const BlogCard = ({ item }) => {
-  const navigate = useNavigate()
+  const navigate = useNavigate();
+
   const ReduceDesc = (text, wordLimit) => {
     if (!text) return '';
     const words = text.split(/\s+/);
@@ -16,15 +17,18 @@ export const BlogCard = ({ item }) => {
     }
     return text;
   };
+
   return (
-    <div className='content'>
+    <div
+      className='content'
+      onClick={() => navigate(`/Job-portal/jobseeker/Blogs/BlogDatas/${item.title}`, { state: { blogData: item } })}
+      style={{ cursor: "pointer" }}
+    >
       <img src={item.Thumbnail} alt={item.title} width="300" />
       <p className='blog-date'>{item.date}</p>
       <h3 className={item.isCategory ? 'card-title' : ''}>{item.title}</h3>
 
       {!item.isCategory && (
-        // <p>{ReduceDesc(item.desc, 10)}</p>
-        
         <p style={{
           overflow: 'hidden',
           display: '-webkit-box',
@@ -33,9 +37,9 @@ export const BlogCard = ({ item }) => {
         }}>
           {ReduceDesc(item.desc, 10)}
         </p>
-
       )}
-      <p style={{ fontSize: "20px", cursor: "pointer", color: "#5295f8", fontWeight: "600" }} onClick={() => navigate(`/Job-portal/jobseeker/Blogs/BlogDatas/${item.title}`, { state: { blogData: item } })}>
+
+      <p style={{ fontSize: "20px", color: "#5295f8", fontWeight: "600", marginTop: "10px" }}>
         Read more
       </p>
     </div>
@@ -44,7 +48,7 @@ export const BlogCard = ({ item }) => {
 
 export const BlogPage = () => {
   const navigate = useNavigate();
-  const { publishedBlogs } = useJobs()
+  const { publishedBlogs } = useJobs();
 
 
   return (

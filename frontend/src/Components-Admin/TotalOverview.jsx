@@ -47,7 +47,7 @@ export const TotalOverview = ({ overviewData = {} }) => {
             );
           })}
           <text x="50%" y="50%" textAnchor="middle" className="Admin-total-count">{total}</text>
-          <text x="52%" y="60%" textAnchor="middle" className="Admin-total-label">Total Applicants Count</text>
+          <text x="50%" y="56%" textAnchor="middle" className="Admin-total-label">Total Applicants Count</text>
         </svg>
       </div>
 

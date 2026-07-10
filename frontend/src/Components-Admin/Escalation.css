@@ -324,6 +324,15 @@
   gap: 12px;
 }
 
+.RepAJob-user-name {
+  display: inline-block;
+  max-width: 110px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
 .RepAJob-grid-row {
   display: flex;
   align-items: center;
@@ -607,6 +616,44 @@
   white-space: nowrap !important;
   flex-shrink: 0 !important;
   box-sizing: border-box !important;
+}
+
+.RepAJob-table th:nth-child(1) {
+  width: 11%;
+}
+
+/* Report ID */
+.RepAJob-table th:nth-child(2) {
+  width: 17%;
+}
+
+/* Subject Column */
+.RepAJob-table th:nth-child(3) {
+  width: 7%;
+}
+
+/* Job ID */
+.RepAJob-table th:nth-child(4) {
+  width: 12%;
+}
+
+/* User Column Header */
+
+
+.RepAJob-table th:nth-child(4),
+.RepAJob-table td:nth-child(4) {
+  padding-left: 4px !important;
+  text-align: left;
+}
+
+
+.RepAJob-user-name {
+  display: inline-block;
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: middle;
 }
 
 @media (max-width: 768px) {

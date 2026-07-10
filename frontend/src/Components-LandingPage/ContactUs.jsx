@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import api from '../api/axios';
 import { FHeader } from '../Components-Jobseeker/FHeader';
 import { Footer } from '../Components-LandingPage/Footer';
@@ -15,10 +15,48 @@ export const ContactUs = () => {
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [serverMessage, setServerMessage] = useState("");
+  const [messageType, setMessageType] = useState(""); // 'success' or 'error'
 
+  // Client-side duplicate prevention states
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [lastSubmissionTime, setLastSubmissionTime] = useState(0);
+  const [submittedMessages, setSubmittedMessages] = useState([]);
+  const SUBMISSION_COOLDOWN = 30000; // 30 seconds cooldown
+  const formRef = useRef();
+
+  // Load and manage submitted messages from sessionStorage
+  useEffect(() => {
+    const loadSubmittedMessages = () => {
+      try {
+        const saved = sessionStorage.getItem('contact_submissions');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          const now = Date.now();
+          // Keep only submissions from last 24 hours
+          const filtered = parsed.filter(sub => now - sub.timestamp < 86400000);
+          setSubmittedMessages(filtered);
+          if (filtered.length !== parsed.length) {
+            sessionStorage.setItem('contact_submissions', JSON.stringify(filtered));
+          }
+        }
+      } catch (e) {
+        console.error('Error loading submissions:', e);
+      }
+    };
+    loadSubmittedMessages();
+  }, []);
+
+  // Save submitted messages to sessionStorage
+  useEffect(() => {
+    if (submittedMessages.length > 0) {
+      sessionStorage.setItem('contact_submissions', JSON.stringify(submittedMessages));
+    }
+  }, [submittedMessages]);
+
+  // Fetch user data
   useEffect(() => {
     const fetchUserData = async () => {
-      const token = sessionStorage.getItem('access');  // ← CHANGED
+      const token = sessionStorage.getItem('access');
 
       if (!token) {
         setIsAuthenticated(false);
@@ -40,8 +78,8 @@ export const ContactUs = () => {
       } catch (error) {
         console.error("Failed to fetch user data:", error);
         if (error.response?.status === 401) {
-          sessionStorage.removeItem('access');  // ← CHANGED
-          sessionStorage.removeItem('refresh'); // ← CHANGED
+          sessionStorage.removeItem('access');
+          sessionStorage.removeItem('refresh');
         }
         setIsAuthenticated(false);
       } finally {
@@ -51,6 +89,7 @@ export const ContactUs = () => {
 
     fetchUserData();
   }, []);
+
   const handleForm = (e) => {
     const { name, value } = e.target;
     setFormValues({ ...formValues, [name]: value });
@@ -61,6 +100,7 @@ export const ContactUs = () => {
       setErrors({ ...errors, [name]: "" });
     }
   };
+
   const validateForm = () => {
     const newErrors = {};
     const nameRegex = /^[A-Za-z\s]+$/;
@@ -95,40 +135,145 @@ export const ContactUs = () => {
     return Object.keys(newErrors).length === 0;
   };
 
+  // Check for duplicate submission
+  const isDuplicateSubmission = () => {
+    const normalizedMessage = formValues.message.trim().toLowerCase();
+    const normalizedEmail = formValues.email.trim().toLowerCase();
+
+    return submittedMessages.some(sub =>
+      sub.email === normalizedEmail &&
+      sub.message === normalizedMessage
+    );
+  };
+
+  // Check cooldown period
+  const isInCooldown = () => {
+    const now = Date.now();
+    return (now - lastSubmissionTime) < SUBMISSION_COOLDOWN;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!validateForm()) return;
+
+    // Prevent multiple submissions
+    if (isSubmitting) {
+      return;
+    }
+
+    // Validate form first
+    if (!validateForm()) {
+      // Scroll to first error
+      const firstError = document.querySelector('.input-error');
+      if (firstError) {
+        firstError.focus();
+      }
+      return;
+    }
+
+    // Check cooldown
+    if (isInCooldown()) {
+      const remainingSeconds = Math.ceil((SUBMISSION_COOLDOWN - (Date.now() - lastSubmissionTime)) / 1000);
+      setMessageType("error");
+      setServerMessage(`Please wait ${remainingSeconds} seconds before submitting again`);
+      setTimeout(() => {
+        setServerMessage("");
+        setMessageType("");
+      }, 5000);
+      return;
+    }
+
+    // Check for duplicate message
+    if (isDuplicateSubmission()) {
+      setMessageType("error");
+      setServerMessage("You have already sent this message. Please wait for our response.");
+      setTimeout(() => {
+        setServerMessage("");
+        setMessageType("");
+      }, 5000);
+      return;
+    }
+
+    // Start submission
+    setIsSubmitting(true);
+    setLoading(true);
+    setServerMessage("");
+    setMessageType("");
 
     try {
-      setLoading(true);
-      setServerMessage("");
-
       const response = await api.post("contact/create/", formValues, {
         headers: { "Content-Type": "application/json" }
       });
 
-      setServerMessage(response.data.message || "Message sent successfully");
+      // Store successful submission
+      const submission = {
+        email: formValues.email.trim().toLowerCase(),
+        message: formValues.message.trim().toLowerCase(),
+        timestamp: Date.now()
+      };
+
+      setSubmittedMessages(prev => [...prev, submission]);
+      setLastSubmissionTime(Date.now());
+
+      // Show success message
+      setMessageType("success");
+      setServerMessage(response.data.message || "Message sent successfully!");
+
+      // Reset form
       setFormValues(initialValues);
 
+      // If authenticated, refill user data
       if (isAuthenticated) {
-        const userRes = await api.get('/users/me/');
-        const user = userRes.data;
-        setFormValues(prev => ({
-          ...prev,
-          name: user.name || user.username || "",
-          email: user.email || "",
-          contact: user.phone || "",
-        }));
+        try {
+          const userRes = await api.get('/users/me/');
+          const user = userRes.data;
+          setFormValues(prev => ({
+            ...prev,
+            name: user.name || user.username || "",
+            email: user.email || "",
+            contact: user.phone || "",
+          }));
+        } catch (error) {
+          console.error("Failed to refresh user data:", error);
+        }
       }
 
+      // Clear success message after 5 seconds
+      setTimeout(() => {
+        setServerMessage("");
+        setMessageType("");
+      }, 5000);
+
     } catch (error) {
+      setMessageType("error");
+
+      // Handle validation errors from backend
       if (error.response && error.response.data.errors) {
         setErrors(error.response.data.errors);
+        setServerMessage("Please check the highlighted fields.");
+      } else if (error.response?.data?.message) {
+        setServerMessage(error.response.data.message);
+      } else if (error.response?.data?.detail) {
+        setServerMessage(error.response.data.detail);
       } else {
         setServerMessage("Something went wrong. Please try again.");
       }
+
+      // Clear error message after 5 seconds
+      setTimeout(() => {
+        setServerMessage("");
+        setMessageType("");
+      }, 5000);
+
     } finally {
       setLoading(false);
+      setIsSubmitting(false);
+    }
+  };
+
+  // Clear specific error when user starts typing
+  const handleInputFocus = (fieldName) => {
+    if (errors[fieldName]) {
+      setErrors({ ...errors, [fieldName]: "" });
     }
   };
 
@@ -157,38 +302,54 @@ export const ContactUs = () => {
           <p className="contact-desc">
             Do you have a question? or need any help
           </p>
+
           {serverMessage && (
-            <p style={{ color: "green", textAlign: "center" }}>
+            <p style={{
+              color: messageType === "success" ? "#155724" : "#721c24",
+              backgroundColor: messageType === "success" ? "#d4edda" : "#f8d7da",
+              border: `1px solid ${messageType === "success" ? "#c3e6cb" : "#f5c6cb"}`,
+              padding: "12px",
+              borderRadius: "4px",
+              textAlign: "center",
+              marginBottom: "15px"
+            }}>
               {serverMessage}
             </p>
           )}
-          <form onSubmit={handleSubmit} className="contact-form">
+
+          <form onSubmit={handleSubmit} className="contact-form" ref={formRef}>
             <div className="contact-form-group">
-              <label>Name</label>
+              <label>Name *</label>
               <input
                 type="text"
                 name="name"
                 placeholder="Enter your name"
                 value={formValues.name}
                 onChange={handleForm}
+                onFocus={() => handleInputFocus('name')}
                 className={errors.name ? "input-error" : ""}
+                disabled={loading}
               />
               {errors.name && <span className="error-msg">{errors.name}</span>}
             </div>
+
             <div className="contact-form-group">
-              <label>Email</label>
+              <label>Email *</label>
               <input
                 type="email"
                 name="email"
                 placeholder="Enter your email ID"
                 value={formValues.email}
                 onChange={handleForm}
+                onFocus={() => handleInputFocus('email')}
                 className={errors.email ? "input-error" : ""}
+                disabled={loading}
               />
               {errors.email && <span className="error-msg">{errors.email}</span>}
             </div>
+
             <div className="contact-form-group">
-              <label>Contact number</label>
+              <label>Contact number *</label>
               <input
                 type="tel"
                 name="contact"
@@ -202,36 +363,54 @@ export const ContactUs = () => {
                     handleForm(e);
                   }
                 }}
+                onFocus={() => handleInputFocus('contact')}
                 className={errors.contact ? "input-error" : ""}
+                disabled={loading}
               />
               {errors.contact && <span className="error-msg">{errors.contact}</span>}
             </div>
+
             <div className="contact-form-group">
-              <label>Message</label>
+              <label>Message *</label>
               <textarea
                 name="message"
                 placeholder="Type something..."
                 value={formValues.message}
                 onChange={handleForm}
+                onFocus={() => handleInputFocus('message')}
                 className={errors.message ? "input-error" : ""}
                 maxLength={MAX_MESSAGE_LENGTH}
+                disabled={loading}
+                rows={4}
               />
-              <span className={`char-counter ${formValues.message.length >= MAX_MESSAGE_LENGTH ? "char-limit-reached" : ""}`}>
-                {formValues.message.length}/{MAX_MESSAGE_LENGTH}
-              </span>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", marginTop: "4px" }}>
+                <span className={`char-counter ${formValues.message.length >= MAX_MESSAGE_LENGTH ? "char-limit-reached" : ""}`}>
+                  {formValues.message.length}/{MAX_MESSAGE_LENGTH}
+                </span>
+                {formValues.message.length > 0 && formValues.message.length < 10 && (
+                  <span style={{ color: "#666" }}>Message too short</span>
+                )}
+              </div>
               {errors.message && <span className="error-msg">{errors.message}</span>}
             </div>
+
             <div style={{ display: "flex", justifyContent: "center", marginTop: "20px" }}>
               <button
                 type="submit"
                 className="contact-submit-btn"
-                style={{ width: "100px", padding: "15px" }}
-                disabled={loading}
+                style={{
+                  width: "100px",
+                  padding: "15px",
+                  opacity: loading || isSubmitting ? 0.6 : 1,
+                  cursor: loading || isSubmitting ? "not-allowed" : "pointer"
+                }}
+                disabled={loading || isSubmitting}
               >
-                {loading ? "Sending..." : "Submit"}
+                {loading ? "Sending..." : isSubmitting ? "Processing..." : "Submit"}
               </button>
             </div>
           </form>
+
           {isAuthenticated && (
             <p style={{ fontSize: "12px", color: "#666", textAlign: "center", marginTop: "15px" }}>
               Your profile information has been auto-filled. You can edit if needed.

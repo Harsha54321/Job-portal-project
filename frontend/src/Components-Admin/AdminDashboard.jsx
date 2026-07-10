@@ -80,6 +80,22 @@ export const AdminDashboard = () => {
         total_overview: {}
     });
 
+    // Add this function inside the AdminDashboard component
+    const formatDate = (dateString) => {
+        if (!dateString) return 'N/A';
+        try {
+            const date = new Date(dateString);
+            if (isNaN(date.getTime())) return 'N/A';
+            return date.toLocaleDateString('en-US', {
+                month: 'short',
+                day: '2-digit',
+                year: 'numeric'
+            });
+        } catch (e) {
+            return 'N/A';
+        }
+    };
+
     // Handle updates into persistent system session registers dynamically
     useEffect(() => {
         if (activetab) {
@@ -541,28 +557,43 @@ export const AdminDashboard = () => {
                                             <img src={Highlight} width={22} alt="" />
                                         </div>
                                         <div className="Admin-jobads-buttons">
-                                            <button onClick={() => setActiveTab('Highlighted Jobs')} className="Admin-create-btn">VIEW ALL</button>
+                                            <button
+                                                onClick={() => {
+                                                    setActiveTab('Highlighted Jobs');
+                                                }}
+                                                className="Admin-create-btn"
+                                            >
+                                                VIEW ALL
+                                            </button>
                                         </div>
                                     </div>
                                     <div style={{ display: "flex", flexDirection: "column", padding: "15px" }}>
-                                        {jobAds.slice(0, 4).map((job, index) => (
-                                            <div className="Admin-job-card" key={job.id || index}>
-                                                <div className="Admin-job-left">
-                                                    <p className="Admin-job-title">{job.title}</p>
-                                                    <span className="Admin-job-under">{job.code || job.id}</span>
-                                                </div>
-                                                <div className="Admin-job-right">
-                                                    <div className="Ads-Count-Cont">
-                                                        <span className="Ads-Count">Posted On</span>
-                                                        <p style={{ margin: "0", fontSize: "11px", color: "rgb(95, 94, 94)", fontWeight: "600" }}>{job.posted}</p>
+                                        {jobAds.slice(0, 4).map((job, index) => {
+                                            // Get the approved date - use approved_at if available
+                                            const approvedDate = job.approved_at || job.posted || job.created_at;
+
+                                            return (
+                                                <div className="Admin-job-card" key={job.id || index}>
+                                                    <div className="Admin-job-left">
+                                                        <p className="Admin-job-title">{job.title}</p>
                                                     </div>
-                                                    <div className="Ads-Count-Cont">
-                                                        <span className="Ads-Count">Highlighted on</span>
-                                                        <p style={{ margin: "0", fontSize: "11px", color: "rgb(95, 94, 94)", fontWeight: "600" }}>{job.highlightOn}</p>
+                                                    <div className="Admin-job-right">
+                                                        <div className="Ads-Count-Cont">
+                                                            <span className="Ads-Count">Approved On</span>
+                                                            <p style={{ margin: "0", fontSize: "11px", color: "rgb(95, 94, 94)", fontWeight: "600" }}>
+                                                                {approvedDate ? formatDate(approvedDate) : 'N/A'}
+                                                            </p>
+                                                        </div>
+                                                        <div className="Ads-Count-Cont">
+                                                            <span className="Ads-Count">Highlighted on</span>
+                                                            <p style={{ margin: "0", fontSize: "11px", color: "rgb(95, 94, 94)", fontWeight: "600" }}>
+                                                                {job.highlighted_at ? formatDate(job.highlighted_at) : (job.highlightOn || 'N/A')}
+                                                            </p>
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                        ))}
+                                            );
+                                        })}
                                     </div>
                                 </div>
                             </div>

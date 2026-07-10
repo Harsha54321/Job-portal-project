@@ -829,12 +829,12 @@ export const Esignup = () => {
           <button
             type="submit"
             className="j-sign-up-submit"
-            disabled={
-              (regSettings.emailVerification && !isEmailVerified) ||
-              (regSettings.mobileVerification && !isMobileVerified) ||
-              isLoading
-            }
-          // disabled={isLoading}
+            // disabled={
+            //   (regSettings.emailVerification && !isEmailVerified) ||
+            //   (regSettings.mobileVerification && !isMobileVerified) ||
+            //   isLoading
+            // }
+          disabled={isLoading}
           >
             {isLoading ? "Creating Account..." : "Create Account"}
           </button>

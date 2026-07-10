@@ -41,7 +41,7 @@ export const EmployerSettings = () => {
       weeklySummary: false,
     },
     defaultPlan: 'Free plan',
-    accountStatus: 'Pending approval', // display-only label, always in sync with selectedAccountStatus
+    accountStatus: 'Hold',
     jobExpireDays: 30,
     maxJobPosts: 10,
     featuredJobLimit: 3,
@@ -51,22 +51,13 @@ export const EmployerSettings = () => {
   const [showPreview, setShowPreview] = useState(false);
   const [previewData, setPreviewData] = useState(null);
 
-  const mapToBackendStatus = (frontendStatus) => {
-    const map = {
-      'Pending approval': 'Hold',
-      'Approved': 'Active',
-      'Rejected': 'Deactivated',
-    };
-    return map[frontendStatus] || 'Hold';
-  };
+  // ─────────────────────────────────────────
+  // CHECK IF SELECTED PLAN IS STARTER
+  // ─────────────────────────────────────────
 
-  const mapToFrontendStatus = (backendStatus) => {
-    const map = {
-      'Hold': 'Pending approval',
-      'Active': 'Approved',
-      'Deactivated': 'Rejected',
-    };
-    return map[backendStatus] || 'Pending approval';
+  const isStarterPlan = () => {
+    const planName = settings.defaultPlan?.toLowerCase() || '';
+    return planName === 'starter plan' || planName === 'starter' || planName === 'free plan' || planName === 'free';
   };
 
   // ─────────────────────────────────────────
@@ -80,6 +71,8 @@ export const EmployerSettings = () => {
         setPlans(res.data);
         if (res.data.length > 0) {
           setSelectedPlanId(res.data[0].id);
+          // Set default plan name
+          setSettings(prev => ({ ...prev, defaultPlan: res.data[0].name }));
         }
       } catch (err) {
         console.error("Failed to fetch plans:", err);
@@ -113,64 +106,6 @@ export const EmployerSettings = () => {
 
     const controller = new AbortController();
 
-    // const fetchSettings = async () => {
-    //   setLoading(true);
-    //   try {
-    //     const url = `employer-settings/${selectedPlanId}/${selectedAccountStatus}/`;
-    //     const res = await api.get(url, { signal: controller.signal });
-    //     const data = res.data;
-
-    //     // KEY FIX: derive accountStatus display label from selectedAccountStatus
-    //     // (our source of truth), NOT from data.account_status returned by the backend.
-    //     // Previously, setSelectedAccountStatus(data.account_status) was called here,
-    //     // which re-triggered this useEffect and caused the revert loop.
-    //     setSettings({
-    //       employerRegistration: data.employer_registration ?? false,
-    //       emailVerification: data.email_verification ?? false,
-    //       mobileVerification: data.mobile_verification ?? false,
-    //       approvalType: data.approval_type ?? 'Manual Type',
-    //       requiredDocs: {
-    //         companyCert: data.req_company_cert ?? false,
-    //         gstCert: data.req_gst_cert ?? false,
-    //         businessEmail: data.req_business_email ?? false,
-    //         companyWebsite: data.req_company_website ?? false,
-    //       },
-    //       preferences: {
-    //         multipleCompany: data.allow_multiple_company ?? false,
-    //         multipleUsers: data.allow_multiple_users ?? false,
-    //         companyReviews: data.show_company_reviews ?? false,
-    //         companyBranding: data.enable_company_branding ?? false,
-    //         featuredEmployer: data.featured_employer_option ?? false,
-    //       },
-    //       notifications: {
-    //         email: data.notif_email ?? false,
-    //         newSignups: data.notif_new_signups ?? false,
-    //         alerts: data.notif_alerts ?? false,
-    //         announcements: data.notif_announcements ?? false,
-    //         weeklySummary: data.notif_weekly_summary ?? false,
-    //       },
-    //       defaultPlan: data.plan || 'Free plan',
-    //       // Derived from selectedAccountStatus — never from the API response
-    //       accountStatus: mapToFrontendStatus(selectedAccountStatus),
-    //       jobExpireDays: data.job_expire_days ?? 30,
-    //       maxJobPosts: data.max_job_posts ?? 10,
-    //       featuredJobLimit: data.featured_job_limit ?? 3,
-    //       allowEditAfterApproval: data.allow_edit_after_approval ?? false,
-    //     });
-
-    //   } catch (err) {
-    //     // Ignore AbortError — this is expected when the user changes
-    //     // selection before the previous fetch completes.
-    //     if (err.name === 'AbortError' || err.code === 'ERR_CANCELED') return;
-    //     console.error("Failed to fetch employer settings:", err);
-    //   } finally {
-    //     // Only clear loading if this request was not aborted
-    //     if (!controller.signal.aborted) {
-    //       setLoading(false);
-    //     }
-    //   }
-    // };
-
     const fetchSettings = async () => {
       setLoading(true);
       try {
@@ -180,17 +115,13 @@ export const EmployerSettings = () => {
 
         console.log("[DEBUG] Fetched data:", data);
 
-        // FIX: Read from nested objects, not flat fields
         setSettings({
-          // Required Docs - Read from requiredDocs object
           requiredDocs: {
             companyCert: data.requiredDocs?.companyCert ?? false,
             gstCert: data.requiredDocs?.gstCert ?? false,
             businessEmail: data.requiredDocs?.businessEmail ?? false,
             companyWebsite: data.requiredDocs?.companyWebsite ?? false,
           },
-
-          // Preferences - Read from preferences object
           preferences: {
             multipleCompany: data.preferences?.multipleCompany ?? false,
             multipleUsers: data.preferences?.multipleUsers ?? false,
@@ -198,8 +129,6 @@ export const EmployerSettings = () => {
             companyBranding: data.preferences?.companyBranding ?? false,
             featuredEmployer: data.preferences?.featuredEmployer ?? false,
           },
-
-          // Notifications - Read from notifications object
           notifications: {
             email: data.notifications?.email ?? false,
             newSignups: data.notifications?.newSignups ?? false,
@@ -207,9 +136,8 @@ export const EmployerSettings = () => {
             announcements: data.notifications?.announcements ?? false,
             weeklySummary: data.notifications?.weeklySummary ?? false,
           },
-
-          defaultPlan: data.plan || 'Free plan',
-          accountStatus: mapToFrontendStatus(selectedAccountStatus),
+          defaultPlan: data.plan || settings.defaultPlan || 'Free plan',
+          accountStatus: selectedAccountStatus,
           jobExpireDays: data.job_expire_days ?? 30,
           maxJobPosts: data.max_job_posts ?? 10,
           featuredJobLimit: data.featured_job_limit ?? 3,
@@ -228,7 +156,6 @@ export const EmployerSettings = () => {
 
     fetchSettings();
 
-    // Cleanup: abort any in-flight request when dependencies change
     return () => controller.abort();
 
   }, [selectedPlanId, selectedAccountStatus]);
@@ -253,7 +180,6 @@ export const EmployerSettings = () => {
   // ─────────────────────────────────────────
 
   const handlePreviewChanges = () => {
-    // Create a copy of current settings for preview
     const preview = {
       ...settings,
       ...registrationSettings,
@@ -269,79 +195,12 @@ export const EmployerSettings = () => {
   // SAVE SETTINGS
   // ─────────────────────────────────────────
 
-  // const handleSave = async () => {
-  //   if (!selectedPlanId) return;
-
-  //   setSaving(true);
-  //   try {
-  //     // selectedAccountStatus is already in backend format — no mapping needed
-  //     const url = `employer-settings/${selectedPlanId}/${selectedAccountStatus}/`;
-
-  //     const payload = {
-  //       employer_registration: settings.employerRegistration,
-  //       email_verification: settings.emailVerification,
-  //       mobile_verification: settings.mobileVerification,
-  //       approval_type: settings.approvalType,
-  //       account_status: selectedAccountStatus,
-  //       job_expire_days: Number(settings.jobExpireDays),
-  //       max_job_posts: Number(settings.maxJobPosts),
-  //       featured_job_limit: Number(settings.featuredJobLimit),
-  //       allow_edit_after_approval: settings.allowEditAfterApproval,
-  //       // Required Docs
-  //       req_company_cert: settings.requiredDocs.companyCert,
-  //       req_gst_cert: settings.requiredDocs.gstCert,
-  //       req_business_email: settings.requiredDocs.businessEmail,
-  //       req_company_website: settings.requiredDocs.companyWebsite,
-  //       // Preferences
-  //       allow_multiple_company: settings.preferences.multipleCompany,
-  //       allow_multiple_users: settings.preferences.multipleUsers,
-  //       show_company_reviews: settings.preferences.companyReviews,
-  //       enable_company_branding: settings.preferences.companyBranding,
-  //       featured_employer_option: settings.preferences.featuredEmployer,
-  //       // Notifications
-  //       notif_email: settings.notifications.email,
-  //       notif_new_signups: settings.notifications.newSignups,
-  //       notif_alerts: settings.notifications.alerts,
-  //       notif_announcements: settings.notifications.announcements,
-  //       notif_weekly_summary: settings.notifications.weeklySummary,
-  //     };
-
-  //     console.log("[DEBUG] Saving payload:", payload);
-
-  //     const response = await api.patch(url, payload);
-
-  //     if (response.status === 200) {
-  //       alert("Settings saved successfully!");
-  //       setShowPreview(false);
-
-  //       // Refresh data to confirm save
-  //       const refreshUrl = `employer-settings/${selectedPlanId}/${selectedAccountStatus}/`;
-  //       const refreshRes = await api.get(refreshUrl);
-  //       const data = refreshRes.data;
-
-  //       // Update settings with saved data
-  //       setSettings(prev => ({
-  //         ...prev,
-  //         jobExpireDays: data.job_expire_days ?? prev.jobExpireDays,
-  //         maxJobPosts: data.max_job_posts ?? prev.maxJobPosts,
-  //         featuredJobLimit: data.featured_job_limit ?? prev.featuredJobLimit,
-  //         allowEditAfterApproval: data.allow_edit_after_approval ?? prev.allowEditAfterApproval,
-  //       }));
-  //     }
-  //   } catch (err) {
-  //     console.error("Failed to save settings:", err);
-  //     alert("Failed to save settings. Please try again.");
-  //   } finally {
-  //     setSaving(false);
-  //   }
-  // };
-
   const handleSave = async () => {
     if (!selectedPlanId) return;
 
     setSaving(true);
     try {
-      // ── 1. Save Registration Settings (separate endpoint) ──
+      // ── 1. Save Registration Settings ──
       await api.patch("employer-registration-settings/", {
         employer_registration: registrationSettings.employerRegistration,
         email_verification: registrationSettings.emailVerification,
@@ -349,28 +208,21 @@ export const EmployerSettings = () => {
         approval_type: registrationSettings.approvalType,
       });
 
-      // ── 2. Save Platform Settings (plan+status specific) ──
+      // ── 2. Save Platform Settings ──
       const url = `employer-settings/${selectedPlanId}/${selectedAccountStatus}/`;
 
-      // Send NESTED objects to match backend expectations
       const payload = {
         account_status: selectedAccountStatus,
-
-        // Job posting settings (flat is fine)
         job_expire_days: Number(settings.jobExpireDays),
         max_job_posts: Number(settings.maxJobPosts),
         featured_job_limit: Number(settings.featuredJobLimit),
         allow_edit_after_approval: settings.allowEditAfterApproval,
-
-        // Required Documents - NESTED (what backend expects)
         requiredDocs: {
           companyCert: settings.requiredDocs.companyCert,
           gstCert: settings.requiredDocs.gstCert,
           businessEmail: settings.requiredDocs.businessEmail,
           companyWebsite: settings.requiredDocs.companyWebsite,
         },
-
-        // Preferences - NESTED (what backend expects)
         preferences: {
           multipleCompany: settings.preferences.multipleCompany,
           multipleUsers: settings.preferences.multipleUsers,
@@ -378,8 +230,6 @@ export const EmployerSettings = () => {
           companyBranding: settings.preferences.companyBranding,
           featuredEmployer: settings.preferences.featuredEmployer,
         },
-
-        // Notifications - NESTED (what backend expects)
         notifications: {
           email: settings.notifications.email,
           newSignups: settings.notifications.newSignups,
@@ -397,11 +247,10 @@ export const EmployerSettings = () => {
         alert("Settings saved successfully!");
         setShowPreview(false);
 
-        // Refresh platform settings data to confirm save
+        // Refresh platform settings data
         const refreshRes = await api.get(url);
         const data = refreshRes.data;
 
-        // Update settings with saved data (no registration fields here)
         setSettings({
           ...settings,
           jobExpireDays: data.job_expire_days ?? settings.jobExpireDays,
@@ -446,29 +295,17 @@ export const EmployerSettings = () => {
   const handlePlanChange = (planName, planId) => {
     setSettings(prev => ({ ...prev, defaultPlan: planName }));
     setSelectedPlanId(planId);
-    // Reset to Hold when switching plans so the useEffect
-    // fetches the correct default combination for the new plan
+    // Reset to Hold when switching plans
     setSelectedAccountStatus('Hold');
   };
 
   // ─────────────────────────────────────────
   // ACCOUNT STATUS CHANGE HANDLER
-  //
-  // Only sets selectedAccountStatus (backend format) and updates the
-  // optimistic display label. The useEffect handles the actual fetch.
-  // We do NOT set selectedAccountStatus from inside fetchSettings —
-  // that was the cause of the revert bug.
   // ─────────────────────────────────────────
 
-  const handleAccountStatusChange = (frontendValue) => {
-    const backendValue = mapToBackendStatus(frontendValue);
-
-    // Optimistically update the display label so there's no flicker
-    // while the fetch is in progress
-    setSettings(prev => ({ ...prev, accountStatus: frontendValue }));
-
-    // This is the only line that triggers the useEffect fetch
-    setSelectedAccountStatus(backendValue);
+  const handleAccountStatusChange = (value) => {
+    setSettings(prev => ({ ...prev, accountStatus: value }));
+    setSelectedAccountStatus(value);
   };
 
   // ─────────────────────────────────────────
@@ -645,6 +482,8 @@ export const EmployerSettings = () => {
   // RENDER
   // ─────────────────────────────────────────
 
+  const isStarter = isStarterPlan();
+
   return (
     <div className="Jobseeker-Set-main-wrapper">
 
@@ -718,16 +557,19 @@ export const EmployerSettings = () => {
               { label: 'Business email', id: 'businessEmail' },
               { label: 'Company website', id: 'companyWebsite' },
             ].map(doc => (
-              <label className="Jobseeker-Set-checkbox-item" key={doc.id}>
+              <div className="Jobseeker-Set-checkbox-item" key={doc.id}>
                 <input
                   type="checkbox"
+                  id={`doc-${doc.id}`}
                   checked={settings.requiredDocs[doc.id]}
                   onChange={(e) => handleChange('requiredDocs', doc.id, e.target.checked, true)}
                   disabled
-                  title="Under Implementation - Coming Soon"
+                  title="Under Implementation"
                 />
-                <span>{doc.label}</span>
-              </label>
+                <label htmlFor={`doc-${doc.id}`} style={{ cursor: 'pointer' }}>
+                  {doc.label}
+                </label>
+              </div>
             ))}
           </div>
         </div>
@@ -752,16 +594,19 @@ export const EmployerSettings = () => {
             { label: 'Enable Company Branding', id: 'companyBranding', disabled: true },
             { label: 'Allow Job Highlighting', id: 'featuredEmployer', disabled: false },
           ].map(pref => (
-            <label className="Jobseeker-Set-checkbox-item" key={pref.id}>
+            <div className="Jobseeker-Set-checkbox-item" key={pref.id}>
               <input
                 type="checkbox"
+                id={`pref-${pref.id}`}
                 checked={settings.preferences[pref.id]}
                 onChange={(e) => handleChange('preferences', pref.id, e.target.checked, true)}
                 disabled={pref.disabled}
                 title={pref.disabled ? "Under implementation" : ""}
               />
-              <span>{pref.label}</span>
-            </label>
+              <label htmlFor={`pref-${pref.id}`} style={{ cursor: 'pointer' }}>
+                {pref.label}
+              </label>
+            </div>
           ))}
         </div>
 
@@ -770,19 +615,52 @@ export const EmployerSettings = () => {
           <h2>Notification settings</h2>
           {[
             { label: 'Email Notifications', id: 'email' },
-            { label: 'New employer signups', id: 'newSignups' },
-            { label: 'Approval / Rejection alerts', id: 'alerts' },
-            { label: 'System Announcements', id: 'announcements' },
+            {
+              label: 'New employer signups',
+              id: 'newSignups',
+              disabled: !isStarter,
+              tooltip: isStarter ? '' : 'Only available for Starter Plan/Free Plan.'
+            },
+            {
+              label: 'Approval / Rejection alerts',
+              id: 'alerts'
+            },
+            {
+              label: 'System Announcements',
+              id: 'announcements',
+              disabled: true,
+              tooltip: 'Under Development'
+            },
             { label: 'Weekly summary', id: 'weeklySummary' },
           ].map(notif => (
-            <label className="Jobseeker-Set-checkbox-item" key={notif.id}>
+            <div
+              className={`Jobseeker-Set-checkbox-item ${notif.disabled ? 'Jobseeker-Set-disabled-item' : ''}`}
+              key={notif.id}
+            >
               <input
                 type="checkbox"
+                id={`notif-${notif.id}`}
                 checked={settings.notifications[notif.id]}
                 onChange={(e) => handleChange('notifications', notif.id, e.target.checked, true)}
+                disabled={notif.disabled || false}
               />
-              <span>{notif.label}</span>
-            </label>
+              <label htmlFor={`notif-${notif.id}`} style={{ cursor: 'pointer' }}>
+                {notif.label}
+                {notif.disabled && (
+                  <span
+                    style={{
+                      marginLeft: '8px',
+                      cursor: 'help',
+                      fontSize: '12px',
+                      color: '#ff9800'
+                    }}
+                    title={notif.tooltip || 'Under Development'}
+                  >
+                    ⓘ
+                  </span>
+                )}
+              </label>
+            </div>
           ))}
         </div>
 
@@ -806,14 +684,14 @@ export const EmployerSettings = () => {
           </div>
 
           <div className="Jobseeker-Set-select-group">
-            <h2>Account status</h2>
+            <h2>Employer Account Status</h2>
             <select
               value={settings.accountStatus}
               onChange={(e) => handleAccountStatusChange(e.target.value)}
             >
-              <option>Pending approval</option>
-              <option>Approved</option>
-              <option>Rejected</option>
+              <option>Hold</option>
+              <option>Active</option>
+              <option>Deactivated</option>
             </select>
           </div>
         </div>
@@ -879,7 +757,6 @@ export const EmployerSettings = () => {
                   checked={settings.allowEditAfterApproval}
                   onChange={(e) =>
                     handleChange(null, 'allowEditAfterApproval', e.target.checked)
-
                   }
                   disabled
                   title="Job edit after approval is under implementation"

@@ -202,12 +202,11 @@
 }
 
 .enq-cell-user {
-    max-width: 150px;
+    max-width: 10px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
     word-break: keep-all;
-    font-weight: 400;
 }
 
 .enq-cell-status {

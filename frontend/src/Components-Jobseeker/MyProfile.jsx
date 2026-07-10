@@ -1329,6 +1329,132 @@ const ResumeSection = ({
     );
 };
 
+const degreeOptions = [
+    "BS", "B.A", "CA", "B.Ed", "M.Com", "B.Sc", "MCA", "BCA", "LLM", "MS/M.Sc",
+    "Diploma", "B.Com", "M.Tech", "MBA/PGDM", "PG Diploma", "B.B.A/ B.M.S",
+    "Medical-MS/MD", "B.Tech/B.E.", "Any Graduate", "Other Post Graduate",
+    "ITI Certification", "Any Postgraduate", "Bachelor Of Science",
+    "Business Economics", "Artificial Intelligence (AI)", "Machine Learning",
+    "Data Science", "Cyber Security", "Cloud Computing"
+];
+
+const DegreeDropdown = ({ value, onChange, options, name, error }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const [isManual, setIsManual] = useState(false);
+    const dropdownRef = useRef(null);
+
+    // If the value exists but isn't in the options list, it was entered manually
+    useEffect(() => {
+        if (value && !options.includes(value) && value !== "Others") {
+            setIsManual(true);
+        }
+    }, [value, options]);
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+                setIsOpen(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
+    const handleSelect = (opt) => {
+        if (opt === "Others") {
+            setIsManual(true);
+            setIsOpen(false);
+            onChange({ target: { name, value: "" } });
+        } else {
+            setIsManual(false);
+            setIsOpen(false);
+            onChange({ target: { name, value: opt } });
+        }
+    };
+
+    // If user selected "Others" or loaded a custom value, show text input
+    if (isManual) {
+        return (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%' }}>
+                <input
+                    type="text"
+                    name={name}
+                    value={value}
+                    onChange={onChange}
+                    placeholder="Type degree manually..."
+                    className={error ? "input-error" : ""}
+                    style={{ flex: 1 }}
+                    autoFocus
+                />
+                <button
+                    type="button"
+                    onClick={() => {
+                        setIsManual(false);
+                        onChange({ target: { name, value: "" } });
+                    }}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc3545', fontSize: '20px', fontWeight: 'bold' }}
+                    title="Select from list"
+                >
+                    &times;
+                </button>
+            </div>
+        );
+    }
+
+    return (
+        <div ref={dropdownRef} style={{ position: 'relative', width: '100%' }}>
+            {/* Dropdown Trigger Box */}
+            <div
+                onClick={() => setIsOpen(!isOpen)}
+                style={{
+                    height: '44px', border: error ? '1px solid #dc3545' : '1px solid #E5E7EB',
+                    borderRadius: '6px', padding: '0 16px', display: 'flex',
+                    alignItems: 'center', cursor: 'pointer', background: '#fff',
+                    justifyContent: 'space-between'
+                }}
+            >
+                <span style={{ color: value ? '#000' : '#999', fontSize: '14px' }}>
+                    {value || "Select Education"}
+                </span>
+                {/* Custom Chevron Arrow from your screenshot */}
+                <svg width="14" height="8" viewBox="0 0 14 8" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ transform: isOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>
+                    <path d="M1 1L7 7L13 1" stroke="#666" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+            </div>
+
+            {/* Dropdown Panel (3 Column Layout) */}
+            {isOpen && (
+                <div style={{
+                    position: 'absolute', top: '100%', left: 0, width: '100%', zIndex: 1000,
+                    background: '#fff', border: '1px solid #E5E7EB', borderRadius: '8px',
+                    padding: '20px', marginTop: '4px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                    maxHeight: '300px', overflowY: 'auto'
+                }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px 12px' }}>
+                        {[...options, "Others"].map(opt => (
+                            <label
+                                key={opt}
+                                style={{
+                                    display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer',
+                                    fontSize: '13px', color: '#333'
+                                }}
+                            >
+                                <input
+                                    type="checkbox" // Visually matches your screenshot requirement
+                                    checked={value === opt}
+                                    onChange={() => handleSelect(opt)}
+                                    style={{ cursor: 'pointer', width: '16px', height: '16px', accentColor: '#007bff' }}
+                                />
+                                {opt}
+                            </label>
+                        ))}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
 const EducationDetails = ({
     data,
     onHighestQualChange,
@@ -1837,13 +1963,12 @@ const EducationDetails = ({
                                 <div className="form-grid">
                                     <div className="form-group">
                                         <label>Degree</label>
-                                        <input
-                                            type="text"
-                                            name="degree"
+                                        <DegreeDropdown
                                             value={grad.degree}
+                                            options={degreeOptions}
+                                            name="degree"
                                             onChange={(e) => handleInputChange(e, 'grad', grad.id)}
-                                            placeholder="e.g., B.E"
-                                            className={errors[`graddegree${grad.id}`] ? "input-error" : ""}
+                                            error={errors[`graddegree${grad.id}`]}
                                         />
                                         {errors[`graddegree${grad.id}`] && <span className="error-message">{errors[`graddegree${grad.id}`]}</span>}
                                     </div>

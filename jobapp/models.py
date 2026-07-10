@@ -2736,3 +2736,24 @@ class EmployerAccountManagerAssignment(models.Model):
 
     def __str__(self):
         return f"{self.employer.email} → {self.account_manager.full_name}"
+
+class EmployerWeeklyReportToken(models.Model):
+ 
+    employer = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        related_name="weekly_report_token",
+    )
+ 
+    token = models.UUIDField(
+        default=uuid.uuid4,
+        unique=True,
+        editable=False,
+    )
+ 
+    expires_at = models.DateTimeField()
+ 
+    created_at = models.DateTimeField(auto_now_add=True)
+ 
+    class Meta:
+        db_table = "EmployerWeeklyReportToken"

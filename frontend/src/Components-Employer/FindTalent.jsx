@@ -41,7 +41,7 @@ export const FindTalent = ({ onUpgradeClick }) => {
   const [loadingJobseekers, setLoadingJobseekers] = useState(true);
   const [hasData, setHasData] = useState(false);
   const [isChecking, setIsChecking] = useState(false);
-
+  const [visibleCount, setVisibleCount] = useState(10);
   // States for Filters
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedLanguages, setSelectedLanguages] = useState([]);
@@ -283,6 +283,7 @@ export const FindTalent = ({ onUpgradeClick }) => {
     const languages = new Map();
     const education = new Map();
     const skills = new Map();
+    const predefinedEdu = ["BS", "B.A", "CA", "B.Ed", "M.Com", "B.Sc", "MCA", "BCA", "LLM", "MS/M.Sc", "Diploma", "B.Com", "M.Tech", "MBA/PGDM", "PG Diploma", "B.B.A/ B.M.S", "Medical-MS/MD", "B.Tech/B.E.", "Any Graduate", "Other Post Graduate", "ITI Certification", "Any Postgraduate", "Bachelor Of Science", "Business Economics", "Artificial Intelligence (AI)", "Machine Learning", "Data Science", "Cyber Security", "Cloud Computing"];
 
     if (!Alluser || Alluser.length === 0) {
       return { languages: [], education: [], skills: [] };
@@ -291,7 +292,8 @@ export const FindTalent = ({ onUpgradeClick }) => {
     const processArray = (arr, key, map) => {
       if (!Array.isArray(arr)) return;
       arr.forEach(item => {
-        const raw = item[key];
+        // Look for the requested key, but fallback to common alternatives or plain strings
+        const raw = typeof item === 'string' ? item : (item[key] || item.course || item.qualification || item.name);
         if (!raw) return;
         const normalized = normalizeValue(raw);
         if (isValidValue(normalized)) {
@@ -307,6 +309,15 @@ export const FindTalent = ({ onUpgradeClick }) => {
       processArray(user.languages, "name", languages);
       processArray(user.educations, "degree", education);
       processArray(user.skills, "name", skills);
+    });
+
+
+    // Add predefined education list to the map
+    predefinedEdu.forEach(edu => {
+      const normalized = normalizeValue(edu);
+      if (isValidValue(normalized)) {
+        education.set(normalized.toLowerCase(), normalized);
+      }
     });
 
     return {
@@ -352,6 +363,7 @@ export const FindTalent = ({ onUpgradeClick }) => {
       skills: newSkills,
       experience: maxExp
     });
+    setVisibleCount(10);
   };
 
   const handleSearchClick = () => handleApplyFilters();
@@ -360,12 +372,12 @@ export const FindTalent = ({ onUpgradeClick }) => {
     if (e.key === 'Enter') handleApplyFilters();
   };
 
-  const getVisibleItemsWithSearch = (items, showAll, searchKey) => {
+  const getVisibleItemsWithSearch = (items, showAll, searchKey, limit = 5) => {
     if (!items || items.length === 0) return [];
     const filtered = items.filter(item =>
       item.toLowerCase().includes(filterSearch[searchKey].toLowerCase())
     );
-    return (showAll || filterSearch[searchKey]) ? filtered : filtered.slice(0, 5);
+    return (showAll || filterSearch[searchKey]) ? filtered : filtered.slice(0, limit);
   };
 
   const filteredTalent = useMemo(() => {
@@ -374,12 +386,21 @@ export const FindTalent = ({ onUpgradeClick }) => {
       const userType = user.user?.user_type || user.user_type || user.role || user.profile?.user_type;
       if (userType === 'employer') return false;
 
-      const userSkills = user.profile?.skills?.map(s => s.name) ||
-        user.skills?.map(s => s.name) || [];
-      const userLanguages = user.profile?.languages?.map(l => l.name) ||
-        user.languages?.map(l => l.name) || [];
-      const userEducation = user.profile?.educations?.map(e => e.degree) ||
-        user.educations?.map(e => e.degree) || [];
+      // Bulletproof text extraction: grabs all string values regardless of the object keys
+      const extractText = (data) => {
+        if (!data) return [];
+        const arr = Array.isArray(data) ? data : [data];
+        return arr.map(item => {
+          if (typeof item === 'string') return item;
+          if (typeof item === 'object') return Object.values(item).filter(v => typeof v === 'string').join(' ');
+          return '';
+        }).filter(Boolean);
+      };
+
+      const userSkills = extractText(user.profile?.skills || user.skills);
+      const userLanguages = extractText(user.profile?.languages || user.languages);
+      // Checks both arrays and single string fields for education
+      const userEducation = extractText(user.profile?.educations || user.educations || user.profile?.education || user.education);
 
       const searchLower = appliedFilters.search.toLowerCase().trim();
       let matchesSearch = true;
@@ -388,7 +409,6 @@ export const FindTalent = ({ onUpgradeClick }) => {
           user.full_name || '',
           user.current_job_title || user.profile?.current_job_title || '',
           user.current_company || user.profile?.current_company || '',
-          // Added location fields based on your ProfileCard structure:
           user.current_location || user.profile?.current_location || '',
           user.city || user.profile?.city || '',
           user.state || user.profile?.state || '',
@@ -398,24 +418,23 @@ export const FindTalent = ({ onUpgradeClick }) => {
         matchesSearch = searchableText.includes(searchLower);
       }
 
-      const normalizeArray = (arr) => arr.map(item => normalizeValue(item));
-
+      // Use .includes() for partial matching (e.g., matches "Diploma" inside "Diploma in IT")
       const matchesLanguage =
         appliedFilters.languages.length === 0 ||
-        normalizeArray(userLanguages).some(lang =>
-          appliedFilters.languages.map(normalizeValue).includes(lang)
+        appliedFilters.languages.some(appLang =>
+          userLanguages.some(lang => lang.toLowerCase().includes(appLang.toLowerCase().trim()))
         );
 
       const matchesEducation =
         appliedFilters.education.length === 0 ||
-        normalizeArray(userEducation).some(edu =>
-          appliedFilters.education.map(normalizeValue).includes(edu)
+        appliedFilters.education.some(appEdu =>
+          userEducation.some(edu => edu.toLowerCase().includes(appEdu.toLowerCase().trim()))
         );
 
       const matchesSkills =
         appliedFilters.skills.length === 0 ||
-        appliedFilters.skills.every(skill =>
-          normalizeArray(userSkills).includes(normalizeValue(skill))
+        appliedFilters.skills.every(appSkill =>
+          userSkills.some(skill => skill.toLowerCase().includes(appSkill.toLowerCase().trim()))
         );
 
       let expNumber = 0;
@@ -448,6 +467,7 @@ export const FindTalent = ({ onUpgradeClick }) => {
       skills: [],
       experience: 10
     });
+    setVisibleCount(10);
   };
 
   // ============================================
@@ -712,20 +732,19 @@ export const FindTalent = ({ onUpgradeClick }) => {
                 onChange={(e) => setFilterSearch({ ...filterSearch, edu: e.target.value })}
                 style={{ width: '100%', padding: '5px', marginBottom: '10px', border: '1px solid #ddd', borderRadius: '3px' }}
               />
-              {getVisibleItemsWithSearch(filterOptions.education, showAllEdu, 'edu').map(edu => (
-                <div key={edu} className="FindTalent-checkbox-item">
-                  <input
-                    type="checkbox"
-                    id={`edu-${edu}`}
-                    checked={selectedEdu.includes(edu)}
-                    onChange={() => handleFilterChange(edu, selectedEdu, setSelectedEdu)}
-                  />
-                  <label htmlFor={`edu-${edu}`}>{edu}</label>
-                </div>
+              {getVisibleItemsWithSearch(filterOptions.education, showAllEdu, 'edu', 3).map(edu => (<div key={edu} className="FindTalent-checkbox-item">
+                <input
+                  type="checkbox"
+                  id={`edu-${edu}`}
+                  checked={selectedEdu.includes(edu)}
+                  onChange={() => handleFilterChange(edu, selectedEdu, setSelectedEdu)}
+                />
+                <label htmlFor={`edu-${edu}`}>{edu}</label>
+              </div>
               ))}
-              {filterOptions.education.length > 5 && (
+              {filterOptions.education.length > 3 && (
                 <span className="FindTalent-view-more-link" onClick={() => setShowAllEdu(!showAllEdu)}>
-                  {showAllEdu ? "View Less" : `View More (${filterOptions.education.length - 5}+)`}
+                  {showAllEdu ? "View Less" : `View More (${filterOptions.education.length - 3}+)`}
                 </span>
               )}
             </div>
@@ -771,7 +790,7 @@ export const FindTalent = ({ onUpgradeClick }) => {
               <p>Please wait while we fetch the data</p>
             </div>
           ) : filteredTalent.length > 0 ? (
-            filteredTalent.map((user, index) => (
+            filteredTalent.slice(0, visibleCount).map((user, index) => (
               <ProfileCard
                 key={user.id || index}
                 user={user}
@@ -788,8 +807,13 @@ export const FindTalent = ({ onUpgradeClick }) => {
             </div>
           )}
 
-          {filteredTalent.length > 0 && filteredTalent.length >= 10 && (
-            <button className="FindTalent-load-more-btn">Load More</button>
+          {filteredTalent.length > visibleCount && (
+            <button
+              className="FindTalent-load-more-btn"
+              onClick={() => setVisibleCount(prev => prev + 10)}
+            >
+              Load More
+            </button>
           )}
         </div>
       </div>
