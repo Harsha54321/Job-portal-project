@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo, useRef } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import './EmployerDashboard.css'
 import DashboardIC from '../assets/Employer/DashboardIC.png'
@@ -45,6 +45,7 @@ export const EmployerDashboard = () => {
     const { currentEmployer, getJobStats, refreshEmployerData } = useJobs();
 
     // ============ ALL HOOKS AT THE TOP ============
+    const contentTopRef = useRef(null);
     const [showLogoutModal, setShowLogoutModal] = useState(false);
     const [applications, setApplications] = useState([]);
     const [loadingStats, setLoadingStats] = useState(true);
@@ -62,6 +63,20 @@ export const EmployerDashboard = () => {
     });
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
     const [selectedJob, setSelectedJob] = useState(null);
+
+    // --- NEW SCROLL EFFECT ---
+    // This ensures EVERY time you change a tab, the dashboard content scrolls to the top
+    useEffect(() => {
+        setTimeout(() => {
+            // 1. Keep the main window locked at the top so your header stays visible
+            window.scrollTo(0, 0);
+
+            // 2. Scroll ONLY the inside of the dashboard container
+            if (contentTopRef.current) {
+                contentTopRef.current.scrollTop = 0;
+            }
+        }, 10);
+    }, [activetab, selectedJob]);
 
     useEffect(() => {
         if (
@@ -468,6 +483,9 @@ export const EmployerDashboard = () => {
                 )}
 
                 <div className={isSidebarOpen ? 'Emainsec' : 'Emainsec2'}>
+                    {/* Anchor element to target the top of the content view */}
+                    <div ref={contentTopRef}></div>
+
                     {activetab === 'Dashboard' && (
                         <>
                             <div className="employer-dashboard-relative-container">

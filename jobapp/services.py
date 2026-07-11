@@ -472,6 +472,36 @@ from django.utils import timezone
 from jobapp.models import EmployerWeeklyReportToken
 
 @staticmethod
+def _get_or_create_weekly_report_token(employer):
+ 
+    report_token = EmployerWeeklyReportToken.objects.filter(
+        employer=employer
+    ).first()
+ 
+    # Create first token
+    if report_token is None:
+ 
+        return EmployerWeeklyReportToken.objects.create(
+            employer=employer,
+            token=uuid.uuid4(),
+            expires_at=timezone.now() + timedelta(days=7),
+        )
+ 
+    # Token expired -> generate a new one
+    if report_token.expires_at <= timezone.now():
+ 
+        report_token.token = uuid.uuid4()
+        report_token.expires_at = timezone.now() + timedelta(days=7)
+        report_token.save(
+            update_fields=[
+                "token",
+                "expires_at",
+            ]
+        )
+ 
+    return report_token
+
+@staticmethod
 def _get_weekly_report_context(employer):
     """
     Build the employer weekly report context.
@@ -673,18 +703,8 @@ def _send_weekly_report_email(
 
     # ---------------------------------------
  
-    report_token, _ = EmployerWeeklyReportToken.objects.update_or_create(
-
-        employer=recipient,
-
-        defaults={
-
-            "token": uuid.uuid4(),
-
-            "expires_at": timezone.now() + timedelta(days=7),
-
-        },
-
+    report_token = _get_or_create_weekly_report_token(
+        recipient
     )
  
     # ---------------------------------------
@@ -763,41 +783,103 @@ def _send_weekly_report_email(
  
     email.send(fail_silently=False)
 
+import uuid
+from datetime import timedelta
+ 
+from django.conf import settings
+from django.utils import timezone
+ 
+ 
 @staticmethod
+
 def _send_weekly_report_push(
+
     recipient,
+
+    token,
+
     title,
+
     message,
+
 ):
+
     """
+
     Send Weekly Report Push Notification.
+
     """
  
-    report_token = EmployerWeeklyReportToken.objects.filter(
-        employer=recipient
-    ).first()
- 
-    if not report_token:
-        return
- 
-    payload = {
-        "event_type": "weekly_report",
-        "category": "weekly_summary",
-        "token": str(report_token.token),
-        "url": reverse(
-            "employer-weekly-summary",
-            kwargs={
-                "token": str(report_token.token),
-            },
-        ),
-    }
- 
-    NotificationService._send_push(
-        recipient=recipient,
-        title=title,
-        message=message,
-        data=payload,
+    report_token = _get_or_create_weekly_report_token(
+
+        recipient
+
     )
+ 
+    payload_data = {
+
+        "notification_type": "system",
+
+        "category": "weekly_summary",
+
+        "event_type": "weekly_report",
+
+        "token": str(report_token.token),
+ 
+        # Backend report URL
+
+        "url": (
+
+            f"{settings.SITE_URL}"
+
+            f"{reverse(
+
+                'employer-weekly-summary',
+
+                kwargs={
+
+                    'token': report_token.token,
+
+                },
+
+            )}"
+
+        ),
+ 
+        # Frontend deep link
+
+        "link": (
+
+            f"{settings.SITE_URL}"
+
+            f"{reverse(
+
+                'employer-weekly-summary',
+
+                kwargs={
+
+                    'token': report_token.token,
+
+                },
+
+            )}"
+
+        )    }
+ 
+    response_id = send_push_notification(
+
+        token=token,
+
+        title=title,
+
+        body=message,
+
+        data=payload_data,
+
+    )
+
+    return response_id
+
 
 @staticmethod
 def _create_weekly_report_notification(
@@ -1438,10 +1520,11 @@ class NotificationService:
 
                 try:
                     if event_type == "weekly_report":
-                        _send_weekly_report_push(
+                        response_id = _send_weekly_report_push(
                             recipient=recipient,
                             title=title,
                             message=message,
+                            token=token,
                         )
                     else:
                         response_id = (

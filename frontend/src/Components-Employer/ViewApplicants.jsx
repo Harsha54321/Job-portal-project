@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import UserIcon from "../assets/Employer/User.png";
 import { useJobs } from "../JobContext";
@@ -19,11 +19,23 @@ export const ViewApplicants = ({ job, onBack }) => {
   const [jobseekerProfile, setJobseekerProfile] = useState(null);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'auto' });
-  }, []);
+  // Create the ref (left here so your return statements still work)
+  const topRef = useRef(null);
 
-  // Fetch applications for this job
+  // Safely scroll ONLY the dashboard container, restricting the main page from moving
+  useEffect(() => {
+    setTimeout(() => {
+      // 1. Keep the main window locked at the top so your header stays visible
+      window.scrollTo(0, 0);
+
+      // 2. Scroll ONLY the inside of the dashboard container
+      const dashboardContainer = document.querySelector('.Emainsec') || document.querySelector('.Emainsec2');
+      if (dashboardContainer) {
+        dashboardContainer.scrollTop = 0;
+      }
+    }, 10);
+  }, [viewMode]);
+
   useEffect(() => {
     const fetchApplications = async () => {
       try {
@@ -167,10 +179,15 @@ export const ViewApplicants = ({ job, onBack }) => {
   };
 
   const handleBack = () => {
-    setViewMode("list");
-    setSelectedApplication(null);
-    setJobseekerProfile(null);
-    if (onBack) onBack();
+    if (viewMode === "detail") {
+      // If viewing a single applicant's profile, go back to the applicants list
+      setViewMode("list");
+      setSelectedApplication(null);
+      setJobseekerProfile(null);
+    } else {
+      // If already on the applicants list, trigger onBack to return to My Job Post
+      if (onBack) onBack();
+    }
   };
 
   const getStatusClass = (status) => {
@@ -188,7 +205,7 @@ export const ViewApplicants = ({ job, onBack }) => {
 
   if (loading) {
     return (
-      <div className="view-applicants-page">
+      <div className="view-applicants-page" ref={topRef}>
         <div className="main-card">
           <div style={{ textAlign: "center", padding: "40px" }}>
             Loading applicants...
@@ -201,7 +218,7 @@ export const ViewApplicants = ({ job, onBack }) => {
   // --- TABLE VIEW ---
   if (viewMode === "list") {
     return (
-      <div className="view-applicants-page">
+      <div className="view-applicants-page" ref={topRef}>
         <div className="main-card">
           <div className="header-section">
             <div className="title-group">
@@ -285,7 +302,7 @@ export const ViewApplicants = ({ job, onBack }) => {
 
   // --- DETAIL VIEW ---
   return (
-    <div className="view-applicants-page detail-view">
+    <div className="view-applicants-page detail-view" ref={topRef}>
       <div className="detail-container">
         <div className="detail-header">
           <button className="back-btn" onClick={handleBack}>← Back to Applications</button>

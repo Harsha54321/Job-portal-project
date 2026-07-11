@@ -1435,17 +1435,17 @@ const DegreeDropdown = ({ value, onChange, options, name, error }) => {
                             <label
                                 key={opt}
                                 style={{
-                                    display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer',
+                                    display: 'flex', alignItems: 'flex-start', gap: '8px', cursor: 'pointer',
                                     fontSize: '13px', color: '#333'
                                 }}
                             >
                                 <input
-                                    type="checkbox" // Visually matches your screenshot requirement
+                                    type="checkbox"
                                     checked={value === opt}
                                     onChange={() => handleSelect(opt)}
-                                    style={{ cursor: 'pointer', width: '16px', height: '16px', accentColor: '#007bff' }}
+                                    style={{ cursor: 'pointer', width: '16px', height: '16px', flexShrink: 0, marginTop: '2px', accentColor: '#007bff' }}
                                 />
-                                {opt}
+                                <span style={{ lineHeight: '20px' }}>{opt}</span>
                             </label>
                         ))}
                     </div>
@@ -1486,9 +1486,8 @@ const EducationDetails = ({
             if (parseFloat(value) > 100) return;
         }
 
-        // 2. Letters only for City/State/Location
-        if (["city", "state", "country", "location", "country", "degree", "dept"].includes(name)) {
-            if (value !== "" && !/^[A-Za-z\s,]*$/.test(value)) return;
+        if (["city", "state", "country", "location", "degree", "dept"].includes(name)) {
+            if (value !== "" && !/^[A-Za-z0-9\s,\.\-\/\(\)]*$/.test(value)) return;
         }
 
         // Clear the specific error for this field

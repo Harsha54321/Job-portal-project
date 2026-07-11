@@ -1434,6 +1434,7 @@ class CreateJobPreviewView(generics.CreateAPIView):
             highlighted_at=timezone.now() if is_highlighted else None,
             expiry_days=platform.job_expire_days,
             is_expired=False,
+            job_status='Hiring in Progress',
         )
  
         # ── Notification message ────────────────────────────────────

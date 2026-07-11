@@ -1281,7 +1281,7 @@ class PostAJobSerializer(serializers.ModelSerializer):
  
         # Default job_status if not provided
         if not validated_data.get('job_status'):
-            validated_data['job_status'] = 'Reviewing Application'
+            validated_data['job_status'] = 'Hiring in Progress'
 
         array_fields = [
             'industry_type',

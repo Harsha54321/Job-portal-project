@@ -117,7 +117,7 @@ export const EditJob = () => {
   const tags = jobData?.tags || [jobCategory];
 
   // Get current status from job data
-  const currentJobStatus = jobData?.job_status || 'Reviewing Application';
+  const currentJobStatus = jobData?.job_status || 'Hiring in Progress';
 
   // Map status to type for styling
   const getStatusType = (status) => {

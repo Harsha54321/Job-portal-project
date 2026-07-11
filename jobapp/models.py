@@ -564,7 +564,7 @@ class PostAJob(models.Model):
     job_status = models.CharField(
         max_length=50,
         choices=JobStatus.choices,
-        default=JobStatus.REVIEWING_APPLICATION,
+        default=JobStatus.HIRING_IN_PROGRESS,
     )
  
     # EXISTING FIELD
