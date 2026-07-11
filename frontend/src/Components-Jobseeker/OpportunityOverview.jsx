@@ -11,10 +11,24 @@ import place from '../assets/opportunity_location.png'
 import twitter from '../assets/socials-x.png'
 import linkedin from '../assets/socials-linkedin.png'
 import facebook from '../assets/socials-facebook.png'
-import { formatPostedDate } from './OpportunitiesCard';
+import { formatPostedDate, isRecentlyPosted } from './OpportunitiesCard';
 import { useJobs } from '../JobContext';
 import { SearchBar } from './SearchBar'
 import api from "../api/axios";
+
+// Custom hook for scroll lock
+const useScrollLock = (isLocked) => {
+  useEffect(() => {
+    if (isLocked) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isLocked]);
+};
 
 export const OpportunityOverview = () => {
   const { id } = useParams();
@@ -39,7 +53,17 @@ export const OpportunityOverview = () => {
   const { isJobApplied } = useJobs();
   const isApplied = job ? isJobApplied(job.id) : false;
 
-  // ✅ Helper function for location display
+  // Check if job is highlighted or recent
+  const isHighlighted = job?.is_highlighted === true;
+  const isRecent = job ? isRecentlyPosted(job.posted_date || job.created_at) : false;
+  const [isOpen, setIsOpen] = useState(false);
+
+  // Apply scroll lock for all popups
+  useScrollLock(isOpen);
+  useScrollLock(isLocationPopupOpen);
+  useScrollLock(isIndustryPopupOpen);
+  useScrollLock(similarLocationPopup.open);
+  // Helper function for location display
   const getLocationDisplay = (location, maxDisplay = 3) => {
     if (!location) return { display: "Location not specified", allLocations: [], hasMore: false };
 
@@ -229,8 +253,39 @@ export const OpportunityOverview = () => {
   }
 
   const industryDisplay = getIndustryDisplay(job.industry_type);
-  
+
   const locationDisplay = locationsList.length > 0 ? locationsList.join(", ") : "Location not specified";
+
+  // Determine card class for main job card
+  let jobCardClassName = "opp-overview-job-card";
+  if (isHighlighted) {
+    jobCardClassName += " highlighted-job";
+  } else if (isRecent) {
+    jobCardClassName += " recent-job";
+  }
+
+  // Determine card class for job details card
+  let jobDetailsClassName = "opp-job-details-card";
+  if (isHighlighted) {
+    jobDetailsClassName += " highlighted-job";
+  } else if (isRecent) {
+    jobDetailsClassName += " recent-job";
+  }
+
+  // Determine card class for similar job items
+  const getSimilarJobClass = (similarJob) => {
+    const isSimHighlighted = similarJob.is_highlighted === true;
+    const isSimRecent = isRecentlyPosted(similarJob.posted_date || similarJob.created_at);
+
+    let className = "opp-similar-job";
+    if (isSimHighlighted) {
+      className += " highlighted-job";
+    } else if (isSimRecent) {
+      className += " recent-job";
+    }
+    return className;
+  };
+
   return (
     <>
       <Header />
@@ -249,8 +304,8 @@ export const OpportunityOverview = () => {
 
         <div className='opp-overview-main'>
           <div className="opp-job-main">
-            {/* Job Header  */}
-            <div className="opp-overview-job-card">
+            {/* Job Header - with dynamic styling */}
+            <div className={jobCardClassName}>
               <div className="Opportunities-job-header">
                 <div>
                   <h2 className="opp-topcard-job-title">{job.job_title}</h2>
@@ -359,7 +414,8 @@ export const OpportunityOverview = () => {
               </div>
             </div>
 
-            <div className="opp-job-details-card">
+            {/* Job Details Card - with dynamic styling */}
+            <div className={jobDetailsClassName}>
               <div className="opp-job-highlights">
                 <h3>Job Highlights</h3>
                 <ul>
@@ -385,9 +441,9 @@ export const OpportunityOverview = () => {
               </ul>
 
               <p><strong>Role:</strong> {job.job_title}</p>
-              
+
               {/* Updated Industry Type with truncation */}
-              <p><strong>Industry Type:</strong> 
+              <p><strong>Industry Type:</strong>
                 <span className="location-text-wrap">
                   {industryDisplay.hasMore ? (
                     <>
@@ -404,7 +460,7 @@ export const OpportunityOverview = () => {
                   )}
                 </span>
               </p>
-              
+
               <p><strong>Department:</strong> {Array.isArray(job.department) ? job.department.join(", ") : job.department}</p>
               <p><strong>Job Type:</strong> {job.work_type}</p>
               <p><strong>Location:</strong><span className="location-text-wrap">
@@ -454,12 +510,15 @@ export const OpportunityOverview = () => {
             {limitedSimilarJob.length > 0 ? (
               limitedSimilarJob.map((sim) => {
                 const locationInfo = getLocationDisplay(sim.location);
+                const simClassName = getSimilarJobClass(sim);
+                const isSimHighlighted = sim.is_highlighted === true;
+                const isSimRecent = isRecentlyPosted(sim.posted_date || sim.created_at);
 
                 return (
                   <div
                     key={sim.id}
                     onClick={() => navigate(`/Job-portal/jobseeker/OpportunityOverview/${sim.id}`)}
-                    className="opp-similar-job"
+                    className={simClassName}
                   >
                     <div className="Opportunities-job-header">
                       <div>

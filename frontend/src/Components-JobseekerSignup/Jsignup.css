@@ -76,7 +76,6 @@ body {
   border-radius: 6px;
   font-size: 14px;
   display: flex;
-  /* position: relative; */
   box-sizing: border-box;
 }
 
@@ -137,7 +136,18 @@ body {
   font-weight: 600;
   z-index: 5;
   line-height: 1;
+  box-sizing: border-box;   
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;  
 }
+ 
+.jsignup-small-verify-btn:hover,
+.jsignup-small-verify-btn:focus {
+  outline: none;
+  transform: translateY(-50%); 
+}
+
 
 
 .verified-badge {

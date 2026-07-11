@@ -156,7 +156,7 @@ ul {
 .opp-report-btn {
   margin-left: auto;
   border: 1px solid #1E88E5;
-  width: 130px;
+  min-width: 180px;
   height: 40px;
   background: #f8f8f8;
   color: #1E88E5;
@@ -214,10 +214,11 @@ ul {
 }
 
 .Opportunities-job-type {
-    color: #1a73e8;
-    font-weight: 500;
-    font-size: 0.9rem;
+  color: #1a73e8;
+  font-weight: 500;
+  font-size: 0.9rem;
 }
+
 /* Row layout */
 .Opportunities-row {
   display: flex;
@@ -306,8 +307,15 @@ ul {
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .opp-loc-modal-header {
@@ -374,4 +382,312 @@ ul {
   white-space: normal;
   word-break: break-word;
   line-height: 1.5;
+}
+
+/* ============================================
+   MAIN JOB CARD - HIGHLIGHTED STYLING
+   ============================================ */
+.opp-overview-job-card {
+  position: relative;
+}
+
+.opp-overview-job-card.highlighted-job {
+  border: 2px solid #FFD700;
+  background: linear-gradient(145deg, #FFFDF5, #FFF8E1);
+  position: relative;
+  overflow: hidden;
+}
+
+.opp-overview-job-card.highlighted-job .opp-topcard-job-title {
+  color: #B8860B;
+}
+
+.opp-overview-job-card.highlighted-job .Opportunities-apply-btn {
+  background: linear-gradient(135deg, #FFD700, #FFA000);
+  color: #5D4037;
+  font-weight: 600;
+  box-shadow: 0 2px 10px rgba(255, 215, 0, 0.4);
+}
+
+.opp-overview-job-card.highlighted-job .Opportunities-apply-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 20px rgba(255, 215, 0, 0.5);
+}
+
+.opp-overview-job-card.highlighted-job .Opportunities-save-btn {
+  border-color: #FFD700;
+  color: #B8860B;
+}
+
+.opp-overview-job-card.highlighted-job .Opportunities-save-btn:hover {
+  background: #FFD700;
+  color: #5D4037;
+}
+
+/* ============================================
+   MAIN JOB CARD - RECENT STYLING
+   ============================================ */
+.opp-overview-job-card.recent-job {
+  border: 1.5px solid #90CAF9;
+  background: linear-gradient(145deg, #F5FAFF, #E3F2FD);
+  box-shadow: 0 2px 12px rgba(30, 136, 229, 0.12);
+}
+
+.opp-overview-job-card.recent-job .opp-topcard-job-title {
+  color: #0D47A1;
+}
+
+.opp-overview-job-card.recent-job .Opportunities-apply-btn {
+  background: #42A5F5;
+  box-shadow: 0 2px 8px rgba(66, 165, 245, 0.3);
+}
+
+.opp-overview-job-card.recent-job .Opportunities-apply-btn:hover {
+  background: #1E88E5;
+  transform: scale(1.05);
+}
+
+.opp-overview-job-card.recent-job .Opportunities-save-btn {
+  border-color: #42A5F5;
+  color: #0D47A1;
+}
+
+.opp-overview-job-card.recent-job .Opportunities-save-btn:hover {
+  background: #42A5F5;
+  color: white;
+}
+
+/* ============================================
+   JOB DETAILS CARD - HIGHLIGHTED STYLING
+   ============================================ */
+.opp-job-details-card {
+  position: relative;
+  background: #fafafa;
+  border: 1px solid #eee;
+  min-width: 727px;
+  border-radius: 12px;
+  padding: 20px;
+
+  line-height: 1.6;
+  transition: all 0.3s ease;
+}
+
+.opp-job-details-card.highlighted-job {
+  border: 2px solid #FFD700;
+
+
+}
+
+.opp-job-details-card.highlighted-job h3 {
+  color: #B8860B;
+}
+
+.opp-job-details-card.highlighted-job .opp-job-highlights {
+  background: rgba(255, 215, 0, 0.08);
+  padding: 20px;
+  border-radius: 8px;
+}
+
+.opp-job-details-card.highlighted-job .opp-key-skills-container span {
+  border-color: #FFD700;
+  color: #B8860B;
+  background: rgba(255, 215, 0, 0.05);
+}
+
+/* ============================================
+   JOB DETAILS CARD - RECENT STYLING
+   ============================================ */
+.opp-job-details-card.recent-job {
+  border: 1.5px solid #90CAF9;
+  background: linear-gradient(145deg, #F5FAFF, #E3F2FD);
+  box-shadow: 0 2px 12px rgba(30, 136, 229, 0.12);
+}
+
+.opp-job-details-card.recent-job h3 {
+  color: #0D47A1;
+}
+
+.opp-job-details-card.recent-job .opp-job-highlights {
+  background: rgba(66, 165, 245, 0.08);
+  padding: 20px;
+  border-radius: 8px;
+}
+
+.opp-job-details-card.recent-job .opp-key-skills-container span {
+  border-color: #42A5F5;
+  color: #0D47A1;
+  background: rgba(66, 165, 245, 0.05);
+}
+
+
+
+/* ============================================
+   JOB DETAILS CARD - HOVER EFFECTS
+   ============================================ */
+.opp-job-details-card:hover {
+  background: #f8f9fa;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.opp-job-details-card.highlighted-job:hover {
+  box-shadow: 0 6px 25px rgba(255, 215, 0, 0.25);
+}
+
+.opp-job-details-card.recent-job:hover {
+  box-shadow: 0 4px 18px rgba(30, 136, 229, 0.2);
+}
+
+/* ============================================
+   SIMILAR JOBS - HIGHLIGHTED STYLING
+   ============================================ */
+.opp-similar-job {
+  position: relative;
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+  margin-bottom: 17px;
+  padding-left: 10px;
+  padding-right: 10px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.opp-similar-job.highlighted-job {
+  border: 2px solid #FFD700;
+  background: linear-gradient(145deg, #FFFDF5, #FFF8E1);
+  box-shadow: 0 4px 15px rgba(255, 215, 0, 0.2);
+}
+
+.opp-similar-job.highlighted-job .similar-job-title {
+  color: #B8860B;
+}
+
+/* ============================================
+   SIMILAR JOBS - RECENT STYLING
+   ============================================ */
+.opp-similar-job.recent-job {
+  border: 1.5px solid #90CAF9;
+  background: linear-gradient(145deg, #F5FAFF, #E3F2FD);
+  box-shadow: 0 2px 10px rgba(30, 136, 229, 0.1);
+}
+
+.opp-similar-job.recent-job .similar-job-title {
+  color: #0D47A1;
+}
+
+/* ============================================
+   RECENT JOB - SAVE BUTTON ALL STATES
+   ============================================ */
+
+/* Normal state - recent job save button */
+.Opportunities-job-card.recent-job .Opportunities-save-btn {
+  border: 1.5px solid #42A5F5;
+  background: white;
+  color: #0D47A1;
+  transition: all 0.3s ease;
+}
+
+/* Hover state */
+.Opportunities-job-card.recent-job .Opportunities-save-btn:hover {
+  background: #42A5F5;
+  color: white;
+  transform: scale(1.05);
+  box-shadow: 0 2px 12px rgba(66, 165, 245, 0.3);
+}
+
+/* Focus state */
+.Opportunities-job-card.recent-job .Opportunities-save-btn:focus {
+  transform: scale(1.06);
+  box-shadow: 0 0 0 3px rgba(66, 165, 245, 0.3);
+}
+
+/* SAVED STATE - recent job */
+.Opportunities-job-card.recent-job .Opportunities-save-btn.saved {
+  background: #42A5F5;
+  color: white;
+  border-color: #42A5F5;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(66, 165, 245, 0.3);
+}
+
+/* Saved + Hover state */
+.Opportunities-job-card.recent-job .Opportunities-save-btn.saved:hover {
+  background: #1E88E5;
+  border-color: #1E88E5;
+  transform: scale(1.05);
+  box-shadow: 0 4px 16px rgba(66, 165, 245, 0.4);
+}
+
+/* Saved + Focus state */
+.Opportunities-job-card.recent-job .Opportunities-save-btn.saved:focus {
+  transform: scale(1.06);
+  box-shadow: 0 0 0 3px rgba(66, 165, 245, 0.4);
+}
+
+/* ============================================
+   SIMILAR JOBS SIDEBAR - LIGHT BACKGROUND
+   ============================================ */
+.opp-job-sidebar {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  margin-right: 120px;
+  border: 1px solid #eee;
+  border-radius: 12px;
+  max-width: 540px;
+  min-width: 450px;
+  padding: 25px;
+  height: fit-content;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  background: #fafafa;
+  transition: all 0.3s ease;
+}
+
+.opp-job-sidebar:hover {
+  background: #f8f9fa;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+/* ============================================
+   BADGE STYLES (Shared with OpportunitiesCard)
+   ============================================ */
+.opp-overview-job-card .job-badge,
+.opp-job-details-card .job-badge,
+.opp-similar-job .job-badge {
+  display: inline-block;
+  padding: 3px 12px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+  position: absolute;
+  top: -6px;
+  right: 14px;
+  z-index: 2;
+  animation: badge-pulse 2s ease-in-out infinite;
+}
+
+@keyframes badge-pulse {
+
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+.premium-badge {
+  background: linear-gradient(135deg, #FFD700, #FFA000);
+  color: #5D4037;
+  box-shadow: 0 2px 12px rgba(255, 215, 0, 0.4);
+}
+
+.recent-badge {
+  background: linear-gradient(135deg, #64B5F6, #1E88E5);
+  color: white;
+  box-shadow: 0 2px 10px rgba(30, 136, 229, 0.3);
 }

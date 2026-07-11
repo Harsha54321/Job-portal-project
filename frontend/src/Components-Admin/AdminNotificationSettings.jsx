@@ -201,15 +201,12 @@ export const AdminNotificationSettings = () => {
       return;
     }
 
-    // Get the new value for this specific cell
-    const newValue = !tablePreferences[typeId]?.[channelName];
-
-    // Update table preferences
+    // Update table preferences ONLY (No master channel side-effects)
     setTablePreferences(prev => ({
       ...prev,
       [typeId]: {
         ...prev[typeId],
-        [channelName]: newValue
+        [channelName]: !prev[typeId]?.[channelName]
       }
     }));
 
@@ -315,18 +312,27 @@ export const AdminNotificationSettings = () => {
                     </div>
                   </td>
                   {mainChannels.map(channel => {
-                    const isDisabled = channel === 'SMS' || type.id === 'general';
+                    const isRowDisabled = type.id === 'general';
+                    const isChannelDisabled = channel === 'SMS';
                     const isGloballyEnabled = isChannelEnabled(channel);
+
+                    const shouldDisable = isChannelDisabled || isRowDisabled || !isGloballyEnabled;
 
                     return (
                       <td key={channel} className="Adm-Not-td-switch">
-                        <span title={isDisabled ? "Under Implementation" : (!isGloballyEnabled ? "Channel is disabled" : "")}>
-                          <label className="Adm-Not-switch" style={{ opacity: isDisabled || !isGloballyEnabled ? 0.4 : 1 }}>
+                        <span title={isChannelDisabled || isRowDisabled ? "Under Implementation" : (!isGloballyEnabled ? "Channel is disabled" : "")}>
+                          <label
+                            className="Adm-Not-switch"
+                            style={{
+                              opacity: shouldDisable ? 0.5 : 1,
+                              pointerEvents: shouldDisable ? 'none' : 'auto'
+                            }}
+                          >
                             <input
                               type="checkbox"
-                              checked={tablePreferences[type.id]?.[channel] ?? false}
+                              checked={shouldDisable ? false : (tablePreferences[type.id]?.[channel] ?? false)}
                               onChange={() => handleTableChange(type.id, channel)}
-                              disabled={isDisabled || !isGloballyEnabled}
+                              disabled={shouldDisable}
                             />
                             <span className="Adm-Not-slider"></span>
                           </label>

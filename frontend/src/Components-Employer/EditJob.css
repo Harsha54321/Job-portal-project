@@ -1,9 +1,9 @@
-/* EditJob.css */
+/* EditJob.css / PostJobForm.css */
 
 .jobpost-page-title {
     min-height: 100vh;
     font-family: 'Inter', sans-serif;
-    background-color: #FAFCFF;
+    background-color: #FAFCFF; /* Optional background tint */
 }
 
 .jobpost-form-header {
@@ -27,9 +27,9 @@
     background: #FFFFFF;
     border: 1px solid #EBEBEB;
     border-radius: 12px;
-    padding: 40px 60px 20px 60px;
+    padding: 40px 60px 20px 60px; 
     max-width: 1000px;
-    margin: 0 auto 20px;
+    margin: 0 auto 20px; 
     box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.02);
 }
 
@@ -38,22 +38,22 @@
     display: flex;
     gap: 20px;
     margin-bottom: 20px;
-    align-items: center;
+    align-items: center; 
 }
 
 .jobpost-form-row.jobpost-top-align {
-    align-items: flex-start;
+    align-items: flex-start; 
 }
 
 .jobpost-label {
-    flex: 0 0 160px;
+    flex: 0 0 160px; 
     font-size: 14px;
     color: #8C95A1;
     font-weight: 600;
 }
 
 .jobpost-top-align .jobpost-label {
-    padding-top: 12px;
+    padding-top: 12px; 
 }
 
 /* Form Controls */
@@ -76,8 +76,7 @@
     color: #333333;
 }
 
-.jobpost-input:focus,
-.jobpost-textarea:focus {
+.jobpost-input:focus, .jobpost-textarea:focus {
     border-color: #2D9CDB;
 }
 
@@ -113,7 +112,7 @@
 }
 
 .jobpost-dropdown-panel {
-    display: none;
+    display: none; 
     position: absolute;
     top: 100%;
     left: 0;
@@ -155,16 +154,16 @@
 
 /* Work Type & Shift Groups */
 .jobpost-inline-group {
-    display: grid;
+    display: grid; 
     grid-template-columns: 1fr 1fr 1fr;
-    padding: 0 16px;
+    padding: 0 16px; 
     align-items: center;
 }
 
 .jobpost-checkbox-label {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 12px; 
     font-size: 14px;
     color: #A0AAB5;
     cursor: pointer;
@@ -211,12 +210,11 @@
 }
 
 /* Dynamic Fields (Highlights/Responsibilities) */
-.highlights-container,
-.responsibilities-list {
+.highlights-container, .responsibilities-list {
     display: flex;
-    flex-direction: column;
+    flex-direction: column; 
     gap: 10px;
-    flex: 1;
+    flex: 1; 
 }
 
 .jobpost-input-icon-titile {
@@ -253,8 +251,7 @@
     margin: 40px 0 80px;
 }
 
-.jobpost-btn-cancel,
-.jobpost-btn-preview {
+.jobpost-btn-cancel, .jobpost-btn-preview {
     padding: 12px 30px;
     border-radius: 6px;
     font-weight: 700;
@@ -278,6 +275,52 @@
 
 .jobpost-btn-preview:hover {
     background: #2582EB;
+}
+
+
+/* ============================================
+   EDIT JOB CARD - ONLY HIGHLIGHTED STYLING
+   ============================================ */
+.edit-job-card-wrapper .Opportunities-job-card {
+    position: relative;
+}
+
+.edit-job-card-wrapper .Opportunities-job-card.highlighted-job {
+    border: 2px solid #FFD700;
+    background: linear-gradient(145deg, #FFFDF5, #FFF8E1);
+    position: relative;
+    overflow: hidden;
+}
+
+.edit-job-card-wrapper .Opportunities-job-card.highlighted-job .Opportunities-job-title {
+    color: #B8860B;
+}
+
+/* Badge for highlighted jobs only */
+.edit-job-card-wrapper .job-badge {
+    display: inline-block;
+    padding: 3px 12px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    position: absolute;
+    top: -6px;
+    right: 14px;
+    z-index: 2;
+    animation: badge-pulse 2s ease-in-out infinite;
+}
+
+@keyframes badge-pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+}
+
+.edit-job-card-wrapper .premium-badge {
+    background: linear-gradient(135deg, #FFD700, #FFA000);
+    color: #5D4037;
+    box-shadow: 0 2px 12px rgba(255, 215, 0, 0.4);
 }
 
 /* ============================================================

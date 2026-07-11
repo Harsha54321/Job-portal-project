@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Footer } from '../Components-LandingPage/Footer';
 import "./HelpCenter.css";
 import Helpcenterimg from "../assets/Helpcenter.png";
@@ -11,13 +11,14 @@ export const HelpCenter = () => {
     const [showResults, setShowResults] = useState(false);
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+    const [searchError, setSearchError] = useState("");
     const navigate = useNavigate();
-
     // Check authentication status
     useEffect(() => {
         const token = sessionStorage.getItem('access');
         setIsAuthenticated(!!token);
     }, []);
+    const inputRef = useRef(null);
 
     const helpLinks = [
         {
@@ -139,6 +140,7 @@ export const HelpCenter = () => {
         setSearchText("");
         setShowResults(false);
         setActiveIndex(-1);
+        setSearchError("");
     };
 
     // Handle "Raise a Ticket" click
@@ -158,6 +160,38 @@ export const HelpCenter = () => {
         navigate('/Job-portal/jobseeker/help-center/live-chat');
     };
 
+    const handleSearch = () => {
+        if (searchText.trim() === "") {
+            setSearchError("Please enter any issue to search");
+            setShowResults(false);
+            inputRef.current?.focus();
+            return;
+        }
+
+        setSearchError("");
+
+        if (filteredLinks.length > 0) {
+            const first = filteredLinks[0];
+            if (first.requiresAuth && !isAuthenticated) {
+                setShowLoginPrompt(true);
+                setTimeout(() => setShowLoginPrompt(false), 30000);
+                return;
+            }
+            navigate(first.path, { state: first.state });
+            setShowResults(false);
+            setSearchText("");
+        }
+    };
+
+    const handleInputChange = (e) => {
+        const value = e.target.value;
+        setSearchText(value);
+        setShowResults(true);
+        if (value.trim() !== "") {
+            setSearchError("");
+        }
+    };
+
     return (
         <>
             <FHeader />
@@ -172,18 +206,17 @@ export const HelpCenter = () => {
                             questions, helpful guides, and useful tips to assist you in getting the
                             most out of our platform.
                         </p>
-
                         <div className="helpcenter-search-wrapper">
-                            <div className="Helpcenter-search-box">
+                            <div className={`Helpcenter-search-box ${searchError ? "error" : ""}`}>
                                 <input
+                                    ref={inputRef}
                                     type="text"
-                                    placeholder="Enter a keyword search"
+                                    placeholder={searchError ? "Please enter any issue to search" : "Enter a keyword search"}
                                     value={searchText}
-                                    onChange={(e) => {
-                                        setSearchText(e.target.value);
-                                        setShowResults(true);
-                                    }}
+                                    onChange={handleInputChange}
                                     onKeyDown={(e) => {
+                                        if (searchError) setSearchError("");
+
                                         if (!filteredLinks.length) return;
 
                                         if (e.key === "ArrowDown") {
@@ -202,43 +235,20 @@ export const HelpCenter = () => {
 
                                         if (e.key === "Enter") {
                                             e.preventDefault();
-                                            const selected = activeIndex >= 0 ? filteredLinks[activeIndex] : filteredLinks[0];
-
-                                            // Check if selected link requires authentication
-                                            if (selected.requiresAuth && !isAuthenticated) {
-                                                setShowLoginPrompt(true);
-                                                setTimeout(() => setShowLoginPrompt(false), 60000);
-                                                return;
-                                            }
-
-                                            navigate(selected.path, { state: selected.state });
-                                            setSearchText("");
-                                            setShowResults(false);
-                                            setActiveIndex(-1);
+                                            handleSearch();
                                         }
+                                    }}
+                                    style={{
+                                        color: searchError ? "#dc3545" : undefined,
+                                        borderColor: searchError ? "#dc3545" : undefined
                                     }}
                                 />
-
-                                <button
-                                    onClick={() => {
-                                        if (filteredLinks.length > 0) {
-                                            const first = filteredLinks[0];
-                                            if (first.requiresAuth && !isAuthenticated) {
-                                                setShowLoginPrompt(true);
-                                                setTimeout(() => setShowLoginPrompt(false), 30000);
-                                                return;
-                                            }
-                                            navigate(first.path, { state: first.state });
-                                            setShowResults(false);
-                                            setSearchText("");
-                                        }
-                                    }}
-                                >
+                                <button onClick={handleSearch}>
                                     <img src={search} alt="search" />
                                 </button>
                             </div>
 
-                            {showResults && searchText && (
+                            {showResults && searchText && !searchError && (
                                 <div className="helpcenter-search-dropdown">
                                     {filteredLinks.length > 0 ? (
                                         filteredLinks.map((item, index) => (

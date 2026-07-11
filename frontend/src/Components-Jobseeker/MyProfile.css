@@ -621,3 +621,11 @@ select:hover,
 select option {
     cursor: pointer;
 }
+
+.submenu-item::before {
+    content: "•";
+    color: #007bff;
+    font-size: 1.4rem;
+    margin-right: 0.75rem;
+    line-height: 0;
+}

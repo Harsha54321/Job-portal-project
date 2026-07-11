@@ -157,7 +157,32 @@ export const Jsignup = () => {
     return true;
   };
 
-  // Helper function to check if email domain is allowed
+  // // Helper function to check if email domain is allowed
+  // const isEmailDomainAllowed = (email) => {
+  //   // If domain restriction is disabled, allow all domains
+  //   if (!jobseekerSettings.domainRest) {
+  //     return true;
+  //   }
+
+  //   // If domain restriction is enabled but no domains specified, treat as all domains allowed
+  //   if (jobseekerSettings.domainRest && jobseekerSettings.allowedDomains.length === 0) {
+  //     return true;
+  //   }
+
+  //   // Extract domain from email
+  //   const emailParts = email.split('@');
+  //   if (emailParts.length !== 2) {
+  //     return false; // Invalid email format
+  //   }
+
+  //   const domain = emailParts[1].toLowerCase().trim();
+
+  //   // Check if domain is in allowed list
+  //   return jobseekerSettings.allowedDomains.some(allowedDomain =>
+  //     allowedDomain.toLowerCase().trim() === domain
+  //   );
+  // };
+
   const isEmailDomainAllowed = (email) => {
     // If domain restriction is disabled, allow all domains
     if (!jobseekerSettings.domainRest) {
@@ -183,7 +208,8 @@ export const Jsignup = () => {
     );
   };
 
-  // Helper function to validate email (format + domain)
+
+  // // Helper function to validate email (format + domain)
   const validateEmail = (email) => {
     if (!email.trim()) {
       return { valid: false, error: "Email is required" };
@@ -203,6 +229,8 @@ export const Jsignup = () => {
 
     return { valid: true, error: null };
   };
+
+  
 
   const handleForm = (e) => {
     const { name, value } = e.target;
@@ -711,7 +739,7 @@ export const Jsignup = () => {
             <h2>Sign up for Jobseeker</h2>
 
             {/* Username */}
-            <label>User name</label>
+            <label>User Name</label>
             <input
               type="text"
               name="username"

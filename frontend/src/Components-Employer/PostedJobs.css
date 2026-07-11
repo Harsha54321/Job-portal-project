@@ -314,3 +314,115 @@
         width: 100%; 
     }
 } */
+
+
+/* ============================================
+   POSTED JOBS CARDS - ONLY HIGHLIGHTED STYLING
+   ============================================ */
+.postedjobs-card {
+    position: relative;
+}
+
+.postedjobs-card.highlighted-job {
+    border: 2px solid #FFD700;
+    background: linear-gradient(145deg, #FFFDF5, #FFF8E1);
+    position: relative;
+    overflow: hidden;
+}
+
+.postedjobs-card.highlighted-job .postedjobs-info h3 {
+    color: #B8860B;
+}
+
+.postedjobs-card.highlighted-job .postedjobs-badge {
+    background: rgba(255, 215, 0, 0.2);
+    border: 1px solid #FFD700;
+    color: #B8860B;
+}
+
+/* Badge for highlighted jobs only */
+.postedjobs-card .job-badge {
+    display: inline-block;
+    padding: 3px 12px;
+    border-radius: 20px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    position: absolute;
+    top: -6px;
+    right: 14px;
+    z-index: 2;
+    animation: badge-pulse 2s ease-in-out infinite;
+}
+
+@keyframes badge-pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+}
+
+.postedjobs-card .premium-badge {
+    background: linear-gradient(135deg, #FFD700, #FFA000);
+    color: #5D4037;
+    box-shadow: 0 2px 12px rgba(255, 215, 0, 0.4);
+}
+
+/* Add/modify these styles in PostedJobs.css */
+
+.postedjobs-menu-wrapper {
+    position: relative;
+    display: inline-block;
+}
+
+.postedjobs-dots {
+    background: none;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    padding: 5px 10px;
+}
+
+.postedjobs-dropdown {
+    position: absolute;
+    right: 0;
+    top: 30px;
+    background: white;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    border-radius: 8px;
+    z-index: 9999 !important;
+    overflow: hidden;
+    min-width: 130px;
+}
+
+.postedjobs-dropdown button {
+    display: block;
+    width: 100%;
+    padding: 12px 15px;
+    border: none;
+    background: none;
+    text-align: left;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background 0.2s;
+}
+
+.postedjobs-dropdown button:hover {
+    background: #f8f9fa;
+}
+
+.delete-opt {
+    color: #d9534f;
+    font-weight: 600;
+}
+
+.delete-opt:hover {
+    background: #fff5f5 !important;
+}
+
+.postedjobs-actions {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 10px;
+    position: relative;
+}

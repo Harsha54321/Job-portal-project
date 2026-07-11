@@ -570,51 +570,108 @@ export const EmployerDashboard = () => {
                                                 <div className='ERecent-Post-Cont'>
                                                     <h3 style={{ marginleft: "40px" }}>Recently Posted Jobs</h3>
                                                     <div className='ERecent-Post-Table-Container'>
-                                                        {PostedJob.length > 0 ? (<>
-                                                            <div className="postedjobs-grid-layout postedjobs-table-header">
-                                                                <div />
-                                                                <span className="postedjobs-label">Applicants</span>
-                                                                <span className="postedjobs-label" title="Candidates who applied but not yet reviewed">
-                                                                    New ⓘ
-                                                                </span>
-                                                                <span className="postedjobs-label">Shortlisted</span>
-                                                                <span className="postedjobs-label">Interview</span>
-                                                                <span className="postedjobs-label">Rejected</span>
-                                                                <div />
-                                                            </div>
-                                                            <div className="postedjobs-list">
-                                                                {PostedJob.slice(0, 5).map((job) => {
-                                                                    const stats = getJobApplicationStats(job.id);
-                                                                    return (
-                                                                        <div key={job.id} className="postedjobs-grid-layout postedjobs-card">
-                                                                            <div className="postedjobs-info">
-                                                                                <h3>{job.job_title || job.title}</h3>
-                                                                                <p className="postedjobs-loc flex items-center gap-2">
-                                                                                    <img src={place} alt="location" className="post-job-locationicon" />
-                                                                                    <LocationDisplay locations={job.location} />
-                                                                                </p>
-                                                                                <small>Created on: {new Date(job.created_at || job.posted_date).toLocaleDateString()}</small>
-                                                                            </div>
-                                                                            <span className="postedjobs-badge">{stats.total}</span>
-                                                                            <span className="postedjobs-badge">{stats.new}</span>
 
-                                                                            <span className="postedjobs-badge">{stats.shortlisted}</span>
-                                                                            <span className="postedjobs-badge">{stats.interview}</span>
-                                                                            <span className="postedjobs-badge">{stats.rejected}</span>
-                                                                            <div className="postedjobs-actions">
-                                                                                <button className="postedjobs-view-btn" onClick={() => handleViewApplicants(job)}>
-                                                                                    View applicants
-                                                                                </button>
-                                                                            </div>
-                                                                        </div>
-                                                                    );
-                                                                })}
-                                                            </div>
-                                                        </>
-                                                        ) : (
+                                                        {PostedJob.length > 0 ? (
                                                             <>
-                                                                <h2 style={{ display: "flex", justifyContent: "center", alignItems: "center", height: '50vh' }}>No Jobs posted by you</h2>
+                                                                <div className="postedjobs-grid-layout postedjobs-table-header">
+                                                                    <div />
+                                                                    <span className="postedjobs-label">Applicants</span>
+                                                                    <span className="postedjobs-label" title="Candidates who applied but not yet reviewed">
+                                                                        New ⓘ
+                                                                    </span>
+                                                                    <span className="postedjobs-label">Shortlisted</span>
+                                                                    <span className="postedjobs-label">Interview</span>
+                                                                    <span className="postedjobs-label">Rejected</span>
+                                                                    <div />
+                                                                </div>
+                                                                <div className="postedjobs-list">
+                                                                    {PostedJob.slice(0, 5).map((job) => {
+                                                                        const stats = getJobApplicationStats(job.id);
+
+                                                                        // ONLY highlighted jobs get styling
+                                                                        const isHighlighted = job.is_highlighted === true;
+
+                                                                        let rowClassName = "postedjobs-grid-layout postedjobs-card";
+                                                                        if (isHighlighted) {
+                                                                            rowClassName += " highlighted-job";
+                                                                        }
+
+                                                                        return (
+                                                                            <div key={job.id} className={rowClassName} style={{ position: 'relative', overflow: 'visible' }}>
+                                                                                {/* Badge only for highlighted jobs */}
+                                                                                {/* {isHighlighted && <span className="job-badge premium-badge">⭐ Featured</span>} */}
+
+                                                                                <div className="postedjobs-info">
+                                                                                    <h3>{job.job_title || job.title}</h3>
+                                                                                    <p className="postedjobs-loc flex items-center gap-2">
+                                                                                        <img src={place} alt="location" className="post-job-locationicon" />
+                                                                                        <LocationDisplay locations={job.location} />
+                                                                                    </p>
+                                                                                    <small>Created on: {new Date(job.created_at || job.posted_date).toLocaleDateString()}</small>
+                                                                                </div>
+                                                                                <span className="postedjobs-badge">{stats.total}</span>
+                                                                                <span className="postedjobs-badge">{stats.new}</span>
+                                                                                <span className="postedjobs-badge">{stats.shortlisted}</span>
+                                                                                <span className="postedjobs-badge">{stats.interview}</span>
+                                                                                <span className="postedjobs-badge">{stats.rejected}</span>
+                                                                                <div className="postedjobs-actions" style={{ position: 'relative' }}>
+                                                                                    <button className="postedjobs-view-btn" onClick={() => handleViewApplicants(job)}>
+                                                                                        View applicants
+                                                                                    </button>
+                                                                                    <div className="postedjobs-menu-wrapper" style={{ position: 'relative', display: 'inline-block' }}>
+                                                                                        <button
+                                                                                            onClick={() => {
+                                                                                                setActiveMenu(activeMenu === job.id ? null : job.id);
+                                                                                            }}
+                                                                                            className="postedjobs-dots"
+                                                                                            style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', padding: '5px 10px', color: '#94a3b8' }}
+                                                                                        >
+                                                                                            ⋮
+                                                                                        </button>
+                                                                                        {activeMenu === job.id && (
+                                                                                            <div
+                                                                                                className="postedjobs-dropdown"
+                                                                                                style={{
+                                                                                                    position: 'absolute',
+                                                                                                    right: 0,
+                                                                                                    top: '30px',
+                                                                                                    background: 'white',
+                                                                                                    boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                                                                                                    borderRadius: '8px',
+                                                                                                    zIndex: 99999,
+                                                                                                    overflow: 'hidden',
+                                                                                                    minWidth: '130px'
+                                                                                                }}
+                                                                                            >
+                                                                                                <button
+                                                                                                    onClick={() => {
+                                                                                                        setActiveMenu(null);
+                                                                                                        navigate('/Job-portal/Employer/EditJob', { state: job });
+                                                                                                    }}
+                                                                                                    style={{ display: 'block', width: '100%', padding: '12px 15px', border: 'none', background: 'none', textAlign: 'left', cursor: 'pointer', fontSize: '14px' }}
+                                                                                                >
+                                                                                                    Edit Status
+                                                                                                </button>
+                                                                                                <button
+                                                                                                    onClick={() => handleDeleteClick(job.id)}
+                                                                                                    className="delete-opt"
+                                                                                                    style={{ display: 'block', width: '100%', padding: '12px 15px', border: 'none', background: 'none', textAlign: 'left', cursor: 'pointer', fontSize: '14px', color: '#d9534f', fontWeight: '600' }}
+                                                                                                >
+                                                                                                    Delete
+                                                                                                </button>
+                                                                                            </div>
+                                                                                        )}
+                                                                                    </div>
+                                                                                </div>
+                                                                            </div>
+                                                                        );
+                                                                    })}
+                                                                </div>
                                                             </>
+                                                        ) : (
+                                                            <h2 style={{ display: "flex", justifyContent: "center", alignItems: "center", height: '50vh' }}>
+                                                                No Jobs posted by you
+                                                            </h2>
                                                         )}
                                                         {PostedJob.length > 0 && (
                                                             <div style={{ textAlign: 'center', marginTop: '20px' }}>

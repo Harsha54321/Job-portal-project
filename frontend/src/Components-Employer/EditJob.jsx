@@ -113,6 +113,14 @@ export const EditJob = () => {
   const jobCategory = jobData?.job_category || 'Full-time';
   const logo = jobData?.company?.company_logo || jobData?.company_logo || null;
 
+  // ONLY highlighted jobs get styling
+  const isHighlighted = jobData?.is_highlighted === true;
+
+  let cardClassName = "Opportunities-job-card";
+  if (isHighlighted) {
+    cardClassName += " highlighted-job";
+  }
+
   // Tags for display
   const tags = jobData?.tags || [jobCategory];
 
@@ -160,24 +168,16 @@ export const EditJob = () => {
 
       console.log('Update result:', result);
 
-      // Check if update was successful (handle different response formats)
       if (result && (result.success === true || result.status === 'success')) {
-        // Update the display status immediately
         setCurrentDisplayStatus(selectedStatus);
-
-        // Also update the jobData object if it's being used elsewhere
         if (jobData) {
           jobData.job_status = selectedStatus;
         }
-
         alert(`Job status updated to: ${selectedStatus}`);
-
         setTimeout(() => {
           navigate('/Job-portal/Employer/Dashboard');
         }, 2000);
-
       } else {
-        // Extract error message from response
         const errorMsg = result?.error?.job_status?.[0] ||
           result?.error ||
           result?.message ||
@@ -187,7 +187,6 @@ export const EditJob = () => {
       }
     } catch (error) {
       console.error('Error updating status:', error);
-
       let errorMessage = 'Error updating status';
       if (error.response) {
         console.error('Error response:', error.response.data);
@@ -197,7 +196,6 @@ export const EditJob = () => {
       } else if (error.message) {
         errorMessage = error.message;
       }
-
       alert(errorMessage);
       setIsUpdating(false);
     }
@@ -247,9 +245,7 @@ export const EditJob = () => {
     <>
       <EHeader />
 
-      {/* Main Page Wrapper */}
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginTop: "120px", minHeight: "80vh", padding: "20px" }}>
-
+      <div className="edit-job-card-wrapper" style={{ display: "flex", flexDirection: "column", alignItems: "center", marginTop: "100px", minHeight: "80vh", padding: "20px" }}>
         {/* Master Content Column - Ensures everything shares the exact same width and alignment */}
         <div style={{ width: "60%", minWidth: "350px", maxWidth: "800px", display: "flex", flexDirection: "column" }}>
 
@@ -272,8 +268,10 @@ export const EditJob = () => {
 
           </div>
 
-          {/* 3. Job Card */}
-          <div className="Opportunities-job-card" style={{ width: "100%", boxSizing: "border-box" }}>
+          <div style={{ width: "100%", boxSizing: "border-box" }} className={cardClassName}>
+            {/* Badge only for highlighted jobs */}
+            {/* {isHighlighted && <span className="job-badge premium-badge">⭐ Featured</span>} */}
+
             <div className="Opportunities-job-header">
               <div>
                 <h3 className="Opportunities-job-title">{jobTitle}</h3>
@@ -356,10 +354,8 @@ export const EditJob = () => {
               {isUpdating ? "Updating..." : "Submit Changes"}
             </button>
           </div>
-
         </div>
       </div>
-
       <Footer />
 
       {/* ============================================================

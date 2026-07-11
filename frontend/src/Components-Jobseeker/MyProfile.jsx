@@ -528,7 +528,7 @@ const Profile = ({ data, onChange, onReset, onNext, setProfilePhoto, setRemovePh
                 <div className="profile-form">
                     {/* Form fields remain the same */}
                     <div className="form-group">
-                        <label>Full name</label>
+                        <label>Full Name*</label>
                         <input
                             type="text"
                             name="fullName"
@@ -542,7 +542,7 @@ const Profile = ({ data, onChange, onReset, onNext, setProfilePhoto, setRemovePh
                         )}
                     </div>
                     <div className="form-group">
-                        <label>Gender</label>
+                        <label>Gender*</label>
                         <select
                             name="gender"
                             value={data.gender || "Select"}
@@ -559,7 +559,7 @@ const Profile = ({ data, onChange, onReset, onNext, setProfilePhoto, setRemovePh
                         )}
                     </div>
                     <div className="form-group">
-                        <label>Date of Birth</label>
+                        <label>Date of Birth*</label>
                         <input
                             type="date"
                             name="dob"
@@ -572,7 +572,7 @@ const Profile = ({ data, onChange, onReset, onNext, setProfilePhoto, setRemovePh
                         {errors.dob && <span className="error-message">{errors.dob}</span>}
                     </div>
                     <div className="form-group">
-                        <label>Marital Status</label>
+                        <label>Marital Status*</label>
                         <select
                             name="maritalStatus"
                             value={data.maritalStatus || "Select"}
@@ -588,7 +588,7 @@ const Profile = ({ data, onChange, onReset, onNext, setProfilePhoto, setRemovePh
                         )}
                     </div>
                     <div className="form-group">
-                        <label>Nationality</label>
+                        <label>Nationality*</label>
                         {/* <input
                             type="text"
                             name="nationality"
@@ -718,7 +718,7 @@ const CurrentDetails = ({ data, onChange, onReset, onNext }) => {
             <div className="form-grid">
                 {/* Experience Status */}
                 <div className="form-group">
-                    <label>Experience Status *</label>
+                    <label>Experience Status*</label>
                     <select
                         name="experienceType"
                         value={data.experienceType || ""}
@@ -736,7 +736,7 @@ const CurrentDetails = ({ data, onChange, onReset, onNext }) => {
                 {!isFresher && data.experienceType === "experienced" && (
                     <>
                         <div className="form-group">
-                            <label>Total Experience (Years) *</label>
+                            <label>Total Experience (Years)*</label>
                             <input
                                 type="text"
                                 name="experience"
@@ -752,7 +752,7 @@ const CurrentDetails = ({ data, onChange, onReset, onNext }) => {
                         </div>
 
                         <div className="form-group">
-                            <label>Current Job Title *</label>
+                            <label>Current Job Title*</label>
                             <input
                                 type="text"
                                 name="jobTitle"
@@ -765,7 +765,7 @@ const CurrentDetails = ({ data, onChange, onReset, onNext }) => {
                         </div>
 
                         <div className="form-group">
-                            <label>Current Company *</label>
+                            <label>Current Company*</label>
                             <input
                                 type="text"
                                 name="company"
@@ -778,7 +778,7 @@ const CurrentDetails = ({ data, onChange, onReset, onNext }) => {
                         </div>
 
                         <div className="form-group">
-                            <label>Notice Period *</label>
+                            <label>Notice Period*</label>
                             <select
                                 name="noticePeriod"
                                 value={data.noticePeriod || "Select"}
@@ -798,7 +798,7 @@ const CurrentDetails = ({ data, onChange, onReset, onNext }) => {
 
                 {/* Location Fields: Rendered cleanly for both statuses */}
                 <div className="form-group full-width">
-                    <label>Current Location *</label>
+                    <label>Current Location*</label>
                     <input
                         type="text"
                         name="currentLocation"
@@ -811,7 +811,7 @@ const CurrentDetails = ({ data, onChange, onReset, onNext }) => {
                 </div>
 
                 <div className="form-group full-width">
-                    <label>Preferred Location(s) *</label>
+                    <label>Preferred Location(s)*</label>
                     <input
                         type="text"
                         name="prefLocation"
@@ -912,7 +912,7 @@ const ContactDetails = ({ data, onChange, onReset, onNext }) => {
             </div>
             <div className="form-grid">
                 <div className="form-group">
-                    <label>Mobile Number</label>
+                    <label>Mobile Number*</label>
                     <input
                         type="tel"
                         name="mobile"
@@ -945,7 +945,7 @@ const ContactDetails = ({ data, onChange, onReset, onNext }) => {
                 </div>
 
                 <div className="form-group">
-                    <label>Email ID</label>
+                    <label>Email ID*</label>
                     <input
                         type="email"
                         name="email"
@@ -973,7 +973,7 @@ const ContactDetails = ({ data, onChange, onReset, onNext }) => {
                 </div>
 
                 <div className="form-group full-width">
-                    <label>Address</label>
+                    <label>Address*</label>
                     <input
                         type="text"
                         name="address"
@@ -988,7 +988,7 @@ const ContactDetails = ({ data, onChange, onReset, onNext }) => {
                 </div>
 
                 <div className="form-group">
-                    <label>Street</label>
+                    <label>Street*</label>
                     <input
                         type="text"
                         name="street"
@@ -1001,7 +1001,7 @@ const ContactDetails = ({ data, onChange, onReset, onNext }) => {
                 </div>
 
                 <div className="form-group">
-                    <label>City</label>
+                    <label>City*</label>
                     <input
                         type="text"
                         name="city"
@@ -1016,7 +1016,7 @@ const ContactDetails = ({ data, onChange, onReset, onNext }) => {
                 </div>
 
                 <div className="form-group">
-                    <label>State</label>
+                    <label>State*</label>
                     <input
                         type="text"
                         name="state"
@@ -1031,7 +1031,7 @@ const ContactDetails = ({ data, onChange, onReset, onNext }) => {
                 </div>
 
                 <div className="form-group">
-                    <label>Pincode</label>
+                    <label>Pincode*</label>
                     <input
                         type="text"
                         name="pincode"
@@ -1048,7 +1048,7 @@ const ContactDetails = ({ data, onChange, onReset, onNext }) => {
                 </div>
 
                 <div className="form-group">
-                    <label>Country</label>
+                    <label>Country*</label>
                     <input
                         type="text"
                         name="country"
@@ -1286,7 +1286,7 @@ const ResumeSection = ({
                                     src={uploadIcon}
                                     alt="upload"
                                 />{" "}
-                                Upload Resume
+                                Upload Resume*
                             </div>
                             <div>
                                 <small>Allowed formats: PDF, DOC, DOCX (Max 5MB)</small>
@@ -1329,132 +1329,6 @@ const ResumeSection = ({
     );
 };
 
-const degreeOptions = [
-    "BS", "B.A", "CA", "B.Ed", "M.Com", "B.Sc", "MCA", "BCA", "LLM", "MS/M.Sc",
-    "Diploma", "B.Com", "M.Tech", "MBA/PGDM", "PG Diploma", "B.B.A/ B.M.S",
-    "Medical-MS/MD", "B.Tech/B.E.", "Any Graduate", "Other Post Graduate",
-    "ITI Certification", "Any Postgraduate", "Bachelor Of Science",
-    "Business Economics", "Artificial Intelligence (AI)", "Machine Learning",
-    "Data Science", "Cyber Security", "Cloud Computing"
-];
-
-const DegreeDropdown = ({ value, onChange, options, name, error }) => {
-    const [isOpen, setIsOpen] = useState(false);
-    const [isManual, setIsManual] = useState(false);
-    const dropdownRef = useRef(null);
-
-    // If the value exists but isn't in the options list, it was entered manually
-    useEffect(() => {
-        if (value && !options.includes(value) && value !== "Others") {
-            setIsManual(true);
-        }
-    }, [value, options]);
-
-    useEffect(() => {
-        const handleClickOutside = (event) => {
-            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-                setIsOpen(false);
-            }
-        };
-        document.addEventListener("mousedown", handleClickOutside);
-        return () => document.removeEventListener("mousedown", handleClickOutside);
-    }, []);
-
-    const handleSelect = (opt) => {
-        if (opt === "Others") {
-            setIsManual(true);
-            setIsOpen(false);
-            onChange({ target: { name, value: "" } });
-        } else {
-            setIsManual(false);
-            setIsOpen(false);
-            onChange({ target: { name, value: opt } });
-        }
-    };
-
-    // If user selected "Others" or loaded a custom value, show text input
-    if (isManual) {
-        return (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%' }}>
-                <input
-                    type="text"
-                    name={name}
-                    value={value}
-                    onChange={onChange}
-                    placeholder="Type degree manually..."
-                    className={error ? "input-error" : ""}
-                    style={{ flex: 1 }}
-                    autoFocus
-                />
-                <button
-                    type="button"
-                    onClick={() => {
-                        setIsManual(false);
-                        onChange({ target: { name, value: "" } });
-                    }}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc3545', fontSize: '20px', fontWeight: 'bold' }}
-                    title="Select from list"
-                >
-                    &times;
-                </button>
-            </div>
-        );
-    }
-
-    return (
-        <div ref={dropdownRef} style={{ position: 'relative', width: '100%' }}>
-            {/* Dropdown Trigger Box */}
-            <div
-                onClick={() => setIsOpen(!isOpen)}
-                style={{
-                    height: '44px', border: error ? '1px solid #dc3545' : '1px solid #E5E7EB',
-                    borderRadius: '6px', padding: '0 16px', display: 'flex',
-                    alignItems: 'center', cursor: 'pointer', background: '#fff',
-                    justifyContent: 'space-between'
-                }}
-            >
-                <span style={{ color: value ? '#000' : '#999', fontSize: '14px' }}>
-                    {value || "Select Education"}
-                </span>
-                {/* Custom Chevron Arrow from your screenshot */}
-                <svg width="14" height="8" viewBox="0 0 14 8" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ transform: isOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>
-                    <path d="M1 1L7 7L13 1" stroke="#666" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-            </div>
-
-            {/* Dropdown Panel (3 Column Layout) */}
-            {isOpen && (
-                <div style={{
-                    position: 'absolute', top: '100%', left: 0, width: '100%', zIndex: 1000,
-                    background: '#fff', border: '1px solid #E5E7EB', borderRadius: '8px',
-                    padding: '20px', marginTop: '4px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                    maxHeight: '300px', overflowY: 'auto'
-                }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px 12px' }}>
-                        {[...options, "Others"].map(opt => (
-                            <label
-                                key={opt}
-                                style={{
-                                    display: 'flex', alignItems: 'flex-start', gap: '8px', cursor: 'pointer',
-                                    fontSize: '13px', color: '#333'
-                                }}
-                            >
-                                <input
-                                    type="checkbox"
-                                    checked={value === opt}
-                                    onChange={() => handleSelect(opt)}
-                                    style={{ cursor: 'pointer', width: '16px', height: '16px', flexShrink: 0, marginTop: '2px', accentColor: '#007bff' }}
-                                />
-                                <span style={{ lineHeight: '20px' }}>{opt}</span>
-                            </label>
-                        ))}
-                    </div>
-                </div>
-            )}
-        </div>
-    );
-};
-
 const EducationDetails = ({
     data,
     onHighestQualChange,
@@ -1467,8 +1341,310 @@ const EducationDetails = ({
     onNext,
 }) => {
     const [openSection, setOpenSection] = useState("sslc");
+    const prevGradCountRef = useRef(data.graduations.length);
+    useEffect(() => {
+        if (data.graduations.length > prevGradCountRef.current) {
+            const lastGrad = data.graduations[data.graduations.length - 1];
+            setOpenSection(`grad-${lastGrad.id}`);
+        }
+        prevGradCountRef.current = data.graduations.length;
+    }, [data.graduations.length]);
     const currentYear = new Date().getFullYear();
     const percentageReg = /^(\d{1,2}(\.\d{0,2})?|100(\.0{0,2})?)$/;
+
+    const degreeMinYears = {
+        // ================= ENGINEERING / TECHNOLOGY =================
+        "BE": 4, "B.E": 4, "BTECH": 4, "B.TECH": 4,
+        "ME": 2, "M.E": 2, "MTECH": 2, "M.TECH": 2,
+        "BARCH": 5, "B.ARCH": 5, "MARCH": 2, "M.ARCH": 2,
+        "BPLAN": 4, "B.PLAN": 4, "MPLAN": 2, "M.PLAN": 2,
+
+        // ================= SCIENCE =================
+        "BSC": 3, "B.SC": 3, "MSC": 2, "M.SC": 2,
+        "BSC(HONS)": 3,
+        "BSTAT": 3, "B.STAT": 3, "MSTAT": 2, "M.STAT": 2,
+        "INTEGRATEDMSC": 5, "INTEGRATEDM.SC": 5,
+
+        // ================= ARTS / HUMANITIES / SOCIAL SCIENCE =================
+        "BA": 3, "B.A": 3, "MA": 2, "M.A": 2,
+        "BA(HONS)": 3,
+
+        // ================= COMMERCE / MANAGEMENT =================
+        "BCOM": 3, "B.COM": 3, "MCOM": 2, "M.COM": 2,
+        "BBA": 3, "MBA": 2, "PGDM": 2,
+        "BBM": 3, "BMS": 3,
+        "BCA": 3, "MCA": 2,
+        "BFIA": 3,
+
+        // ================= COMPUTER SCIENCE / IT (STANDALONE) =================
+        "BSCCS": 3, "BSCIT": 3, "MSCCS": 2, "MSCIT": 2,
+        "MSCDATASCIENCE": 2, "PGDCA": 1,
+
+        // ================= MEDICAL - ALLOPATHY =================
+        "MBBS": 5.5,
+        "MD": 3, "MS": 3, "DM": 3, "MCH": 3, "M.CH": 3,
+        "DNB": 3,
+
+        // ================= DENTAL =================
+        "BDS": 5, "MDS": 3,
+
+        // ================= AYUSH (Ayurveda / Homeopathy / Unani / Siddha / Yoga & Naturopathy) =================
+        "BAMS": 5.5, "BHMS": 5.5, "BUMS": 5.5, "BSMS": 5.5, "BYNS": 5.5, "BNYS": 5.5,
+        "MDAYURVEDA": 3, "MDHOMEOPATHY": 3,
+
+        // ================= VETERINARY / AGRICULTURE / FISHERIES / FORESTRY =================
+        "BVSC": 5, "BVSC&AH": 5, "MVSC": 2,
+        "BSCAGRICULTURE": 4, "MSCAGRICULTURE": 2,
+        "BSCFORESTRY": 4, "BSCHORTICULTURE": 4,
+        "BFSC": 4, "B.F.SC": 4,
+
+        // ================= PHARMACY =================
+        "D.PHARM": 2, "DPHARM": 2,
+        "B.PHARM": 4, "BPHARM": 4,
+        "M.PHARM": 2, "MPHARM": 2,
+        "PHARM.D": 6, "PHARMD": 6,
+
+        // ================= NURSING / ALLIED HEALTH =================
+        "ANM": 2, "GNM": 3.5,
+        "BSCNURSING": 4, "MSCNURSING": 2,
+        "BPT": 4.5, "MPT": 2,
+        "BOT": 4.5, "MOT": 2,
+        "BASLP": 4,
+        "B.SCMLT": 3, "BMLT": 3,
+        "BSCOPTOMETRY": 4,
+
+        // ================= LAW =================
+        "LLB": 3, "LL.B": 3,
+        "BALLB": 5, "BA.LLB": 5, "BBALLB": 5, "BBA.LLB": 5, "BCOMLLB": 5,
+        "LLM": 1, "LL.M": 1,
+
+        // ================= EDUCATION =================
+        "D.ED": 2, "DED": 2,
+        "B.ED": 2, "BED": 2,
+        "M.ED": 2, "MED": 2,
+        "D.EL.ED": 2, "BPED": 3, "B.P.ED": 3, "MPED": 2, "M.P.ED": 2,
+
+        // ================= DESIGN / FINE ARTS / FASHION =================
+        "B.DES": 4, "BDES": 4, "M.DES": 2, "MDES": 2,
+        "BFA": 4, "MFA": 2,
+        "BSCFASHIONDESIGN": 3, "MSCFASHIONDESIGN": 2,
+        "BID": 4,
+
+        // ================= SOCIAL WORK / JOURNALISM / MEDIA / LIBRARY SCIENCE =================
+        "BSW": 3, "MSW": 2,
+        "BJMC": 3, "MJMC": 2, "BJ": 3, "MJ": 2,
+        "BLIS": 1, "MLIS": 1,
+
+        // ================= HOTEL MANAGEMENT / AVIATION / VOCATIONAL =================
+        "BHM": 4, "BHMCT": 4, "MHM": 2,
+        "B.VOC": 3, "BVOC": 3,
+        "DIPLOMAINAVIATION": 1,
+
+        // ================= PROFESSIONAL / FINANCE COURSES =================
+        "CA": 3, "C.A": 3,
+        "CS": 3, "C.S": 3,
+        "CMA": 3, "ICWA": 3,
+        "CFA": 2,
+        "ACCA": 2,
+        "ACTUARIALSCIENCE": 3,
+
+        // ================= DIPLOMA / DOCTORATE / OTHER =================
+        "DIPLOMA": 3,
+        "POLYTECHNIC": 3,
+        "ITI": 1,
+        "PHD": 3, "PH.D": 3, "DOCTORATE": 3,
+    };
+    const degreeAliases = {
+        // ================= ENGINEERING / TECHNOLOGY =================
+        "BACHELOROFENGINEERING": "BE",
+        "BACHELOROFTECHNOLOGY": "BTECH",
+        "MASTEROFENGINEERING": "ME",
+        "MASTEROFTECHNOLOGY": "MTECH",
+        "BACHELOROFARCHITECTURE": "BARCH",
+        "MASTEROFARCHITECTURE": "MARCH",
+        "BACHELOROFPLANNING": "BPLAN",
+        "MASTEROFPLANNING": "MPLAN",
+
+        // ================= SCIENCE =================
+        "BACHELOROFSCIENCE": "BSC",
+        "MASTEROFSCIENCE": "MSC",
+        "BACHELOROFSCIENCEHONOURS": "BSC(HONS)",
+        "BACHELOROFSCIENCEHONS": "BSC(HONS)",
+        "BACHELOROFSTATISTICS": "BSTAT",
+        "MASTEROFSTATISTICS": "MSTAT",
+        "INTEGRATEDMASTEROFSCIENCE": "INTEGRATEDMSC",
+
+        // ================= ARTS / HUMANITIES =================
+        "BACHELOROFARTS": "BA",
+        "MASTEROFARTS": "MA",
+        "BACHELOROFARTSHONOURS": "BA(HONS)",
+        "BACHELOROFARTSHONS": "BA(HONS)",
+
+        // ================= COMMERCE / MANAGEMENT =================
+        "BACHELOROFCOMMERCE": "BCOM",
+        "MASTEROFCOMMERCE": "MCOM",
+        "BACHELOROFBUSINESSADMINISTRATION": "BBA",
+        "MASTEROFBUSINESSADMINISTRATION": "MBA",
+        "POSTGRADUATEDIPLOMAINMANAGEMENT": "PGDM",
+        "BACHELOROFBUSINESSMANAGEMENT": "BBM",
+        "BACHELOROFMANAGEMENTSTUDIES": "BMS",
+        "BACHELOROFCOMPUTERAPPLICATIONS": "BCA",
+        "MASTEROFCOMPUTERAPPLICATIONS": "MCA",
+        "BACHELOROFFINANCEANDINVESTMENTANALYSIS": "BFIA",
+
+        // ================= COMPUTER SCIENCE / IT (STANDALONE) =================
+        "BACHELOROFSCIENCECOMPUTERSCIENCE": "BSCCS",
+        "BACHELOROFSCIENCEINFORMATIONTECHNOLOGY": "BSCIT",
+        "MASTEROFSCIENCECOMPUTERSCIENCE": "MSCCS",
+        "MASTEROFSCIENCEINFORMATIONTECHNOLOGY": "MSCIT",
+        "MASTEROFSCIENCEDATASCIENCE": "MSCDATASCIENCE",
+        "POSTGRADUATEDIPLOMAINCOMPUTERAPPLICATIONS": "PGDCA",
+
+        // ================= MEDICAL - ALLOPATHY =================
+        "BACHELOROFMEDICINEBACHELOROFSURGERY": "MBBS",
+        "DOCTOROFMEDICINE": "MD",
+        "MASTEROFSURGERY": "MS",
+        "DOCTORATEOFMEDICINE": "DM",
+        "MASTEROFCHIRURGIAE": "MCH",
+        "MAGISTERCHIRURGIAE": "MCH",
+        "DIPLOMATEOFNATIONALBOARD": "DNB",
+
+        // ================= DENTAL =================
+        "BACHELOROFDENTALSURGERY": "BDS",
+        "MASTEROFDENTALSURGERY": "MDS",
+
+        // ================= AYUSH =================
+        "BACHELOROFAYURVEDICMEDICINEANDSURGERY": "BAMS",
+        "BACHELOROFHOMEOPATHICMEDICINEANDSURGERY": "BHMS",
+        "BACHELOROFUNANIMEDICINEANDSURGERY": "BUMS",
+        "BACHELOROFSIDDHAMEDICINEANDSURGERY": "BSMS",
+        "BACHELOROFYOGAANDNATUROPATHYSCIENCES": "BYNS",
+        "BACHELOROFNATUROPATHYANDYOGICSCIENCES": "BNYS",
+        "DOCTOROFMEDICINEAYURVEDA": "MDAYURVEDA",
+        "DOCTOROFMEDICINEHOMEOPATHY": "MDHOMEOPATHY",
+
+        // ================= VETERINARY / AGRICULTURE / FISHERIES / FORESTRY =================
+        "BACHELOROFVETERINARYSCIENCE": "BVSC",
+        "BACHELOROFVETERINARYSCIENCEANDANIMALHUSBANDRY": "BVSC&AH",
+        "MASTEROFVETERINARYSCIENCE": "MVSC",
+        "BACHELOROFSCIENCEAGRICULTURE": "BSCAGRICULTURE",
+        "MASTEROFSCIENCEAGRICULTURE": "MSCAGRICULTURE",
+        "BACHELOROFSCIENCEFORESTRY": "BSCFORESTRY",
+        "BACHELOROFSCIENCEHORTICULTURE": "BSCHORTICULTURE",
+        "BACHELOROFFISHERIESSCIENCE": "BFSC",
+
+        // ================= PHARMACY =================
+        "DIPLOMAINPHARMACY": "DPHARM",
+        "BACHELOROFPHARMACY": "BPHARM",
+        "MASTEROFPHARMACY": "MPHARM",
+        "DOCTOROFPHARMACY": "PHARMD",
+
+        // ================= NURSING / ALLIED HEALTH =================
+        "AUXILIARYNURSEMIDWIFE": "ANM",
+        "GENERALNURSINGANDMIDWIFERY": "GNM",
+        "BACHELOROFSCIENCENURSING": "BSCNURSING",
+        "MASTEROFSCIENCENURSING": "MSCNURSING",
+        "BACHELOROFPHYSIOTHERAPY": "BPT",
+        "MASTEROFPHYSIOTHERAPY": "MPT",
+        "BACHELOROFOCCUPATIONALTHERAPY": "BOT",
+        "MASTEROFOCCUPATIONALTHERAPY": "MOT",
+        "BACHELOROFAUDIOLOGYANDSPEECHLANGUAGEPATHOLOGY": "BASLP",
+        "BACHELOROFSCIENCEMEDICALLABORATORYTECHNOLOGY": "BSCMLT",
+        "BACHELOROFMEDICALLABORATORYTECHNOLOGY": "BMLT",
+        "BACHELOROFSCIENCEOPTOMETRY": "BSCOPTOMETRY",
+
+        // ================= LAW =================
+        "BACHELOROFLAWS": "LLB",
+        "BACHELOROFARTSBACHELOROFLAWS": "BALLB",
+        "BACHELOROFBUSINESSADMINISTRATIONBACHELOROFLAWS": "BBALLB",
+        "BACHELOROFCOMMERCEBACHELOROFLAWS": "BCOMLLB",
+        "MASTEROFLAWS": "LLM",
+
+        // ================= EDUCATION =================
+        "DIPLOMAINEDUCATION": "DED",
+        "BACHELOROFEDUCATION": "BED",
+        "MASTEROFEDUCATION": "MED",
+        "DIPLOMAINELEMENTARYEDUCATION": "D.EL.ED",
+        "BACHELOROFPHYSICALEDUCATION": "BPED",
+        "MASTEROFPHYSICALEDUCATION": "MPED",
+
+        // ================= DESIGN / FINE ARTS / FASHION =================
+        "BACHELOROFDESIGN": "BDES",
+        "MASTEROFDESIGN": "MDES",
+        "BACHELOROFFINEARTS": "BFA",
+        "MASTEROFFINEARTS": "MFA",
+        "BACHELOROFSCIENCEFASHIONDESIGN": "BSCFASHIONDESIGN",
+        "MASTEROFSCIENCEFASHIONDESIGN": "MSCFASHIONDESIGN",
+        "BACHELOROFINTERIORDESIGN": "BID",
+
+        // ================= SOCIAL WORK / JOURNALISM / MEDIA / LIBRARY SCIENCE =================
+        "BACHELOROFSOCIALWORK": "BSW",
+        "MASTEROFSOCIALWORK": "MSW",
+        "BACHELOROFJOURNALISMANDMASSCOMMUNICATION": "BJMC",
+        "MASTEROFJOURNALISMANDMASSCOMMUNICATION": "MJMC",
+        "BACHELOROFJOURNALISM": "BJ",
+        "MASTEROFJOURNALISM": "MJ",
+        "BACHELOROFLIBRARYANDINFORMATIONSCIENCE": "BLIS",
+        "MASTEROFLIBRARYANDINFORMATIONSCIENCE": "MLIS",
+
+        // ================= HOTEL MANAGEMENT / AVIATION / VOCATIONAL =================
+        "BACHELOROFHOTELMANAGEMENT": "BHM",
+        "BACHELOROFHOTELMANAGEMENTANDCATERINGTECHNOLOGY": "BHMCT",
+        "MASTEROFHOTELMANAGEMENT": "MHM",
+        "BACHELOROFVOCATION": "BVOC",
+        "DIPLOMAINAVIATIONMANAGEMENT": "DIPLOMAINAVIATION",
+
+        // ================= PROFESSIONAL / FINANCE COURSES =================
+        "CHARTEREDACCOUNTANT": "CA",
+        "COMPANYSECRETARY": "CS",
+        "COSTANDMANAGEMENTACCOUNTANT": "CMA",
+        "INSTITUTEOFCOSTANDWORKSACCOUNTANTS": "ICWA",
+        "CHARTEREDFINANCIALANALYST": "CFA",
+        "ASSOCIATIONOFCHARTEREDCERTIFIEDACCOUNTANTS": "ACCA",
+        "ACTUARIALSCIENCE": "ACTUARIALSCIENCE",
+
+        // ================= DIPLOMA / DOCTORATE / OTHER =================
+        "DIPLOMA": "DIPLOMA",
+        "POLYTECHNICDIPLOMA": "POLYTECHNIC",
+        "INDUSTRIALTRAININGINSTITUTE": "ITI",
+        "DOCTOROFPHILOSOPHY": "PHD",
+    };
+
+
+
+    // const getMinYearsForDegree = (degreeName) => {
+    //     if (!degreeName) return 1;
+    //     const normalized = degreeName.trim().toUpperCase().replace(/\s+/g, "");
+    //     return degreeMinYears[normalized] || 1;
+    // };
+
+    // const isDegreeRecognized = (degreeName) => {
+    //     if (!degreeName) return false;
+    //     const normalized = degreeName.trim().toUpperCase().replace(/\s+/g, "");
+    //     return Object.prototype.hasOwnProperty.call(degreeMinYears, normalized);
+    // };
+    const resolveDegreeKey = (degreeName) => {
+        if (!degreeName) return null;
+        const normalized = degreeName.trim().toUpperCase().replace(/\s+/g, "");
+        if (Object.prototype.hasOwnProperty.call(degreeMinYears, normalized)) return normalized;
+        if (Object.prototype.hasOwnProperty.call(degreeAliases, normalized)) return degreeAliases[normalized];
+        return null;
+    };
+
+    const getMinYearsForDegree = (degreeName) => {
+        const key = resolveDegreeKey(degreeName);
+        return key ? degreeMinYears[key] : 1;
+    };
+
+    const isDegreeRecognized = (degreeName) => {
+        return resolveDegreeKey(degreeName) !== null;
+    };
+    const getGradLabel = (index, total, highestQual) => {
+        if (total === 1) return "Graduation";
+        if (index === 0) return "Under-Graduation";
+        if (index === total - 1) return highestQual === "Doctorate" ? "Doctorate" : "Post-Graduation";
+        return "Post-Graduation";
+    };
 
     const toggleSection = (id) => setOpenSection(openSection === id ? null : id);
 
@@ -1486,8 +1662,12 @@ const EducationDetails = ({
             if (parseFloat(value) > 100) return;
         }
 
-        if (["city", "state", "country", "location", "degree", "dept"].includes(name)) {
-            if (value !== "" && !/^[A-Za-z0-9\s,\.\-\/\(\)]*$/.test(value)) return;
+        // 2. Letters only for City/State/Location
+        if (["city", "state", "country", "location", "country",].includes(name)) {
+            if (value !== "" && !/^[A-Za-z\s,]*$/.test(value)) return;
+        }
+        if (["degree", "dept"].includes(name)) {
+            if (value !== "" && !/^[A-Za-z\s.,()&-]*$/.test(value)) return;
         }
 
         // Clear the specific error for this field
@@ -1564,12 +1744,51 @@ const EducationDetails = ({
         if (!data.hsc.location?.trim()) newErrors.hsclocation = "*Location is required";
         if (!data.hsc.year) newErrors.hscyear = "*Year of completion is required";
         else if (parseInt(data.hsc.year) > currentYear) newErrors.hscyear = "*Cannot be in future";
-        else if (data.sslc.year && parseInt(data.hsc.year) <= parseInt(data.sslc.year))
+        // else if (data.sslc.year && parseInt(data.hsc.year) <= parseInt(data.sslc.year))
+        //     newErrors.hscyear = "*Must be after SSLC";
+
+        // data.graduations.forEach((grad) => {
+
+        else if (data.hsc.year && parseInt(data.hsc.year) <= parseInt(data.sslc.year))
             newErrors.hscyear = "*Must be after SSLC";
+
+        // const requiresGraduation = ["Under-Graduation", "Post-Graduation", "Doctorate"].includes(data.highestQual);
+        // if (requiresGraduation && data.graduations.length === 0) {
+        //     newErrors.graduationRequired = "*Please add your graduation details";
+        // }
+
+        const requiredGradCount = {
+            "Under-Graduation": 1,
+            "Post-Graduation": 2,
+            "Doctorate": 3,
+        }[data.highestQual] || 0;
+
+        // if (requiredGradCount > 0 && data.graduations.length < requiredGradCount) {
+        //     newErrors.graduationRequired =
+        //         data.highestQual === "Post-Graduation"
+        //             ? "*Please add both your Under-Graduation and Post-Graduation details"
+        //             : data.highestQual === "Doctorate"
+        //             ? "*Please add your Under-Graduation, Post-Graduation, and Doctorate details"
+        //             : "*Please add your graduation details";
+        // }
+
+        if (requiredGradCount > 0 && data.graduations.length < requiredGradCount) {
+            newErrors.graduationRequired =
+                data.highestQual === "Post-Graduation"
+                    ? "*Under-Graduation and Post-Graduation details are required"
+                    : data.highestQual === "Doctorate"
+                        ? "*Under-Graduation, Post-Graduation, and Doctorate details are required"
+                        : "*Graduation details are required";
+        }
+
+
 
         data.graduations.forEach((grad) => {
             if (!grad.degree || grad.degree.trim() === "") {
                 newErrors[`graddegree${grad.id}`] = "Degree is required";
+
+            } else if (!isDegreeRecognized(grad.degree)) {
+                newErrors[`graddegree${grad.id}`] = "*Please check the spelling";
             }
             if (!grad.dept || grad.dept.trim() === "") {
                 newErrors[`graddept${grad.id}`] = "Department is required";
@@ -1609,15 +1828,30 @@ const EducationDetails = ({
             else if (endDate > today) {
                 newErrors[`gradendYear${grad.id}`] = "*Ending year cannot be in future";
             }
+            // else if (startDate && endDate < startDate) {
+            //     newErrors[`gradendYear${grad.id}`] = "*Ending year cannot be before starting year";
+            // }
+            // else if (
+            //     startDate &&
+            //     endDate &&
+            //     endDate.getFullYear() - startDate.getFullYear() < 1
+            // ) {
+            //     newErrors[`gradendYear${grad.id}`] = "*Course duration must be at least 1 year";
+            // }
             else if (startDate && endDate < startDate) {
                 newErrors[`gradendYear${grad.id}`] = "*Ending year cannot be before starting year";
             }
-            else if (
-                startDate &&
-                endDate &&
-                endDate.getFullYear() - startDate.getFullYear() < 1
-            ) {
-                newErrors[`gradendYear${grad.id}`] = "*Course duration must be at least 1 year";
+            else if (startDate && endDate) {
+                const totalMonths =
+                    (endDate.getFullYear() - startDate.getFullYear()) * 12 +
+                    (endDate.getMonth() - startDate.getMonth());
+
+                const minYears = getMinYearsForDegree(grad.degree);
+
+                if (totalMonths < minYears * 12) {
+                    newErrors[`gradendYear${grad.id}`] =
+                        `*${grad.degree || "This degree"} typically requires at least ${minYears} year(s). Please check your dates.`;
+                }
             }
             if (!grad.city) {
                 newErrors[`gradcity${grad.id}`] = "City is required";
@@ -1632,17 +1866,17 @@ const EducationDetails = ({
                 newErrors[`graddepartment${grad.id}`] = "department is required";
             }
 
-            else if (grad.startYear) {
-                const start = new Date(grad.startYear);
-                const end = new Date(grad.endYear);
+            // else if (grad.startYear) {
+            //     const start = new Date(grad.startYear);
+            //     const end = new Date(grad.endYear);
 
-                if (end < start) {
-                    newErrors[`gradendYear${grad.id}`] = "Ending year cannot be before starting year";
-                }
-                else if (end.getFullYear() - start.getFullYear() < 1) {
-                    newErrors[`gradendYear${grad.id}`] = "Course duration must be at least 1 year";
-                }
-            }
+            //     if (end < start) {
+            //         newErrors[`gradendYear${grad.id}`] = "Ending year cannot be before starting year";
+            //     }
+            //     else if (end.getFullYear() - start.getFullYear() < 1) {
+            //         newErrors[`gradendYear${grad.id}`] = "Course duration must be at least 1 year";
+            //     }
+            // } #delete this block
         });
 
         setErrors(newErrors);
@@ -1671,13 +1905,45 @@ const EducationDetails = ({
                 newErrors.hscyear
             ) {
                 setOpenSection("hsc");
+                // } else {
+                //     const firstGradErrorKey = Object.keys(newErrors).find((key) =>
+                //         key.startsWith("grad")
+                //     );
+
+                //     if (firstGradErrorKey && data.graduations.length > 0) {
+                //         setOpenSection(`grad-${data.graduations[0].id}`);
+                //     }
+                // }
+                //             } else {
+                //     const gradWithError = data.graduations.find((g) =>
+                //         Object.keys(newErrors).some(
+                //             (key) => key.startsWith("grad") && key.endsWith(String(g.id))
+                //         )
+                //     );
+
+                //     if (gradWithError) {
+                //         setOpenSection(`grad-${gradWithError.id}`);
+                //     }
+                // }
+
             } else {
-                const firstGradErrorKey = Object.keys(newErrors).find((key) =>
-                    key.startsWith("grad")
+                const gradWithError = data.graduations.find((g) =>
+                    Object.keys(newErrors).some(
+                        (key) => key.startsWith("grad") && key.endsWith(String(g.id))
+                    )
                 );
 
-                if (firstGradErrorKey && data.graduations.length > 0) {
-                    setOpenSection(`grad-${data.graduations[0].id}`);
+                //     if (gradWithError) {
+                //         setOpenSection(`grad-${gradWithError.id}`);
+                //     } else if (newErrors.graduationRequired && data.graduations.length > 0) {
+                //         setOpenSection(`grad-${data.graduations[0].id}`);
+                //     }
+                // }
+
+                if (gradWithError) {
+                    setOpenSection(`grad-${gradWithError.id}`);
+                } else if (newErrors.graduationRequired) {
+                    onAddGrad();
                 }
             }
 
@@ -1733,7 +1999,7 @@ const EducationDetails = ({
                         <div className="accordion-body">
                             <div className="form-grid">
                                 <div className="form-group">
-                                    <label>Name of Institution</label>
+                                    <label>Name of Institution*</label>
                                     <input
                                         type="text"
                                         name="institution"
@@ -1751,7 +2017,7 @@ const EducationDetails = ({
                                 </div>
 
                                 <div className="form-group">
-                                    <label>Percentage</label>
+                                    <label>Percentage*</label>
                                     <input
                                         type="text"
                                         name="percentage"
@@ -1767,7 +2033,7 @@ const EducationDetails = ({
                                 </div>
 
                                 <div className="form-group">
-                                    <label>Location</label>
+                                    <label>Location*</label>
                                     <input
                                         type="text"
                                         name="location"
@@ -1788,7 +2054,7 @@ const EducationDetails = ({
                                 </div>
 
                                 <div className="form-group">
-                                    <label>Year of completion</label>
+                                    <label>Year of Completion*</label>
                                     <input
                                         type="date"
                                         name="year"
@@ -1837,7 +2103,7 @@ const EducationDetails = ({
                                     )}
                                 </div>
                                 <div className="form-group">
-                                    <label>Name of Institution</label>
+                                    <label>Name of Institution*</label>
                                     <input
                                         type="text"
                                         name="institution"
@@ -1856,7 +2122,7 @@ const EducationDetails = ({
                                     )}
                                 </div>
                                 <div className="form-group">
-                                    <label>Location</label>
+                                    <label>Location*</label>
                                     <input
                                         type="text"
                                         name="location"
@@ -1877,7 +2143,7 @@ const EducationDetails = ({
                                     )}
                                 </div>
                                 <div className="form-group">
-                                    <label>Year of completion</label>
+                                    <label>Year of Completion*</label>
                                     <input
                                         type="date"
                                         name="year"
@@ -1892,7 +2158,7 @@ const EducationDetails = ({
                                     )}
                                 </div>
                                 <div className="form-group">
-                                    <label>Percentage</label>
+                                    <label>Percentage*</label>
                                     <input
                                         type="text"
                                         name="percentage"
@@ -1921,7 +2187,9 @@ const EducationDetails = ({
                             <div
                                 style={{ display: "flex", alignItems: "center", gap: "10px" }}
                             >
-                                <span>Graduation {index > 0 ? index + 1 : ""}</span>
+                                {/* <span>Graduation {index > 0 ? index + 1 : ""}</span> */}
+
+                                <span>{getGradLabel(index, data.graduations.length, data.highestQual)}</span>
                             </div>
                             <span className="accordion-icon">
                                 {openSection === `grad-${grad.id}` ? "-" : "+"}
@@ -1961,18 +2229,19 @@ const EducationDetails = ({
 
                                 <div className="form-grid">
                                     <div className="form-group">
-                                        <label>Degree</label>
-                                        <DegreeDropdown
-                                            value={grad.degree}
-                                            options={degreeOptions}
+                                        <label>Degree*</label>
+                                        <input
+                                            type="text"
                                             name="degree"
+                                            value={grad.degree}
                                             onChange={(e) => handleInputChange(e, 'grad', grad.id)}
-                                            error={errors[`graddegree${grad.id}`]}
+                                            placeholder="e.g., B.E"
+                                            className={errors[`graddegree${grad.id}`] ? "input-error" : ""}
                                         />
                                         {errors[`graddegree${grad.id}`] && <span className="error-message">{errors[`graddegree${grad.id}`]}</span>}
                                     </div>
                                     <div className="form-group">
-                                        <label>Degree status</label>
+                                        <label>Degree Status*</label>
                                         <select
                                             name="status"
                                             value={grad.status}
@@ -1988,7 +2257,7 @@ const EducationDetails = ({
                                         )}
                                     </div>
                                     <div className="form-group">
-                                        <label>Department</label>
+                                        <label>Department*</label>
                                         <input
                                             type="text"
                                             name="dept"
@@ -2002,7 +2271,7 @@ const EducationDetails = ({
                                         )}
                                     </div>
                                     <div className="form-group">
-                                        <label>Percentage</label>
+                                        <label>Percentage*</label>
                                         <input
                                             type="text"
                                             name="percentage"
@@ -2015,7 +2284,7 @@ const EducationDetails = ({
                                         {errors[`gradpercentage${grad.id}`] && <span className="error-message">{errors[`gradpercentage${grad.id}`]}</span>}
                                     </div>
                                     <div className="form-group">
-                                        <label>Starting year</label>
+                                        <label>Starting Year*</label>
                                         <input
                                             type="date"
                                             name="startYear"
@@ -2027,7 +2296,7 @@ const EducationDetails = ({
                                         {errors[`gradstartYear${grad.id}`] && <span className="error-message">{errors[`gradstartYear${grad.id}`]}</span>}
                                     </div>
                                     <div className="form-group">
-                                        <label>Ending year</label>
+                                        <label>Ending Year*</label>
                                         <input
                                             type="date"
                                             name="endYear"
@@ -2039,7 +2308,7 @@ const EducationDetails = ({
                                         {errors[`gradendYear${grad.id}`] && <span className="error-message">{errors[`gradendYear${grad.id}`]}</span>}
                                     </div>
                                     <div className="form-group full-width">
-                                        <label>Institution name</label>
+                                        <label>Institution Name*</label>
                                         <input
                                             type="text"
                                             name="college"
@@ -2058,7 +2327,7 @@ const EducationDetails = ({
                                         )}
                                     </div>
                                     <div className="form-group">
-                                        <label>City</label>
+                                        <label>City*</label>
                                         <input
                                             type="text"
                                             name="city"
@@ -2070,7 +2339,7 @@ const EducationDetails = ({
                                         {errors[`gradcity${grad.id}`] && <span className="error-message">{errors[`gradcity${grad.id}`]}</span>}
                                     </div>
                                     <div className="form-group">
-                                        <label>State</label>
+                                        <label>State*</label>
                                         <input
                                             type="text"
                                             name="state"
@@ -2082,7 +2351,7 @@ const EducationDetails = ({
                                         {errors[`gradstate${grad.id}`] && <span className="error-message">{errors[`gradstate${grad.id}`]}</span>}
                                     </div>
                                     <div className="form-group">
-                                        <label>Country</label>
+                                        <label>Country*</label>
                                         <input
                                             type="text"
                                             name="country"
@@ -2299,7 +2568,7 @@ const WorkExperience = ({
                             <div className="form-grid">
                                 {/* ... all entry fields remain same ... */}
                                 <div className="form-group">
-                                    <label>Job Title</label>
+                                    <label>Job Title*</label>
                                     <input
                                         type="text" name="title" value={entry.title}
                                         onChange={(e) => handleEntryChange(entry.id, e)}
@@ -2309,7 +2578,7 @@ const WorkExperience = ({
                                     {errors[`title_${entry.id}`] && <span className="error-message">{errors[`title_${entry.id}`]}</span>}
                                 </div>
                                 <div className="form-group">
-                                    <label>Company Name</label>
+                                    <label>Company Name*</label>
                                     <input
                                         type="text"
                                         name="company"
@@ -2321,7 +2590,7 @@ const WorkExperience = ({
                                     {errors[`company_${entry.id}`] && <span className="error-message">{errors[`company_${entry.id}`]}</span>}
                                 </div>
                                 <div className="form-group">
-                                    <label>Start Date</label>
+                                    <label>Start Date*</label>
                                     <input
                                         type="date"
                                         name="startDate"
@@ -2332,7 +2601,7 @@ const WorkExperience = ({
                                     {errors[`startDate_${entry.id}`] && <span className="error-message">{errors[`startDate_${entry.id}`]}</span>}
                                 </div>
                                 <div className="form-group">
-                                    <label>End Date</label>
+                                    <label>End Date*</label>
                                     <input
                                         type="date"
                                         name="endDate"
@@ -2347,7 +2616,7 @@ const WorkExperience = ({
                                     )}
                                 </div>
                                 <div className="form-group">
-                                    <label>Industry / Domain</label>
+                                    <label>Industry / Domain*</label>
                                     <select
                                         name="industry"
                                         value={entry.industry}
@@ -2364,7 +2633,7 @@ const WorkExperience = ({
                                     {errors[`industry_${entry.id}`] && <span className="error-message">{errors[`industry_${entry.id}`]}</span>}
                                 </div>
                                 <div className="form-group">
-                                    <label>Job Type</label>
+                                    <label>Job Type*</label>
                                     <select
                                         name="jobType"
                                         value={entry.jobType}
@@ -2380,7 +2649,7 @@ const WorkExperience = ({
                                     {errors[`jobType_${entry.id}`] && <span className="error-message">{errors[`jobType_${entry.id}`]}</span>}
                                 </div>
                                 <div className="form-group">
-                                    <label>Location</label>
+                                    <label>Location*</label>
                                     <input
                                         type="text"
                                         name="location"
@@ -2392,7 +2661,7 @@ const WorkExperience = ({
                                     {errors[`location_${entry.id}`] && <span className="error-message">{errors[`location_${entry.id}`]}</span>}
                                 </div>
                                 <div className="form-group">
-                                    <label>Key Responsibilities / Achievements</label>
+                                    <label>Key Responsibilities / Achievements*</label>
                                     <textarea
                                         name="responsibilities"
                                         value={entry.responsibilities || ""}
@@ -2418,7 +2687,7 @@ const WorkExperience = ({
 
             {isFresher && data.hasExperience === "No" && data.entries.length === 0 && (
                 <div style={{ padding: "20px", textAlign: "center", color: "#666", backgroundColor: "#f5f5f5", borderRadius: "8px", marginTop: "20px" }}>
-                    📌 As a Fresher, work experience details are optional. You can add internship experience if you have any.
+                    As a Fresher, work experience details are optional. You can add internship experience if you have any.
                 </div>
             )}
 
@@ -2777,7 +3046,7 @@ const LanguagesKnown = ({
                     />
                 </div>
                 <div className="form-group">
-                    <label>Proficiency</label>
+                    <label>Proficiency*</label>
                     <select value={currentLang.proficiency} onChange={(e) => setCurrentLang({ ...currentLang, proficiency: e.target.value })}>
                         <option value="Select">Select</option>
                         <option value="Beginner">Beginner</option>
@@ -3151,7 +3420,7 @@ const Preferences = ({ data, experienceType, onChange, onReset, onSubmitFinal, s
                 )}
 
                 <div className="form-group">
-                    <label>Expected CTC</label>
+                    <label>Expected CTC*</label>
                     <input
                         type="text"
                         name="expectedCTC"
@@ -3167,7 +3436,7 @@ const Preferences = ({ data, experienceType, onChange, onReset, onSubmitFinal, s
                 </div>
 
                 <div className="form-group">
-                    <label>Preferred Job Type</label>
+                    <label>Preferred Job Type*</label>
                     <select
                         name="jobType"
                         value={data.jobType || "Select"}
@@ -3186,7 +3455,7 @@ const Preferences = ({ data, experienceType, onChange, onReset, onSubmitFinal, s
                 </div>
 
                 <div className="form-group">
-                    <label>Preferred Industry/Role</label>
+                    <label>Preferred Industry/Role*</label>
                     <input
                         type="text"
                         name="role"
@@ -3642,15 +3911,38 @@ export const MyProfile = () => {
         }
     }, [allData.currentDetails.experienceType, allData.experience.entries.length]);
 
+    // const handleHighestQualChange = (e) => {
+    //     const { value } = e.target;
+    //     setAllData((prev) => ({
+    //         ...prev,
+    //         education: {
+    //             ...prev.education,
+    //             highestQual: value,
+    //         },
+    //     }));
+    // };
+
     const handleHighestQualChange = (e) => {
         const { value } = e.target;
-        setAllData((prev) => ({
-            ...prev,
-            education: {
-                ...prev.education,
-                highestQual: value,
-            },
-        }));
+        setAllData((prev) => {
+            const needsGrad = ["Under-Graduation", "Post-Graduation", "Doctorate"].includes(value);
+            const shouldAddEntry = needsGrad && prev.education.graduations.length === 0;
+
+            return {
+                ...prev,
+                education: {
+                    ...prev.education,
+                    highestQual: value,
+                    graduations: shouldAddEntry
+                        ? [{
+                            id: `temp-${Date.now()}`,
+                            degree: "", status: "Select", dept: "", percentage: "",
+                            startYear: "", endYear: "", college: "", city: "", state: "", country: "",
+                        }]
+                        : prev.education.graduations,
+                },
+            };
+        });
     };
 
     const handleUpdateSSLC = (e) => {
@@ -4595,7 +4887,7 @@ export const MyProfile = () => {
                                                         handleItemClick(subItem, item.title);
                                                     }}
                                                 >
-                                                    <span className="dot">•</span> {subItem}
+                                                    {subItem}
                                                 </div>
                                             ))}
                                         </div>

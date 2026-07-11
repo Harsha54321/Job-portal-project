@@ -6,8 +6,8 @@ import { useJobs } from "../JobContext";
 import api from "../api/axios";  // ← ఈ line add
 import { useNavigate } from "react-router-dom";
 
-export const ENotification = ({  }) => {
-    
+export const ENotification = ({ }) => {
+
     const {
         employerNotifications,
         setEmployerNotifications,
@@ -17,7 +17,7 @@ export const ENotification = ({  }) => {
         setEmployerShowNotification,
         fetchNotifications  // ← Add this
     } = useJobs();
-    
+
     const navigate = useNavigate();
     const containerRef = useRef(null);
 
@@ -29,7 +29,7 @@ export const ENotification = ({  }) => {
     };
 
     // ================= API FUNCTIONS =================
-    
+
     // MARK AS READ
     const handleMarkAsRead = async (id) => {
         try {
@@ -102,6 +102,43 @@ export const ENotification = ({  }) => {
         };
     }, [employershowNotification, setEmployerShowNotification]);
 
+    // CLOSE MENU ON OUTSIDE CLICK (Add this new useEffect)
+    useEffect(() => {
+        const handleMenuClickOutside = (event) => {
+            // Check if the click is outside any menu
+            const menus = document.querySelectorAll('.overflow-menu');
+            const buttons = document.querySelectorAll('.more-options-btn');
+
+            let clickedOnMenu = false;
+            let clickedOnButton = false;
+
+            menus.forEach(menu => {
+                if (menu.contains(event.target)) {
+                    clickedOnMenu = true;
+                }
+            });
+
+            buttons.forEach(button => {
+                if (button.contains(event.target)) {
+                    clickedOnButton = true;
+                }
+            });
+
+            // If click is NOT on menu AND NOT on the three dots button, close all menus
+            if (!clickedOnMenu && !clickedOnButton) {
+                setEmployerActiveMenuId(null);
+            }
+        };
+
+        if (employershowNotification) {
+            document.addEventListener("mousedown", handleMenuClickOutside);
+        }
+
+        return () => {
+            document.removeEventListener("mousedown", handleMenuClickOutside);
+        };
+    }, [employershowNotification, setEmployerActiveMenuId]);
+
     return (
         <div
             ref={containerRef}
@@ -139,7 +176,7 @@ export const ENotification = ({  }) => {
 
             {/* NOTIFICATION LIST */}
             <div className="notifications-list">
-                {employerNotifications.map((notification) => (
+                {/* {employerNotifications.map((notification) => (
                     <div
                         key={notification.id}
                         className={notification.isRead ? "notification-old-item" : "notification-new-item"}
@@ -150,6 +187,69 @@ export const ENotification = ({  }) => {
                         </div>
 
                         <div className="more-options-wrapper">
+                            <button
+                                className="more-options-btn"
+                                onClick={(e) => toggleMenu(notification.id, e)}
+                            >
+                                ⋮
+                            </button>
+
+                            {employeractiveMenuId === notification.id && (
+                                <div className="overflow-menu">
+                                    {notification.isRead ? (
+                                        <button
+                                            className="menu-item"
+                                            onClick={() => handleMarkAsUnread(notification.id)}
+                                        >
+                                            Mark as unread
+                                        </button>
+                                    ) : (
+                                        <button
+                                            className="menu-item"
+                                            onClick={() => handleMarkAsRead(notification.id)}
+                                        >
+                                            Mark as read
+                                        </button>
+                                    )}
+                                    <button
+                                        onClick={() => handleDelete(notification.id)}
+                                        className="menu-item delete-item"
+                                    >
+                                        Delete
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                ))} */}
+
+                {employerNotifications.map((notification) => (
+                    <div
+                        key={notification.id}
+                        className={notification.isRead ? "notification-old-item" : "notification-new-item"}
+                    >
+                        <button
+                            type="button"
+                            className="notification-content"
+                            onClick={() => {
+                                if (!notification.isRead) {
+                                    handleMarkAsRead(notification.id);
+                                }
+                            }}
+                            aria-label={
+                                notification.isRead
+                                    ? notification.text
+                                    : `${notification.text}. Unread. Press to mark as read.`
+                            }
+                        >
+                            <p className="notification-text">{notification.text}</p>
+                            <p className="notification-time">{notification.time}</p>
+                        </button>
+
+                        <div
+                            className="more-options-wrapper"
+                            onClick={(e) => e.stopPropagation()}
+                        >
                             <button
                                 className="more-options-btn"
                                 onClick={(e) => toggleMenu(notification.id, e)}

@@ -42,7 +42,7 @@ export const JobMonitorOverview = ({ jobId, setSelectedJobId }) => {
                 console.log(`🔄 Fetching job ${currentId} directly from API...`);
                 const response = await api.get(`/admin/jobs/${currentId}/detail/`);
                 const fetchedJob = response.data;
-                
+
                 // Add to context if possible
                 if (setJobs && fetchedJob) {
                     setJobs(prev => {
@@ -53,7 +53,7 @@ export const JobMonitorOverview = ({ jobId, setSelectedJobId }) => {
                         return prev;
                     });
                 }
-                
+
                 setJobData(fetchedJob);
             } catch (err) {
                 console.error("Failed to fetch job:", err);
@@ -104,8 +104,8 @@ export const JobMonitorOverview = ({ jobId, setSelectedJobId }) => {
     if (isLoading) {
         return (
             <div className='opp-overview-main'>
-                <div style={{ 
-                    textAlign: 'center', 
+                <div style={{
+                    textAlign: 'center',
                     padding: '40px 20px',
                     display: 'flex',
                     flexDirection: 'column',
@@ -136,13 +136,13 @@ export const JobMonitorOverview = ({ jobId, setSelectedJobId }) => {
     if (error) {
         return (
             <div className='opp-overview-main'>
-                <div style={{ 
-                    textAlign: 'center', 
+                <div style={{
+                    textAlign: 'center',
                     padding: '40px 20px',
                     color: '#dc3545'
                 }}>
                     <p style={{ fontSize: '16px', marginBottom: '15px' }}>{error}</p>
-                    <button 
+                    <button
                         onClick={() => {
                             setIsLoading(true);
                             setError(null);
@@ -245,6 +245,8 @@ export const JobMonitorOverview = ({ jobId, setSelectedJobId }) => {
             setLoadingStates(prev => ({ ...prev, flag: false }));
         }
     };
+
+    const isHighlighted = selectedJob.is_highlighted === true;
 
     // Get company name from employer relationship
     const getCompanyName = () => {
@@ -372,11 +374,15 @@ export const JobMonitorOverview = ({ jobId, setSelectedJobId }) => {
     // Get display data
     const locationData = getLocationDisplay();
     const industryData = getIndustryDisplay();
+    let cardClassName = "opp-overview-job-card";
+    if (isHighlighted) {
+        cardClassName += " highlighted-job";
+    }
 
     return (
         <div className='opp-overview-main'>
             <div className="opp-job-main">
-                <div className="opp-overview-job-card">
+                <div className={cardClassName}>
                     <div className="Opportunities-job-header">
                         <div>
                             <h2 className="opp-topcard-job-title">{selectedJob.job_title || selectedJob.title || 'N/A'}</h2>

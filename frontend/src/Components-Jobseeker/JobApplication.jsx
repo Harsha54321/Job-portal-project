@@ -434,7 +434,7 @@ export const JobApplication = () => {
                 />
                 {errors.name && <small className="error-text">{errors.name}</small>}
               </div>
-              <div className="apply-form-edit" onClick={() => setEditableField("name")}>
+              <div className="apply-form-edit" onClick={() => setEditableField("name")} title="Click to edit name"  >
                 <img src={FormEditIcon} alt="edit" />
               </div>
             </div>
@@ -453,13 +453,13 @@ export const JobApplication = () => {
                 />
                 {errors.dob && <small className="error-text">{errors.dob}</small>}
               </div>
-              <div className="apply-form-edit" onClick={() => setEditableField("dob")}>
+              <div className="apply-form-edit" onClick={() => setEditableField("dob")} title="Click to edit date of birth"  >
                 <img src={FormEditIcon} alt="edit" />
               </div>
             </div>
 
             <div className="apply-form-row">
-              <div className="apply-form-label">Marital status</div>
+              <div className="apply-form-label">Marital Status</div>
               <div className="apply-form-input">
                 <select
                   className={`apply-form-select-input ${errors.marital ? "error-border" : ""}`}
@@ -474,13 +474,13 @@ export const JobApplication = () => {
                 </select>
                 {errors.marital && <small className="error-text">{errors.marital}</small>}
               </div>
-              <div className="apply-form-edit" onClick={() => setEditableField("marital")}>
+              <div className="apply-form-edit" onClick={() => setEditableField("marital")} title="Click to edit marital status"  >
                 <img src={FormEditIcon} alt="edit" />
               </div>
             </div>
 
             <div className="apply-form-row">
-              <div className="apply-form-label">Mobile number</div>
+              <div className="apply-form-label">Mobile Number</div>
               <div className="apply-form-input">
                 <input
                   type="tel"
@@ -492,7 +492,7 @@ export const JobApplication = () => {
                 />
                 {errors.mobile && <small className="error-text">{errors.mobile}</small>}
               </div>
-              <div className="apply-form-edit" onClick={() => setEditableField("mobile")}>
+              <div className="apply-form-edit" onClick={() => setEditableField("mobile")} title="Click to edit mobile number"  >
                 <img src={FormEditIcon} alt="edit" />
               </div>
             </div>
@@ -510,13 +510,13 @@ export const JobApplication = () => {
                 />
                 {errors.email && <small className="error-text">{errors.email}</small>}
               </div>
-              <div className="apply-form-edit" onClick={() => setEditableField("email")}>
+              <div className="apply-form-edit" onClick={() => setEditableField("email")} title="Click to edit email"  >
                 <img src={FormEditIcon} alt="edit" />
               </div>
             </div>
 
             <div className="apply-form-row">
-              <div className="apply-form-label">Current address</div>
+              <div className="apply-form-label">Current Address</div>
               <div className="apply-form-info-box">
                 {editableField === "address" ? (
                   <>
@@ -537,13 +537,13 @@ export const JobApplication = () => {
                 )}
                 {(errors.city || errors.zip) && <small className="error-text">Address details required</small>}
               </div>
-              <div className="apply-form-edit" onClick={() => setEditableField("address")}>
+              <div className="apply-form-edit" onClick={() => setEditableField("address")} title="Click to edit address"  >
                 <img src={FormEditIcon} alt="edit" />
               </div>
             </div>
 
             <div className="apply-form-row align-top">
-              <div className="apply-form-label">Cover letter</div>
+              <div className="apply-form-label">Cover Letter</div>
               <div className="apply-form-input">
                 <textarea
                   className={`cover-textarea ${errors.coverLetter ? "error-border" : ""}`}
@@ -606,9 +606,9 @@ export const JobApplication = () => {
               <button type="button" className="apply-form-secondary-btn" onClick={() => navigate(-1)} disabled={isSubmitting}>
                 Cancel
               </button>
-              <button 
-                type="submit" 
-                className="apply-form-primary-btn" 
+              <button
+                type="submit"
+                className="apply-form-primary-btn"
                 disabled={isSubmitting}
               >
                 {isSubmitting ? "Applying..." : "Apply"}

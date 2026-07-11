@@ -100,7 +100,7 @@ export const JNotification = ({ }) => {
                 const focusableElements = containerRef.current?.querySelectorAll(
                     'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
                 );
-                
+
                 if (!focusableElements || focusableElements.length === 0) return;
 
                 const firstElement = focusableElements[0];
@@ -122,7 +122,7 @@ export const JNotification = ({ }) => {
         // Add event listener when notification is shown
         if (showNotification) {
             document.addEventListener('keydown', handleKeyDown);
-            
+
             // Focus the first focusable element after a small delay
             setTimeout(() => {
                 const firstFocusable = containerRef.current?.querySelector(
@@ -175,6 +175,43 @@ export const JNotification = ({ }) => {
         };
     }, [showNotification, setShowNotification, setActiveMenuId]);
 
+    // CLOSE MENU ON OUTSIDE CLICK (Add this new useEffect)
+    useEffect(() => {
+        const handleMenuClickOutside = (event) => {
+            // Check if the click is outside any menu
+            const menus = document.querySelectorAll('.overflow-menu');
+            const buttons = document.querySelectorAll('.more-options-btn');
+
+            let clickedOnMenu = false;
+            let clickedOnButton = false;
+
+            menus.forEach(menu => {
+                if (menu.contains(event.target)) {
+                    clickedOnMenu = true;
+                }
+            });
+
+            buttons.forEach(button => {
+                if (button.contains(event.target)) {
+                    clickedOnButton = true;
+                }
+            });
+
+            // If click is NOT on menu AND NOT on the three dots button, close all menus
+            if (!clickedOnMenu && !clickedOnButton) {
+                setActiveMenuId(null);
+            }
+        };
+
+        if (showNotification) {
+            document.addEventListener("mousedown", handleMenuClickOutside);
+        }
+
+        return () => {
+            document.removeEventListener("mousedown", handleMenuClickOutside);
+        };
+    }, [showNotification, setActiveMenuId]);
+
     return (
         <div
             ref={containerRef}
@@ -193,8 +230,8 @@ export const JNotification = ({ }) => {
                     />
                     <h2>Notifications</h2>
                 </div>
-                <button 
-                    onClick={() => setShowNotification(false)} 
+                <button
+                    onClick={() => setShowNotification(false)}
                     className="notifications-close-btn"
                     aria-label="Close notifications"
                 >
@@ -212,8 +249,8 @@ export const JNotification = ({ }) => {
                         </span>
                     )}
                 </div>
-                <button 
-                    className="clear-all-btn" 
+                <button
+                    className="clear-all-btn"
                     onClick={handleClearAll}
                     aria-label="Clear all notifications"
                 >
@@ -223,7 +260,7 @@ export const JNotification = ({ }) => {
 
             {/* NOTIFICATION LIST */}
             <div className="notifications-list">
-                {notificationsData.map((notification) => (
+                {/* {notificationsData.map((notification) => (
                     <div
                         key={notification.id}
                         className={notification.isRead ? "notification-old-item" : "notification-new-item"}
@@ -232,8 +269,80 @@ export const JNotification = ({ }) => {
                             <p className="notification-text">{notification.text}</p>
                             <p className="notification-time">{notification.time}</p>
                         </div>
-
+ 
                         <div className="more-options-wrapper">
+                            <button
+                                className="more-options-btn"
+                                onClick={(e) => toggleMenu(notification.id, e)}
+                                aria-label="More options"
+                                aria-expanded={activeMenuId === notification.id}
+                            >
+                                ⋮
+                            </button>
+ 
+                            {activeMenuId === notification.id && (
+                                <div
+                                    className="overflow-menu"
+                                    role="menu"
+                                    aria-label="Notification options"
+                                >
+                                    {notification.isRead ? (
+                                        <button
+                                            className="menu-item"
+                                            onClick={() => handleMarkAsUnread(notification.id)}
+                                            role="menuitem"
+                                        >
+                                            Mark as unread
+                                        </button>
+                                    ) : (
+                                        <button
+                                            className="menu-item"
+                                            onClick={() => handleMarkAsRead(notification.id)}
+                                            role="menuitem"
+                                        >
+                                            Mark as read
+                                        </button>
+                                    )}
+                                    <button
+                                        onClick={() => handleDelete(notification.id)}
+                                        className="menu-item delete-item"
+                                        role="menuitem"
+                                    >
+                                        Delete
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                ))} */}
+
+                {notificationsData.map((notification) => (
+                    <div
+                        key={notification.id}
+                        className={notification.isRead ? "notification-old-item" : "notification-new-item"}
+                    >
+                        <button
+                            type="button"
+                            className="notification-content"
+                            onClick={() => {
+                                if (!notification.isRead) {
+                                    handleMarkAsRead(notification.id);
+                                }
+                            }}
+                            aria-label={
+                                notification.isRead
+                                    ? notification.text
+                                    : `${notification.text}. Unread. Press to mark as read.`
+                            }
+                        >
+                            <p className="notification-text">{notification.text}</p>
+                            <p className="notification-time">{notification.time}</p>
+                        </button>
+
+                        <div
+                            className="more-options-wrapper"
+                            onClick={(e) => e.stopPropagation()}
+                        >
                             <button
                                 className="more-options-btn"
                                 onClick={(e) => toggleMenu(notification.id, e)}
@@ -244,7 +353,7 @@ export const JNotification = ({ }) => {
                             </button>
 
                             {activeMenuId === notification.id && (
-                                <div 
+                                <div
                                     className="overflow-menu"
                                     role="menu"
                                     aria-label="Notification options"

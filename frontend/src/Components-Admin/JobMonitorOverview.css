@@ -141,3 +141,95 @@
         min-width: unset;
     }
 }
+
+
+/* ============================================
+   JOB MONITOR OVERVIEW - HIGHLIGHTED STYLING
+   ============================================ */
+.opp-overview-job-card {
+    position: relative;
+}
+z
+.opp-overview-job-card.highlighted-job {
+    border: 2px solid #FFD700;
+    background: linear-gradient(145deg, #FFFDF5, #FFF8E1);
+    position: relative;
+    overflow: hidden;
+}
+
+.opp-overview-job-card.highlighted-job .opp-topcard-job-title {
+    color: #B8860B;
+}
+
+.opp-overview-job-card.highlighted-job .Opportunities-job-company {
+    color: #8D6E1A;
+}
+
+.opp-overview-job-card.highlighted-job .Opportunities-detail-line {
+    color: #6D5A1A;
+}
+
+.opp-overview-job-card.highlighted-job .Opportunities-job-tag {
+    border-color: #FFD700;
+    color: #B8860B;
+    background: rgba(255, 215, 0, 0.1);
+}
+
+.opp-overview-job-card.highlighted-job .opp-job-highlights {
+    background: rgba(255, 215, 0, 0.08);
+    border-radius: 8px;
+    padding: 20px;
+}
+
+.opp-overview-job-card.highlighted-job .opp-job-highlights h3 {
+    color: #B8860B;
+}
+
+.opp-overview-job-card.highlighted-job .opp-job-highlights ul li {
+    color: #6D5A1A;
+}
+
+.opp-overview-job-card.highlighted-job .opp-key-skill-tag {
+    border-color: #FFD700;
+    color: #B8860B;
+    background: rgba(255, 215, 0, 0.08);
+}
+
+.opp-overview-job-card.highlighted-job .opp-key-skill-tag:hover {
+    background: rgba(255, 215, 0, 0.15);
+}
+
+.opp-overview-job-card.highlighted-job h3 {
+    color: #B8860B;
+}
+
+.opp-overview-job-card.highlighted-job p strong {
+    color: #8D6E1A;
+}
+
+/* Badge for highlighted jobs */
+.opp-overview-job-card .job-badge {
+    display: inline-block;
+    padding: 3px 12px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    position: absolute;
+    top: -6px;
+    right: 14px;
+    z-index: 2;
+    animation: badge-pulse 2s ease-in-out infinite;
+}
+
+@keyframes badge-pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+}
+
+.opp-overview-job-card .premium-badge {
+    background: linear-gradient(135deg, #FFD700, #FFA000);
+    color: #5D4037;
+    box-shadow: 0 2px 12px rgba(255, 215, 0, 0.4);
+}

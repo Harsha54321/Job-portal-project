@@ -331,6 +331,47 @@
   }
 }
 
+.Helpcenter-search-box.error {
+    border-color: #dc3545;
+}
+
+.Helpcenter-search-box.error input {
+    border-color: #dc3545;
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+}
+
+.helpcenter-search-wrapper .shake {
+    animation: shake 0.3s ease-in-out;
+}
+
+.Helpcenter-search-box.error {
+    border-color: #dc3545 !important;
+}
+
+.Helpcenter-search-box.error input {
+    color: #dc3545;
+}
+
+.Helpcenter-search-box.error input::placeholder {
+    color: #dc3545 !important;
+    font-weight: 500;
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+}
+
+.Helpcenter-search-box.error {
+    animation: shake 0.3s ease-in-out;
+}
+
 .toast-container {
   position: fixed;
   bottom: 40px;

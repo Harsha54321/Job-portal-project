@@ -7,19 +7,40 @@ import place from '../assets/opportunity_location.png';
 import calender from '../assets/calender_card.png';
 import './SavedJobsCard.css';
 import { useJobs } from '../JobContext';
-import { formatPostedDate } from './OpportunitiesCard';
+import { formatPostedDate, isRecentlyPosted } from './OpportunitiesCard';
 import { useNavigate } from "react-router-dom";
 import { LocationDisplay } from './LocationDisplay';
 
 export const SavedJobsCard = ({ job, onRemoved }) => {
-    // const { applyForJob, toggleSaveJob, appliedJobs } = useJobs();
-
     const { isJobApplied } = useJobs();
     const { unsaveJob } = useJobs();
     const isApplied = isJobApplied(job.id);
 
     const navigate = useNavigate();
     if (!job) return null;
+
+    // Determine card styling based on job status
+    const isHighlighted = job.is_highlighted === true;
+    const isRecent = isRecentlyPosted(job.posted_date || job.created_at);
+
+    // Priority: Highlighted > Recent > Normal
+    let cardClassName = "myjobs-job-card";
+    if (isHighlighted) {
+        cardClassName += " highlighted-job";
+    } else if (isRecent) {
+        cardClassName += " recent-job";
+    }
+
+    // Get badge text based on job status
+    const getBadge = () => {
+        // if (isHighlighted) {
+        //     return <span className="job-badge premium-badge">⭐ Featured</span>;
+        // }
+        // if (isRecent) {
+        //     return <span className="job-badge recent-badge">🆕 New</span>;
+        // }
+        return null;
+    };
 
     const handleUnsave = async () => {
         try {
@@ -38,28 +59,18 @@ export const SavedJobsCard = ({ job, onRemoved }) => {
     };
 
     const HandleClick = () => {
-        navigate(`/Job-portal/jobseeker/OpportunityOverview/${job.id}`)
-    }
-
-    // const formatLocation = (location) => {
-
-    //     if (!location) return "Location not specified";
-
-    //     if (Array.isArray(location)) {
-    //         return location.join(", ");
-    //     }
-    //     return location;
-    // };
-
-    // const locationDisplay = formatLocation(job.location);
+        navigate(`/Job-portal/jobseeker/OpportunityOverview/${job.id}`);
+    };
 
     return (
-        <div className="myjobs-job-card">
+        <div className={cardClassName}>
+            {/* Badge for highlighted/recent jobs */}
+            {getBadge()}
+
             <div onClick={() => HandleClick()}>
                 <div className="myjobs-card-header">
                     <div>
                         <h2 className="myjobs-job-title">{job.job_title}</h2>
-                        {/* <span className="menu-dots">⋮</span> */}
                     </div>
                 </div>
                 <div className="myjobs-company-sub">

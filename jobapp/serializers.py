@@ -1390,9 +1390,14 @@ class PostAJobSerializer(serializers.ModelSerializer):
         # Hide highlight fields if plan doesn't allow it
         # ─────────────────────────────────────
  
-        if not platform or not platform.featured_employer_option:
-            data.pop("is_highlighted", None)
-            data.pop("highlighted_at", None)
+        # if not platform or not platform.featured_employer_option:
+        #     data.pop("is_highlighted", None)
+        #     data.pop("highlighted_at", None)
+        
+        if user and user.user_type == "employer":
+            if not platform or not platform.featured_employer_option:
+                data.pop("is_highlighted", None)
+                data.pop("highlighted_at", None)
  
         return data
  

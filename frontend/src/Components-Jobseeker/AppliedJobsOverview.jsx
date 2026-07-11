@@ -15,6 +15,20 @@ import { Stepper, Step, StepLabel, StepConnector, Typography, Box } from '@mui/m
 import { styled } from '@mui/material/styles';
 import api from "../api/axios";
 
+// Custom hook for scroll lock
+const useScrollLock = (isLocked) => {
+  useEffect(() => {
+    if (isLocked) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isLocked]);
+};
+
 const AnimatedConnector = styled(StepConnector)(({ theme }) => ({
   '& .MuiStepConnector-line': {
     borderColor: '#eaeaf0',
@@ -40,8 +54,11 @@ export const AppliedJobsOverview = () => {
   const [loading, setLoading] = useState(true);
   const [activeStep, setActiveStep] = useState(-1);
 
-  // ✅ Location popup state
+  // Location popup state
   const [isLocationPopupOpen, setIsLocationPopupOpen] = useState(false);
+
+  // Apply scroll lock for location popup
+  useScrollLock(isLocationPopupOpen);
 
   // Fetch application by ID
   useEffect(() => {
@@ -115,7 +132,7 @@ export const AppliedJobsOverview = () => {
 
   const job = appliedJob.job;
 
-  // ✅ Helper function to get location display with + more
+  // Helper function to get location display with + more
   const getLocationDisplay = (location, maxDisplay = 2) => {
     if (!location) return { display: "Location not specified", allLocations: [], hasMore: false };
 
@@ -149,7 +166,7 @@ export const AppliedJobsOverview = () => {
     };
   };
 
-  // ✅ Get location info
+  // Get location info
   const locationInfo = getLocationDisplay(job.location, 2);
 
   const viewJob = {
@@ -238,7 +255,7 @@ export const AppliedJobsOverview = () => {
               <span className="Opportunities-divider">|</span>
               <img src={place} className='card-icons' alt="location" />
 
-              {/* ✅ Location with + more functionality */}
+              {/* Location with + more functionality */}
               {locationInfo.hasMore ? (
                 <>
                   {locationInfo.allLocations.slice(0, 2).join(", ")}
@@ -315,7 +332,7 @@ export const AppliedJobsOverview = () => {
             <p><strong>Job Type:</strong> {viewJob.WorkType}</p>
             <p>
               <strong>Location:</strong>
-              {/* ✅ Location with + more in details section */}
+              {/* Location with + more in details section */}
               {locationInfo.hasMore ? (
                 <>
                   {locationInfo.allLocations.slice(0, 2).join(", ")}
@@ -432,7 +449,7 @@ export const AppliedJobsOverview = () => {
         )}
       </div>
 
-      {/* ✅ Location Popup Modal */}
+      {/* Location Popup Modal */}
       {isLocationPopupOpen && (
         <div className="opp-loc-modal-overlay" onClick={() => setIsLocationPopupOpen(false)}>
           <div className="opp-loc-modal-content" onClick={e => e.stopPropagation()}>
