@@ -9,6 +9,7 @@ import resumeIcon from "../assets/resume_icon.png";
 import { Header } from "../Components-LandingPage/Header";
 import { useEffect } from "react";
 import api from "../api/axios";
+import EducationDegreeDropdown, { degreeOptions } from "./EducationDegreeDropdown";
 
 const isValidValue = (value) => {
     if (!value) return false;
@@ -1453,6 +1454,9 @@ const EducationDetails = ({
         "POLYTECHNIC": 3,
         "ITI": 1,
         "PHD": 3, "PH.D": 3, "DOCTORATE": 3,
+        // ================= POST GRADUATION / PG =================
+        "P.G": 2,
+        "PG": 2,
     };
     const degreeAliases = {
         // ================= ENGINEERING / TECHNOLOGY =================
@@ -1608,6 +1612,15 @@ const EducationDetails = ({
         "POLYTECHNICDIPLOMA": "POLYTECHNIC",
         "INDUSTRIALTRAININGINSTITUTE": "ITI",
         "DOCTOROFPHILOSOPHY": "PHD",
+        // ================= POST GRADUATION / PG =================
+        "PG": "P.G",
+        "P.G": "P.G",
+        "POSTGRADUATION": "P.G",
+        "POST GRADUATION": "P.G",
+        "POST-GRADUATION": "P.G",
+        "POSTGRADUATE": "P.G",
+        "POST GRADUATE": "P.G",
+        "POST-GRADUATE": "P.G",
     };
 
 
@@ -1650,36 +1663,235 @@ const EducationDetails = ({
 
     const [errors, setErrors] = useState({});
 
-    // Local change handler to clear errors immediately when user types
+    // In EducationDetails component, update the handleInputChange function:
+
     const handleInputChange = (e, type, id = null) => {
         const { name, value } = e.target;
 
+        // ============================================================
+        // 1. DEGREE NORMALIZATION (for 'degree' field)
+        // ============================================================
+        if (name === "degree") {
+            const normalized = normalizeDegree(value);
+            if (normalized) {
+                // Create synthetic event with normalized value
+                const syntheticEvent = { target: { name, value: normalized } };
+
+                // Clear the specific error for this field
+                const errorKey = id !== null ? `graddegree${id}` : `${type}degree`;
+                if (errors[errorKey]) {
+                    setErrors(prev => ({ ...prev, [errorKey]: "" }));
+                }
+
+                // Call the parent update functions with normalized value
+                if (type === 'grad') {
+                    onUpdateGrad(id, syntheticEvent);
+                } else if (type === 'sslc') {
+                    onUpdateSSLC(syntheticEvent);
+                } else if (type === 'hsc') {
+                    onUpdateHSC(syntheticEvent);
+                }
+                return;
+            }
+        }
+
+        // ============================================================
+        // 2. PERCENTAGE VALIDATION (allow only 2 decimal places, max 100)
+        // ============================================================
         if (name === "percentage") {
             const decimalRegex = /^\d*\.?\d{0,2}$/;
-
             if (value !== "" && !decimalRegex.test(value)) return;
-
             if (parseFloat(value) > 100) return;
         }
 
-        // 2. Letters only for City/State/Location
-        if (["city", "state", "country", "location", "country",].includes(name)) {
+        // ============================================================
+        // 3. TEXT-ONLY VALIDATION (City, State, Country, Location)
+        // ============================================================
+        if (["city", "state", "country", "location"].includes(name)) {
             if (value !== "" && !/^[A-Za-z\s,]*$/.test(value)) return;
         }
+
+        // ============================================================
+        // 4. DEGREE/DEPARTMENT VALIDATION (allow special characters)
+        // ============================================================
         if (["degree", "dept"].includes(name)) {
             if (value !== "" && !/^[A-Za-z\s.,()&-]*$/.test(value)) return;
         }
 
-        // Clear the specific error for this field
+        // ============================================================
+        // 5. INSTITUTION VALIDATION (allow letters, numbers, special chars)
+        // ============================================================
+        if (name === "institution" || name === "college") {
+            const val = e.target.value;
+            if (val === "" || /^[a-zA-Z0-9\s\.\,\’\'\"\&\-\/\(\)]*$/.test(val)) {
+                // Continue with normal flow
+            } else {
+                return; // Block invalid characters
+            }
+        }
+
+        // ============================================================
+        // 6. CLEAR ERROR FOR THIS FIELD
+        // ============================================================
         const errorKey = id !== null ? `grad${name}${id}` : `${type}${name}`;
         if (errors[errorKey]) {
             setErrors(prev => ({ ...prev, [errorKey]: "" }));
         }
 
-        // Call the parent update functions
-        if (type === 'sslc') onUpdateSSLC(e);
-        else if (type === 'hsc') onUpdateHSC(e);
-        else onUpdateGrad(id, e);
+        // ============================================================
+        // 7. CALL PARENT UPDATE FUNCTIONS
+        // ============================================================
+        if (type === 'sslc') {
+            onUpdateSSLC(e);
+        } else if (type === 'hsc') {
+            onUpdateHSC(e);
+        } else if (type === 'grad') {
+            onUpdateGrad(id, e);
+        }
+    };
+
+    // ============================================================
+    // HELPER: NORMALIZE DEGREE
+    // ============================================================
+    const normalizeDegree = (value) => {
+        if (!value) return null;
+        const trimmed = value.trim();
+        if (!trimmed) return null;
+
+        // Remove extra spaces and convert to uppercase for comparison
+        const normalized = trimmed.toUpperCase().replace(/\s+/g, "");
+
+        // Check if it's already a valid degree key in degreeMinYears
+        if (degreeMinYears[normalized]) return normalized;
+
+        // Check if it's in degreeAliases
+        if (degreeAliases[normalized]) return degreeAliases[normalized];
+
+        // Common full name to abbreviation mapping
+        const fullNameMap = {
+            // Engineering / Technology
+            "BACHELOR OF TECHNOLOGY": "B.TECH",
+            "BACHELOR OF ENGINEERING": "B.E",
+            "MASTER OF TECHNOLOGY": "M.TECH",
+            "MASTER OF ENGINEERING": "M.E",
+            "BACHELOR OF ARCHITECTURE": "B.ARCH",
+            "MASTER OF ARCHITECTURE": "M.ARCH",
+            "BACHELOR OF PLANNING": "B.PLAN",
+            "MASTER OF PLANNING": "M.PLAN",
+
+            // Science
+            "BACHELOR OF SCIENCE": "B.SC",
+            "MASTER OF SCIENCE": "M.SC",
+            "BACHELOR OF SCIENCE HONOURS": "BSC(HONS)",
+            "BACHELOR OF STATISTICS": "B.STAT",
+            "MASTER OF STATISTICS": "M.STAT",
+
+            // Arts / Humanities
+            "BACHELOR OF ARTS": "B.A",
+            "MASTER OF ARTS": "M.A",
+            "BACHELOR OF ARTS HONOURS": "BA(HONS)",
+
+            // Commerce / Management
+            "BACHELOR OF COMMERCE": "B.COM",
+            "MASTER OF COMMERCE": "M.COM",
+            "BACHELOR OF BUSINESS ADMINISTRATION": "BBA",
+            "MASTER OF BUSINESS ADMINISTRATION": "MBA",
+            "BACHELOR OF COMPUTER APPLICATIONS": "BCA",
+            "MASTER OF COMPUTER APPLICATIONS": "MCA",
+
+            // Medical
+            "BACHELOR OF MEDICINE BACHELOR OF SURGERY": "MBBS",
+            "DOCTOR OF MEDICINE": "MD",
+            "MASTER OF SURGERY": "MS",
+            "BACHELOR OF DENTAL SURGERY": "BDS",
+            "MASTER OF DENTAL SURGERY": "MDS",
+
+            // Pharmacy
+            "BACHELOR OF PHARMACY": "B.PHARM",
+            "MASTER OF PHARMACY": "M.PHARM",
+            "DOCTOR OF PHARMACY": "PHARM.D",
+
+            // Law
+            "BACHELOR OF LAWS": "LL.B",
+            "MASTER OF LAWS": "LL.M",
+
+            // Education
+            "BACHELOR OF EDUCATION": "B.ED",
+            "MASTER OF EDUCATION": "M.ED",
+
+            // Design
+            "BACHELOR OF DESIGN": "B.DES",
+            "MASTER OF DESIGN": "M.DES",
+
+            // Diploma / Doctorate
+            "DIPLOMA": "DIPLOMA",
+            "POLYTECHNIC": "POLYTECHNIC",
+            "DOCTOR OF PHILOSOPHY": "PH.D",
+            "DOCTORATE": "DOCTORATE",
+
+            // Additional common variations
+            "BTECH": "B.TECH",
+            "B TECH": "B.TECH",
+            "B-TECH": "B.TECH",
+            "BE": "B.E",
+            "B E": "B.E",
+            "B-E": "B.E",
+            "MTECH": "M.TECH",
+            "M TECH": "M.TECH",
+            "M-TECH": "M.TECH",
+            "ME": "M.E",
+            "M E": "M.E",
+            "M-E": "M.E",
+            "BSC": "B.SC",
+            "B SC": "B.SC",
+            "B-SC": "B.SC",
+            "MSC": "M.SC",
+            "M SC": "M.SC",
+            "M-SC": "M.SC",
+            "BA": "B.A",
+            "B A": "B.A",
+            "B-A": "B.A",
+            "MA": "M.A",
+            "M A": "M.A",
+            "M-A": "M.A",
+            "BCOM": "B.COM",
+            "B COM": "B.COM",
+            "B-COM": "B.COM",
+            "MCOM": "M.COM",
+            "M COM": "M.COM",
+            "M-COM": "M.COM",
+            "LLB": "LL.B",
+            "LL B": "LL.B",
+            "LL-B": "LL.B",
+            "LLM": "LL.M",
+            "LL M": "LL.M",
+            "LL-M": "LL.M",
+            "PHD": "PH.D",
+            "PH D": "PH.D",
+            "PH-D": "PH.D",
+            // Post Graduation
+            "POST GRADUATION": "P.G",
+            "POSTGRADUATION": "P.G",
+            "POST-GRADUATION": "P.G",
+            "POST GRADUATE": "P.G",
+            "POSTGRADUATE": "P.G",
+            "POST-GRADUATE": "P.G",
+            "PG": "P.G",
+        };
+
+        // Check if the exact full name exists in map
+        const trimmedUpper = trimmed.toUpperCase();
+        if (fullNameMap[trimmedUpper]) {
+            return fullNameMap[trimmedUpper];
+        }
+
+        // Check if the normalized version exists (handles "BACHELOROFSCIENCE" etc.)
+        if (fullNameMap[normalized]) {
+            return fullNameMap[normalized];
+        }
+
+        // If no mapping found, return the original trimmed value
+        return trimmed;
     };
 
     const handleBlur = (e, type, id = null) => {
@@ -2230,15 +2442,17 @@ const EducationDetails = ({
                                 <div className="form-grid">
                                     <div className="form-group">
                                         <label>Degree*</label>
-                                        <input
-                                            type="text"
-                                            name="degree"
+                                        <EducationDegreeDropdown
                                             value={grad.degree}
                                             onChange={(e) => handleInputChange(e, 'grad', grad.id)}
-                                            placeholder="e.g., B.E"
-                                            className={errors[`graddegree${grad.id}`] ? "input-error" : ""}
+                                            name="degree"
+                                            error={errors[`graddegree${grad.id}`]}
+                                            placeholder="Select or type degree"
                                         />
-                                        {errors[`graddegree${grad.id}`] && <span className="error-message">{errors[`graddegree${grad.id}`]}</span>}
+                                        {/* REMOVE this duplicate error message */}
+                                        {/* {errors[`graddegree${grad.id}`] && (
+        <span className="error-message">{errors[`graddegree${grad.id}`]}</span>
+    )} */}
                                     </div>
                                     <div className="form-group">
                                         <label>Degree Status*</label>

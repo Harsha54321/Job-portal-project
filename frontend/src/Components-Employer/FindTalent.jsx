@@ -5,24 +5,120 @@ import { ProfileCard } from './ProfileCard';
 import { useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 
+// ============================================================
+// ✅ SHARED DEGREE OPTIONS - Same as MyProfile
+// ============================================================
+const BASE_DEGREE_OPTIONS = [
+  // ================= ENGINEERING / TECHNOLOGY =================
+  "B.E", "B.TECH",
+  "M.E", "M.TECH",
+  "B.ARCH", "M.ARCH",
+  "B.PLAN", "M.PLAN",
+
+  // ================= SCIENCE =================
+  "B.SC", "M.SC",
+  "BSC(HONS)",
+  "B.STAT", "M.STAT",
+  "INTEGRATEDM.SC",
+
+  // ================= ARTS / HUMANITIES =================
+  "B.A", "M.A",
+  "BA(HONS)",
+
+  // ================= COMMERCE / MANAGEMENT =================
+  "B.COM", "M.COM",
+  "BBA", "MBA", "PGDM",
+  "BBM", "BMS",
+  "BCA", "MCA",
+  "BFIA",
+
+  // ================= COMPUTER SCIENCE / IT =================
+  "BSCCS", "BSCIT", "MSCCS", "MSCIT",
+  "MSCDATASCIENCE", "PGDCA",
+
+  // ================= MEDICAL - ALLOPATHY =================
+  "MBBS",
+  "MD", "MS", "DM", "M.CH",
+  "DNB",
+
+  // ================= DENTAL =================
+  "BDS", "MDS",
+
+  // ================= AYUSH =================
+  "BAMS", "BHMS", "BUMS", "BSMS", "BYNS", "BNYS",
+  "MDAYURVEDA", "MDHOMEOPATHY",
+
+  // ================= VETERINARY / AGRICULTURE / FORESTRY =================
+  "BVSC", "BVSC&AH", "MVSC",
+  "BSCAGRICULTURE", "MSCAGRICULTURE",
+  "BSCFORESTRY", "BSCHORTICULTURE",
+  "B.F.SC",
+
+  // ================= PHARMACY =================
+  "D.PHARM",
+  "B.PHARM",
+  "M.PHARM",
+  "PHARM.D", "PHARMD",
+
+  // ================= NURSING / ALLIED HEALTH =================
+  "ANM", "GNM",
+  "BSCNURSING", "MSCNURSING",
+  "BPT", "MPT",
+  "BOT", "MOT",
+  "BASLP",
+  "B.SCMLT",
+  "BSCOPTOMETRY",
+
+  // ================= LAW =================
+  "LL.B",
+  "BALLB", "BA.LLB", "BBALLB", "BBA.LLB", "BCOMLLB",
+  "LL.M",
+
+  // ================= EDUCATION =================
+  "D.ED",
+  "B.ED",
+  "M.ED",
+  "D.EL.ED",
+  "B.P.ED",
+  "M.P.ED",
+
+  // ================= DESIGN / FINE ARTS / FASHION =================
+  "B.DES",
+  "M.DES",
+  "BFA", "MFA",
+  "BSCFASHIONDESIGN", "MSCFASHIONDESIGN",
+  "BID",
+
+  // ================= SOCIAL WORK / JOURNALISM / MEDIA =================
+  "BSW", "MSW",
+  "BJMC", "MJMC",
+  "BJ", "MJ",
+  "BLIS", "MLIS",
+
+  // ================= HOTEL MANAGEMENT / AVIATION / VOCATIONAL =================
+  "BHM", "BHMCT", "MHM",
+  "B.VOC",
+  "DIPLOMAINAVIATION",
+
+  // ================= PROFESSIONAL / FINANCE =================
+  "C.A",
+  "C.S",
+  "CMA", "ICWA",
+  "CFA",
+  "ACCA",
+  "ACTUARIALSCIENCE",
+
+  // ================= DIPLOMA / DOCTORATE / OTHER =================
+  "DIPLOMA",
+  "POLYTECHNIC",
+  "ITI",
+  "PH.D", "DOCTORATE",
+];
+
+// Remove duplicates and sort
+const BASE_DEGREE_SET = new Set(BASE_DEGREE_OPTIONS);
+
 export const FindTalent = ({ onUpgradeClick }) => {
-  const normalizeValue = (value) => {
-    if (!value || typeof value !== "string") return null;
-    let cleaned = value.trim().toLowerCase();
-    cleaned = cleaned.replace(/\s+/g, " ");
-    cleaned = cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
-    return cleaned;
-  };
-
-  const isValidValue = (value) => {
-    if (!value) return false;
-    const cleaned = value.trim();
-    if (cleaned.length < 2) return false;
-    if (!/^[a-zA-Z\s]+$/.test(cleaned)) return false;
-    if (/^(.)\1+$/.test(cleaned)) return false;
-    return true;
-  };
-
   // Get data from JobContext
   const { Alluser, setAlluser } = useJobs();
   const navigate = useNavigate();
@@ -66,7 +162,6 @@ export const FindTalent = ({ onUpgradeClick }) => {
   // 1. CHECK ACCESS - MAIN FUNCTION
   // ============================================
   const checkCandidateSearchAccess = useCallback(async (forceRefresh = false) => {
-    // Prevent multiple simultaneous checks
     if (isChecking && !forceRefresh) return;
 
     try {
@@ -86,13 +181,11 @@ export const FindTalent = ({ onUpgradeClick }) => {
         candidate_search: plan?.Candidate_Search
       });
 
-      // Check all conditions
       const isExpired = subscription?.is_expired === true;
       const isCancelled = subscription?.status === 'cancelled';
       const isActive = subscription?.status === 'active';
       const isFeatureEnabled = plan?.Candidate_Search === true;
 
-      // ✅ Access ONLY if active AND not expired AND feature enabled
       const canAccess = isActive && !isExpired && isFeatureEnabled;
 
       let message = '';
@@ -108,7 +201,6 @@ export const FindTalent = ({ onUpgradeClick }) => {
         message = `Your subscription is not active. Please contact support.`;
       }
 
-      // 🔴 If access was revoked, clear the data IMMEDIATELY
       if (accessState.canAccess && !canAccess) {
         console.log('🔴 Access revoked - clearing candidate data');
         setAlluser([]);
@@ -125,7 +217,6 @@ export const FindTalent = ({ onUpgradeClick }) => {
         subscriptionStatus
       });
 
-      // Only fetch data if can access
       if (canAccess && !hasData) {
         await fetchJobseekers();
       } else if (!canAccess) {
@@ -181,12 +272,23 @@ export const FindTalent = ({ onUpgradeClick }) => {
   };
 
   // ============================================
-  // 3. REFRESH ACCESS (called from parent)
+  // 3. REFRESH DATA
   // ============================================
-  const refreshAccess = useCallback(async () => {
-    console.log('🔄 Manual refresh triggered');
-    await checkCandidateSearchAccess(true);
-  }, [checkCandidateSearchAccess]);
+  const refreshData = useCallback(async () => {
+    console.log('🔄 Refreshing data...');
+    await fetchJobseekers();
+    setSelectedLanguages([]);
+    setSelectedEdu([]);
+    setSelectedSkills([]);
+    setAppliedFilters({
+      search: '',
+      languages: [],
+      education: [],
+      skills: [],
+      experience: maxExp
+    });
+    setVisibleCount(10);
+  }, [fetchJobseekers, maxExp]);
 
   // ============================================
   // 4. HANDLE UPGRADE/REACTIVATE
@@ -208,10 +310,8 @@ export const FindTalent = ({ onUpgradeClick }) => {
   };
 
   // ============================================
-  // 5. EFFECTS - MULTIPLE TRIGGERS
+  // 5. EFFECTS
   // ============================================
-
-  // 5a. Initial check on mount
   useEffect(() => {
     const userType = sessionStorage.getItem('user_type');
     if (userType !== 'employer') {
@@ -221,53 +321,81 @@ export const FindTalent = ({ onUpgradeClick }) => {
     checkCandidateSearchAccess(true);
   }, []);
 
-  // 5b. Poll every 30 seconds (catches cancellation/expiry)
   useEffect(() => {
     const interval = setInterval(() => {
       checkCandidateSearchAccess(false);
+      if (accessState.canAccess) {
+        refreshData();
+      }
     }, 30000);
-
     return () => clearInterval(interval);
-  }, [checkCandidateSearchAccess]);
+  }, [checkCandidateSearchAccess, accessState.canAccess, refreshData]);
 
-  // 5c. Check on tab visibility change
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        console.log('👁️ Tab visible - re-checking access');
+        console.log('👁️ Tab visible - re-checking access and refreshing data');
         checkCandidateSearchAccess(true);
+        if (accessState.canAccess) {
+          refreshData();
+        }
       }
     };
-
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [checkCandidateSearchAccess]);
+  }, [checkCandidateSearchAccess, accessState.canAccess, refreshData]);
 
-  // 5d. Check on page focus
   useEffect(() => {
     const handleFocus = () => {
-      console.log('🎯 Page focused - re-checking access');
+      console.log('🎯 Page focused - re-checking access and refreshing data');
       checkCandidateSearchAccess(true);
+      if (accessState.canAccess) {
+        refreshData();
+      }
     };
-
     window.addEventListener('focus', handleFocus);
     return () => window.removeEventListener('focus', handleFocus);
-  }, [checkCandidateSearchAccess]);
+  }, [checkCandidateSearchAccess, accessState.canAccess, refreshData]);
 
-  // 5e. Check on navigation
   useEffect(() => {
     const handlePopState = () => {
-      console.log('↩️ Navigation - re-checking access');
+      console.log('↩️ Navigation - re-checking access and refreshing data');
       checkCandidateSearchAccess(true);
+      if (accessState.canAccess) {
+        refreshData();
+      }
     };
-
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
-  }, [checkCandidateSearchAccess]);
+  }, [checkCandidateSearchAccess, accessState.canAccess, refreshData]);
 
   // ============================================
-  // 6. FILTER LOGIC (unchanged)
+  // 6. FILTER LOGIC - NO NORMALIZATION
   // ============================================
+
+  // ✅ Build dynamic degree options from BASE + degrees from backend
+  const dynamicDegreeOptions = useMemo(() => {
+    const dynamicSet = new Set(BASE_DEGREE_SET);
+
+    if (Alluser && Alluser.length > 0) {
+      Alluser.forEach(user => {
+        const educations = user.profile?.educations || user.educations || [];
+        if (Array.isArray(educations)) {
+          educations.forEach(edu => {
+            const degree = edu?.degree || edu?.course || edu?.qualification || edu?.name;
+            if (degree && typeof degree === 'string' && degree.trim()) {
+              dynamicSet.add(degree.trim());
+            }
+          });
+        }
+      });
+    }
+
+    return Array.from(dynamicSet).sort((a, b) =>
+      a.localeCompare(b, undefined, { sensitivity: 'base' })
+    );
+  }, [Alluser]);
+
   const jobseekersOnly = useMemo(() => {
     if (!Alluser || Alluser.length === 0) return [];
     return Alluser.filter(user => {
@@ -279,53 +407,66 @@ export const FindTalent = ({ onUpgradeClick }) => {
     });
   }, [Alluser]);
 
+  // ✅ EDUCATION FILTER OPTIONS - Direct values from MyProfile
   const filterOptions = useMemo(() => {
     const languages = new Map();
     const education = new Map();
     const skills = new Map();
-    const predefinedEdu = ["BS", "B.A", "CA", "B.Ed", "M.Com", "B.Sc", "MCA", "BCA", "LLM", "MS/M.Sc", "Diploma", "B.Com", "M.Tech", "MBA/PGDM", "PG Diploma", "B.B.A/ B.M.S", "Medical-MS/MD", "B.Tech/B.E.", "Any Graduate", "Other Post Graduate", "ITI Certification", "Any Postgraduate", "Bachelor Of Science", "Business Economics", "Artificial Intelligence (AI)", "Machine Learning", "Data Science", "Cyber Security", "Cloud Computing"];
+
+    // ============================================================
+    // STEP 1: Add ALL base degree options
+    // ============================================================
+    BASE_DEGREE_OPTIONS.forEach(deg => {
+      if (deg && deg.trim()) {
+        education.set(deg.trim().toLowerCase(), deg.trim());
+      }
+    });
+
+    // ============================================================
+    // STEP 2: Add ALL dynamic degree options from MyProfile
+    // ============================================================
+    dynamicDegreeOptions.forEach(edu => {
+      if (edu && edu.trim()) {
+        education.set(edu.trim().toLowerCase(), edu.trim());
+      }
+    });
 
     if (!Alluser || Alluser.length === 0) {
-      return { languages: [], education: [], skills: [] };
+      return {
+        languages: [],
+        education: Array.from(education.values()).sort(),
+        skills: [],
+      };
     }
 
+    // ============================================================
+    // STEP 3: Extract from user data (languages and skills only)
+    // ============================================================
     const processArray = (arr, key, map) => {
       if (!Array.isArray(arr)) return;
       arr.forEach(item => {
-        // Look for the requested key, but fallback to common alternatives or plain strings
         const raw = typeof item === 'string' ? item : (item[key] || item.course || item.qualification || item.name);
-        if (!raw) return;
-        const normalized = normalizeValue(raw);
-        if (isValidValue(normalized)) {
-          map.set(normalized.toLowerCase(), normalized);
+        if (raw && typeof raw === 'string' && raw.trim()) {
+          map.set(raw.trim().toLowerCase(), raw.trim());
         }
       });
     };
 
     Alluser.forEach(user => {
       processArray(user.profile?.languages, "name", languages);
-      processArray(user.profile?.educations, "degree", education);
       processArray(user.profile?.skills, "name", skills);
       processArray(user.languages, "name", languages);
-      processArray(user.educations, "degree", education);
       processArray(user.skills, "name", skills);
     });
 
-
-    // Add predefined education list to the map
-    predefinedEdu.forEach(edu => {
-      const normalized = normalizeValue(edu);
-      if (isValidValue(normalized)) {
-        education.set(normalized.toLowerCase(), normalized);
-      }
-    });
+    console.log('📚 Education options available (BASE + DYNAMIC):', Array.from(education.values()).sort());
 
     return {
       languages: Array.from(languages.values()).sort(),
       education: Array.from(education.values()).sort(),
       skills: Array.from(skills.values()).sort(),
     };
-  }, [Alluser]);
+  }, [Alluser, dynamicDegreeOptions]);
 
   const handleFilterChange = (value, state, setState) => {
     setState(
@@ -342,11 +483,17 @@ export const FindTalent = ({ onUpgradeClick }) => {
     let newSkills = [...selectedSkills];
 
     if (term) {
+      // Check if search term matches any degree option
+      const matchingDegree = dynamicDegreeOptions.find(d =>
+        d.toLowerCase() === term
+      );
+
+      if (matchingDegree && !newEdu.includes(matchingDegree)) {
+        newEdu.push(matchingDegree);
+      }
+
       filterOptions.languages.forEach(l => {
         if (l.toLowerCase() === term && !newLangs.includes(l)) newLangs.push(l);
-      });
-      filterOptions.education.forEach(e => {
-        if (e.toLowerCase() === term && !newEdu.includes(e)) newEdu.push(e);
       });
       filterOptions.skills.forEach(s => {
         if (s.toLowerCase() === term && !newSkills.includes(s)) newSkills.push(s);
@@ -380,13 +527,13 @@ export const FindTalent = ({ onUpgradeClick }) => {
     return (showAll || filterSearch[searchKey]) ? filtered : filtered.slice(0, limit);
   };
 
+  // ✅ Filtered talent with direct comparison (no normalization)
   const filteredTalent = useMemo(() => {
     if (!Alluser || Alluser.length === 0) return [];
     return Alluser.filter((user) => {
       const userType = user.user?.user_type || user.user_type || user.role || user.profile?.user_type;
       if (userType === 'employer') return false;
 
-      // Bulletproof text extraction: grabs all string values regardless of the object keys
       const extractText = (data) => {
         if (!data) return [];
         const arr = Array.isArray(data) ? data : [data];
@@ -397,10 +544,17 @@ export const FindTalent = ({ onUpgradeClick }) => {
         }).filter(Boolean);
       };
 
+      // Extract education with all possible field names
+      const userEducationRaw = user.profile?.educations || user.educations || user.profile?.education || user.education || [];
+      const userEducation = extractText(userEducationRaw);
+
+      // Extract degree specifically
+      const userDegrees = (user.profile?.educations || user.educations || [])
+        .map(edu => edu?.degree || edu?.course || edu?.qualification || edu?.name || '')
+        .filter(Boolean);
+
       const userSkills = extractText(user.profile?.skills || user.skills);
       const userLanguages = extractText(user.profile?.languages || user.languages);
-      // Checks both arrays and single string fields for education
-      const userEducation = extractText(user.profile?.educations || user.educations || user.profile?.education || user.education);
 
       const searchLower = appliedFilters.search.toLowerCase().trim();
       let matchesSearch = true;
@@ -413,23 +567,33 @@ export const FindTalent = ({ onUpgradeClick }) => {
           user.city || user.profile?.city || '',
           user.state || user.profile?.state || '',
           ...userSkills,
-          ...userEducation
+          ...userEducation,
+          ...userDegrees
         ].join(' ').toLowerCase();
         matchesSearch = searchableText.includes(searchLower);
       }
 
-      // Use .includes() for partial matching (e.g., matches "Diploma" inside "Diploma in IT")
       const matchesLanguage =
         appliedFilters.languages.length === 0 ||
         appliedFilters.languages.some(appLang =>
           userLanguages.some(lang => lang.toLowerCase().includes(appLang.toLowerCase().trim()))
         );
 
+      // ✅ Direct education matching - no normalization
       const matchesEducation =
         appliedFilters.education.length === 0 ||
-        appliedFilters.education.some(appEdu =>
-          userEducation.some(edu => edu.toLowerCase().includes(appEdu.toLowerCase().trim()))
-        );
+        appliedFilters.education.some(appEdu => {
+          const searchEdu = appEdu.toLowerCase().trim();
+          // Check in education objects
+          const matchesInEducation = userEducation.some(edu =>
+            edu.toLowerCase().includes(searchEdu)
+          );
+          // Check in degree fields specifically
+          const matchesInDegree = userDegrees.some(deg =>
+            deg.toLowerCase().includes(searchEdu)
+          );
+          return matchesInEducation || matchesInDegree;
+        });
 
       const matchesSkills =
         appliedFilters.skills.length === 0 ||
@@ -474,7 +638,6 @@ export const FindTalent = ({ onUpgradeClick }) => {
   // 7. RENDER LOGIC
   // ============================================
 
-  // Case 1: Loading
   if (loadingAccess || loadingJobseekers) {
     return (
       <div className="talent-page-container">
@@ -502,7 +665,6 @@ export const FindTalent = ({ onUpgradeClick }) => {
     );
   }
 
-  // Case 2: No Access - FULL LOCK PAGE
   if (!accessState.canAccess) {
     const isExpired = accessState.isExpired;
     const isCancelled = accessState.isCancelled;
@@ -599,11 +761,10 @@ export const FindTalent = ({ onUpgradeClick }) => {
   }
 
   // ============================================
-  // 8. Case 3: Has Access - Show Full Content
+  // 8. HAS ACCESS - SHOW FULL CONTENT
   // ============================================
   return (
     <div className="talent-page-container">
-      {/* Plan Status Indicator */}
       <div style={{
         textAlign: "right",
         padding: "10px 20px",
@@ -612,9 +773,23 @@ export const FindTalent = ({ onUpgradeClick }) => {
         borderBottom: "1px solid #e2e8f0"
       }}>
         Plan: {accessState.planName} • Status: Active
+        <button
+          onClick={refreshData}
+          style={{
+            marginLeft: '15px',
+            background: 'none',
+            border: '1px solid #e2e8f0',
+            borderRadius: '4px',
+            padding: '4px 12px',
+            cursor: 'pointer',
+            fontSize: '12px',
+            color: '#64748b'
+          }}
+        >
+          🔄 Refresh
+        </button>
       </div>
 
-      {/* Search Section */}
       <section className="FindTalent-search-section">
         <div className="FindTalent-search-wrapper">
           <input
@@ -625,7 +800,6 @@ export const FindTalent = ({ onUpgradeClick }) => {
             onChange={(e) => {
               const newValue = e.target.value;
               setSearchTerm(newValue);
-
               if (newValue.trim() === '') {
                 setSelectedLanguages([]);
                 setSelectedEdu([]);
@@ -657,7 +831,6 @@ export const FindTalent = ({ onUpgradeClick }) => {
       </section>
 
       <div className="FindTalent-layout-body">
-        {/* Filters Sidebar */}
         <div className="FindTalent-filters-sidebar">
           <div className="FindTalent-filter-top">
             <button className="FindTalent-filter-label" onClick={handleApplyFilters}>Apply filters</button>
@@ -720,7 +893,7 @@ export const FindTalent = ({ onUpgradeClick }) => {
             </div>
           </div>
 
-          {/* Education Filter */}
+          {/* ✅ Education Filter - Shows ALL degrees from MyProfile (no normalization) */}
           {filterOptions.education.length > 0 && (
             <div className="FindTalent-filter-category">
               <h3>Education</h3>
@@ -732,19 +905,20 @@ export const FindTalent = ({ onUpgradeClick }) => {
                 onChange={(e) => setFilterSearch({ ...filterSearch, edu: e.target.value })}
                 style={{ width: '100%', padding: '5px', marginBottom: '10px', border: '1px solid #ddd', borderRadius: '3px' }}
               />
-              {getVisibleItemsWithSearch(filterOptions.education, showAllEdu, 'edu', 3).map(edu => (<div key={edu} className="FindTalent-checkbox-item">
-                <input
-                  type="checkbox"
-                  id={`edu-${edu}`}
-                  checked={selectedEdu.includes(edu)}
-                  onChange={() => handleFilterChange(edu, selectedEdu, setSelectedEdu)}
-                />
-                <label htmlFor={`edu-${edu}`}>{edu}</label>
-              </div>
+              {getVisibleItemsWithSearch(filterOptions.education, showAllEdu, 'edu', 5).map(edu => (
+                <div key={edu} className="FindTalent-checkbox-item">
+                  <input
+                    type="checkbox"
+                    id={`edu-${edu}`}
+                    checked={selectedEdu.includes(edu)}
+                    onChange={() => handleFilterChange(edu, selectedEdu, setSelectedEdu)}
+                  />
+                  <label htmlFor={`edu-${edu}`}>{edu}</label>
+                </div>
               ))}
-              {filterOptions.education.length > 3 && (
+              {filterOptions.education.length > 5 && (
                 <span className="FindTalent-view-more-link" onClick={() => setShowAllEdu(!showAllEdu)}>
-                  {showAllEdu ? "View Less" : `View More (${filterOptions.education.length - 3}+)`}
+                  {showAllEdu ? "View Less" : `View More (${filterOptions.education.length - 5}+)`}
                 </span>
               )}
             </div>
@@ -803,6 +977,20 @@ export const FindTalent = ({ onUpgradeClick }) => {
               <p>Try adjusting your filters or search term</p>
               <button className="FindTalent-clear-filters-btn" onClick={clearFilters}>
                 Clear all filters
+              </button>
+              <button
+                onClick={refreshData}
+                style={{
+                  marginTop: '10px',
+                  padding: '8px 20px',
+                  background: '#007bff',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer'
+                }}
+              >
+                Refresh Data
               </button>
             </div>
           )}

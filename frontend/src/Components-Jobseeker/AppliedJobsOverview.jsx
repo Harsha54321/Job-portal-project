@@ -14,6 +14,7 @@ import { useJobs } from '../JobContext'
 import { Stepper, Step, StepLabel, StepConnector, Typography, Box } from '@mui/material'
 import { styled } from '@mui/material/styles';
 import api from "../api/axios";
+import { isRecentlyPosted } from './OpportunitiesCard';
 
 // Custom hook for scroll lock
 const useScrollLock = (isLocked) => {
@@ -132,6 +133,10 @@ export const AppliedJobsOverview = () => {
 
   const job = appliedJob.job;
 
+  // Check if job is highlighted
+  const isHighlighted = job.is_highlighted === true;
+  const isRecent = isRecentlyPosted(job.posted_date || job.created_at);
+
   // Helper function to get location display with + more
   const getLocationDisplay = (location, maxDisplay = 2) => {
     if (!location) return { display: "Location not specified", allLocations: [], hasMore: false };
@@ -224,87 +229,113 @@ export const AppliedJobsOverview = () => {
     },
   ];
 
+  // Determine card class for top card
+  let topCardClassName = "appliedjobsO-job-card";
+  if (isHighlighted) {
+    topCardClassName += " highlighted-job";
+  } else if (isRecent) {
+    topCardClassName += " recent-job";
+  }
+
+  // Determine card class for details card
+  let detailsCardClassName = "opp-job-details-card";
+  if (isHighlighted) {
+    detailsCardClassName += " highlighted-job";
+  } else if (isRecent) {
+    detailsCardClassName += " recent-job";
+  }
+
   return (
     <div>
       <Header />
+      <div style={{ margin: "120px 60px 20px 60px", display: "flex", justifyContent: "flex-start" }}>
+        <button
+          className="back-btn"
+          onClick={() => navigate(-1)}
+          style={{ padding: "10px 25px", border: "1px solid #ddd", borderRadius: "8px", background: "#5D98F1", fontWeight: "600", color: "#FFFF", cursor: "pointer" }}
+        >
+          Back
+        </button>
+      </div>
+      <div className={topCardClassName}>
+        <div className="applied-jobs-top-card-grid">
+          <div>
+            <div className="myjobs-card-header">
+              <div><h2 className="myjobs-job-title">{viewJob.title}</h2></div>
+            </div>
+            <div style={{ marginTop: "20px" }} className="myjobs-company-sub">
+              <p className="myjobs-company-name">
+                {viewJob.company}
+                <span className="Opportunities-divider">|</span>
+                <span className="star"><img src={starIcon} alt="star" /></span>
+                {viewJob.ratings}
+                <span className="Opportunities-divider">|</span>
+                <span>{viewJob.reviewNo}</span>
+              </p>
+            </div>
+            <div style={{ marginTop: "20px" }} className="Opportunities-job-details">
+              <p className='Opportunities-detail-line'>
+                <img src={time} className='card-icons' alt="time" />
+                {viewJob.WorkType}
+                <span className="Opportunities-divider">|</span>
+                <span>{viewJob.salary}</span>
+                <span className="Opportunities-divider">|</span>
+                <img src={experience} className='card-icons' alt="experience" />
+                {viewJob.experience}
+                <span className="Opportunities-divider">|</span>
+                <img src={place} className='card-icons' alt="location" />
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr" }} className='appliedjobsO-job-card'>
-        <div>
-          <div className="myjobs-card-header">
-            <div><h2 className="myjobs-job-title">{viewJob.title}</h2></div>
-          </div>
-          <div style={{ marginTop: "20px" }} className="myjobs-company-sub">
-            <p className="myjobs-company-name">
-              {viewJob.company}
-              <span className="Opportunities-divider">|</span>
-              <span className="star"><img src={starIcon} alt="star" /></span>
-              {viewJob.ratings}
-              <span className="Opportunities-divider">|</span>
-              <span>{viewJob.reviewNo}</span>
-            </p>
-          </div>
-          <div style={{ marginTop: "20px" }} className="Opportunities-job-details">
-            <p className='Opportunities-detail-line'>
-              <img src={time} className='card-icons' alt="time" />
-              {viewJob.WorkType}
-              <span className="Opportunities-divider">|</span>
-              <span>{viewJob.salary}</span>
-              <span className="Opportunities-divider">|</span>
-              <img src={experience} className='card-icons' alt="experience" />
-              {viewJob.experience}
-              <span className="Opportunities-divider">|</span>
-              <img src={place} className='card-icons' alt="location" />
-
-              {/* Location with + more functionality */}
-              {locationInfo.hasMore ? (
-                <>
-                  {locationInfo.allLocations.slice(0, 2).join(", ")}
-                  <span
-                    className="opp-show-more-link"
-                    onClick={() => setIsLocationPopupOpen(true)}
-                  >
-                    +{locationInfo.remainingCount} more
+                {/* Location with + more functionality */}
+                {locationInfo.hasMore ? (
+                  <>
+                    {locationInfo.allLocations.slice(0, 2).join(", ")}
+                    <span
+                      className="opp-show-more-link"
+                      onClick={() => setIsLocationPopupOpen(true)}
+                    >
+                      +{locationInfo.remainingCount} more
+                    </span>
+                  </>
+                ) : (
+                  viewJob.location
+                )}
+              </p>
+            </div>
+            <div style={{ marginTop: "20px", alignItems: "center", display: "flex", justifyContent: "space-between" }} className="Applied-job-tags">
+              {viewJob.tags && (
+                <div>
+                  <span className={`Opportunities-job-tag ${viewJob.tags?.toLowerCase()}`}>
+                    {viewJob.tags}
                   </span>
-                </>
-              ) : (
-                viewJob.location
+                </div>
               )}
-            </p>
+              <span className={`applied-application-status status-${viewJob.status.type.replace(/\s+/g, "_")}`}>
+                {viewJob.status.text}
+              </span>
+            </div>
+            <hr className="Opportunities-separator" />
           </div>
-          <div style={{ marginTop: "20px", alignItems: "center", display: "flex", justifyContent: "space-between" }} className="Applied-job-tags">
-            {viewJob.tags && (
-              <div>
-                <span className={`Opportunities-job-tag ${viewJob.tags?.toLowerCase()}`}>
-                  {viewJob.tags}
-                </span>
+
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "end", paddingRight: "50px" }}>
+            {viewJob.logo ? (
+              <img
+                width={150}
+                style={{ marginTop: "50px" }}
+                src={viewJob.logo}
+                alt={viewJob.company}
+              />
+            ) : (
+              <div className="Opportunities-job-logo-placeholder">
+                {viewJob.company.charAt(0).toUpperCase()}
               </div>
             )}
-            <span className={`applied-application-status status-${viewJob.status.type}`}>
-              {viewJob.status.text}
-            </span>
           </div>
-          <hr className="Opportunities-separator" />
-        </div>
-
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "end", paddingRight: "50px" }}>
-          {viewJob.logo ? (
-            <img
-              width={150}
-              style={{ marginTop: "50px" }}
-              src={viewJob.logo}
-              alt={viewJob.company}
-            />
-          ) : (
-            <div className="Opportunities-job-logo-placeholder">
-              {viewJob.company.charAt(0).toUpperCase()}
-            </div>
-          )}
         </div>
       </div>
 
       <div className='AppliedJobs-overview-main'>
         <div className='opp-job-main'>
-          <div className="opp-job-details-card">
+          <div className={detailsCardClassName}>
             {/* Job Highlights */}
             <div className="opp-job-highlights">
               <h3>Job Highlights</h3>

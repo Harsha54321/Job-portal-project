@@ -629,3 +629,40 @@ select option {
     margin-right: 0.75rem;
     line-height: 0;
 }
+
+/* Education Degree Dropdown Styles */
+.education-degree-dropdown {
+    position: relative;
+    width: 100%;
+}
+
+.education-degree-dropdown .degree-dropdown-trigger {
+    height: 44px;
+    border: 1px solid #E5E7EB;
+    border-radius: 6px;
+    padding: 0 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    background: #fff;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.education-degree-dropdown .degree-dropdown-trigger:hover {
+    border-color: #007bff;
+}
+
+.education-degree-dropdown .degree-dropdown-trigger:focus-within {
+    border-color: #007bff;
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.12);
+}
+
+.education-degree-dropdown .degree-dropdown-trigger.input-error {
+    border-color: #FF6F61;
+    background-color: #fff8f8;
+}
+
+.education-degree-dropdown .degree-dropdown-trigger.input-error:focus-within {
+    box-shadow: 0 0 0 3px rgba(255, 111, 97, 0.2);
+}

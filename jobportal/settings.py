@@ -104,13 +104,13 @@ CELERY_BEAT_SCHEDULE = {
             'send_weekly_summary_notifications'
         ),
 
-        'schedule': timedelta(seconds=60),
+        # 'schedule': timedelta(seconds=60),
 
-        # 'schedule': crontab(
-        #     hour=9,
-        #     minute=0,
-        #     day_of_week='monday'
-        # ),
+        'schedule': crontab(
+            hour=9,
+            minute=0,
+            day_of_week='monday'
+        ),
     },
  
     # ─────────────────────────────
@@ -301,7 +301,8 @@ import os
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://54.183.89.14")
 # FRONTEND_URL = FRONTEND_URL = "http://localhost:5173"
 
-SITE_URL = "http://127.0.0.1:8000"
+# SITE_URL = "http://127.0.0.1:8000"
+SITE_URL = "http://54.183.89.14"
  
 GOOGLE_CLIENT_ID = "105293618059-al95762js6gc2o9umchkb3la0mnirhs1.apps.googleusercontent.com"
 #GOOGLE_CLIENT_ID = "146646258104-184rcr7uv1mpttpi8bjf9tjq2r2ijg1i.apps.googleusercontent.com"
