@@ -81,22 +81,26 @@ export const JobMonitorOverview = ({ jobId, setSelectedJobId }) => {
     }, [jobs, currentId, jobData]);
 
     const handleDelete = async () => {
-        const confirmDelete = window.confirm("Are you sure you want to delete this job?");
-        if (confirmDelete) {
-            try {
-                setLoadingStates(prev => ({ ...prev, delete: true }));
-                await api.delete(`/admin/jobs/${currentId}/delete/`);
-                deleteJob(currentId);
-                if (typeof setSelectedJobId === 'function') {
-                    setSelectedJobId(null);
-                }
-                alert("Job deleted successfully!");
-            } catch (error) {
-                console.error("Delete failed:", error);
-                alert(error.response?.data?.message || "Failed to delete job. Please try again.");
-            } finally {
-                setLoadingStates(prev => ({ ...prev, delete: false }));
+        // Show confirmation dialog
+        const userConfirmed = window.confirm("⚠️ Are you sure you want to delete this job? This action cannot be undone.");
+
+        if (!userConfirmed) {
+            return; // Exit if user cancels
+        }
+
+        try {
+            setLoadingStates(prev => ({ ...prev, delete: true }));
+            await api.delete(`/admin/jobs/${currentId}/delete/`);
+            deleteJob(currentId);
+            if (typeof setSelectedJobId === 'function') {
+                setSelectedJobId(null);
             }
+            alert("✅ Job deleted successfully!");
+        } catch (error) {
+            console.error("Delete failed:", error);
+            alert(error.response?.data?.message || "❌ Failed to delete job. Please try again.");
+        } finally {
+            setLoadingStates(prev => ({ ...prev, delete: false }));
         }
     };
 

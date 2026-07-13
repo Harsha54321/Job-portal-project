@@ -1394,7 +1394,7 @@ class PostAJobSerializer(serializers.ModelSerializer):
         #     data.pop("is_highlighted", None)
         #     data.pop("highlighted_at", None)
         
-        if user and user.user_type == "employer":
+        if user and user.is_authenticated and hasattr(user, 'user_type') and user.user_type == "employer":
             if not platform or not platform.featured_employer_option:
                 data.pop("is_highlighted", None)
                 data.pop("highlighted_at", None)
