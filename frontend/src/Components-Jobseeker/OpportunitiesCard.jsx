@@ -44,11 +44,11 @@ export const OpportunitiesCard = ({ job }) => {
 
     // Priority: Highlighted > Recent > Normal
     let cardClassName = "Opportunities-job-card";
-    if (isHighlighted) {
-        cardClassName += " highlighted-job";
-    } else if (isRecent) {
-        cardClassName += " recent-job";
-    }
+    // if (isHighlighted) {
+    //     cardClassName += " highlighted-job";
+    // } else if (isRecent) {
+    //     cardClassName += " recent-job";
+    // }
 
     const handleSave = async (e) => {
         e.stopPropagation();
@@ -90,7 +90,7 @@ export const OpportunitiesCard = ({ job }) => {
             <div onClick={() => handleClick()}>
 
 
-                <div className="Opportunities-job-header">
+                {/* <div className="Opportunities-job-header">
                     <div>
                         <h3 className="Opportunities-job-title">{job.job_title}</h3>
                         <p className="Opportunities-job-company">
@@ -108,8 +108,27 @@ export const OpportunitiesCard = ({ job }) => {
                             {job.company?.company_name?.charAt(0).toUpperCase()}
                         </div>
                     )}
-                </div>
+                </div> */}
+                <div className="Opportunities-job-header">
+                    <div className="Opportunities-job-info">
+                        <h3 className="Opportunities-job-title">{job.job_title}</h3>
+                        <p className="Opportunities-job-company">
+                            {job.company?.company_name}
+                        </p>
+                    </div>
 
+                    {job.company?.logo || job.company?.company_logo ? (
+                        <img
+                            src={job.company.logo || job.company.company_logo}
+                            alt={job.company?.company_name}
+                            className="Opportunities-job-logo"
+                        />
+                    ) : (
+                        <div className="Opportunities-job-logo-placeholder">
+                            {job.company?.company_name?.charAt(0).toUpperCase()}
+                        </div>
+                    )}
+                </div>
                 <div className="Opportunities-job-details">
                     <p className='Opportunities-detail-line'>
                         <img src={time} className='card-icons' />
@@ -127,17 +146,26 @@ export const OpportunitiesCard = ({ job }) => {
                     </div>
                 </div>
 
-                <div className='Opportunities-details-bottom'>
-                    <div className="Opportunities-job-tags">
-                        {job.job_category && (
-                            <span className={`Opportunities-job-tag ${job.job_category.toLowerCase()}`}>
-                                {job.job_category}
-                            </span>
-                        )}
+                <div className="Opportunities-details-bottom">
+                    <div className="Opportunities-left-details">
+                        <div className="Opportunities-job-tags">
+                            {job.job_category && (
+                                <span className={`Opportunities-job-tag ${job.job_category.toLowerCase()}`}>
+                                    {job.job_category}
+                                </span>
+                            )}
+                        </div>
+
+                        <div className="Opportunities-job-type">
+                            {job.work_type}
+                        </div>
                     </div>
-                    <div className="Opportunities-job-type">
-                        {job.work_type}
-                    </div>
+
+                    {job.is_highlighted && (
+                        <span className="highlighted-job-label">
+                            ⭐ Highlighted Job
+                        </span>
+                    )}
                 </div>
             </div>
 

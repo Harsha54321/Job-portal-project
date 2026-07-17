@@ -186,6 +186,7 @@ export const AppliedJobsOverview = () => {
     logo: job.company?.logo || job.company?.company_logo,
     tags: job.job_category || "",
     JobHighlights: job.job_highlights || [],
+    is_highlighted: job.is_highlighted || false,
     Responsibilities: job.responsibilities || [],
     KeySkills: job.key_skills || [],
     jobDescription: job.job_description,
@@ -231,19 +232,19 @@ export const AppliedJobsOverview = () => {
 
   // Determine card class for top card
   let topCardClassName = "appliedjobsO-job-card";
-  if (isHighlighted) {
-    topCardClassName += " highlighted-job";
-  } else if (isRecent) {
-    topCardClassName += " recent-job";
-  }
+  // if (isHighlighted) {
+  //   topCardClassName += " highlighted-job";
+  // } else if (isRecent) {
+  //   topCardClassName += " recent-job";
+  // }
 
   // Determine card class for details card
   let detailsCardClassName = "opp-job-details-card";
-  if (isHighlighted) {
-    detailsCardClassName += " highlighted-job";
-  } else if (isRecent) {
-    detailsCardClassName += " recent-job";
-  }
+  // if (isHighlighted) {
+  //   detailsCardClassName += " highlighted-job";
+  // } else if (isRecent) {
+  //   detailsCardClassName += " recent-job";
+  // }
 
   return (
     <div>
@@ -260,8 +261,15 @@ export const AppliedJobsOverview = () => {
       <div className={topCardClassName}>
         <div className="applied-jobs-top-card-grid">
           <div>
-            <div className="myjobs-card-header">
+            {/* <div className="myjobs-card-header">
               <div><h2 className="myjobs-job-title">{viewJob.title}</h2></div>
+            </div> */}
+            <div className="myjobs-card-header">
+              <div className="myjobs-job-info">
+                <h2 className="myjobs-job-title">
+                  {viewJob.title}
+                </h2>
+              </div>
             </div>
             <div style={{ marginTop: "20px" }} className="myjobs-company-sub">
               <p className="myjobs-company-name">
@@ -308,6 +316,12 @@ export const AppliedJobsOverview = () => {
                     {viewJob.tags}
                   </span>
                 </div>
+              )}
+
+              {viewJob.is_highlighted && (
+                <span className="highlighted-job-label">
+                  ⭐ Highlighted Job
+                </span>
               )}
               <span className={`applied-application-status status-${viewJob.status.type.replace(/\s+/g, "_")}`}>
                 {viewJob.status.text}

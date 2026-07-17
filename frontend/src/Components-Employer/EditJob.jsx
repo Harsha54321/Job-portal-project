@@ -117,9 +117,7 @@ export const EditJob = () => {
   const isHighlighted = jobData?.is_highlighted === true;
 
   let cardClassName = "Opportunities-job-card";
-  if (isHighlighted) {
-    cardClassName += " highlighted-job";
-  }
+ 
 
   // Tags for display
   const tags = jobData?.tags || [jobCategory];
@@ -314,9 +312,15 @@ export const EditJob = () => {
                   <span className="Opportunities-job-tag full-time">Full-time</span>
                 )}
               </div>
+              
               <div className="Opportunities-job-type">
                 {workType}
               </div>
+              {isHighlighted && (
+                <span className="job-badge premium-badge inline-highlight-badge">
+                  ⭐ Highlighted Job
+                </span>
+              )}
             </div>
 
             <hr className="Opportunities-separator" />

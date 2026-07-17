@@ -24,11 +24,11 @@ export function SearchResultsCard({ job }) {
 
     // Priority: Highlighted > Recent > Normal
     let cardClassName = "SearchResults-job-card";
-    if (isHighlighted) {
-        cardClassName += " highlighted-job";
-    } else if (isRecent) {
-        cardClassName += " recent-job";
-    }
+    // if (isHighlighted) {
+    //     cardClassName += " highlighted-job";
+    // } else if (isRecent) {
+    //     cardClassName += " recent-job";
+    // }
 
     /* ---------------- NAVIGATION ---------------- */
     const handleCardClick = () => {
@@ -51,9 +51,6 @@ export function SearchResultsCard({ job }) {
         }
     };
 
-    // Get badge text based on job status
-
-
     /* ---------------- LOGO ---------------- */
     const logoContent = job.company?.logo || job.company?.company_logo ? (
         <img
@@ -70,21 +67,17 @@ export function SearchResultsCard({ job }) {
     return (
         <div className={cardClassName}>
             <div onClick={handleCardClick}>
-                {/* Badge for highlighted/recent jobs */}
-
-
                 <div className="SearchResults-job-card-header">
-                    <div>
+                    <div className="SearchResults-job-card-info">
                         <h3 className="SearchResults-job-card-title">
                             {job.job_title}
                         </h3>
+
                         <p className="SearchResults-job-card-company">
-                            <span className="star">
-                                <img src={starIcon} alt="rating" />
-                            </span>
-                            {job.company?.rating || 0} - {job.company?.company_name}
+                            {job.company?.company_name}
                         </p>
                     </div>
+
                     {logoContent}
                 </div>
 
@@ -106,15 +99,23 @@ export function SearchResultsCard({ job }) {
                 </div>
 
                 <div className='SearchResults-job-card-details-bottom'>
-                    <div className="SearchResults-job-card-tags">
+                    <div className="SearchResults-job-card-details-child">
                         {job.job_category && (
                             <span className={`SearchResults-job-card-tag ${job.job_category.toLowerCase()}`}>
                                 {job.job_category}
                             </span>
                         )}
+                        <div className="SearchResults-job-card-type">
+                            {job.work_type || "Not specified"}
+                        </div>
                     </div>
-                    <div className="SearchResults-job-card-type">
-                        {job.work_type || "Not specified"}
+
+                    <div className="Opportunities-job-highlighted">
+                        {job.is_highlighted && (
+                            <span className="highlighted-job-label">
+                                ⭐ Highlighted Job
+                            </span>
+                        )}
                     </div>
                 </div>
             </div>
@@ -136,7 +137,6 @@ export function SearchResultsCard({ job }) {
                     <button
                         className={`SearchResults-save-btn ${isSaved ? "saved" : ""}`}
                         onClick={handleSave}
-
                     >
                         {isSaved ? "Saved" : "Save"}
                     </button>

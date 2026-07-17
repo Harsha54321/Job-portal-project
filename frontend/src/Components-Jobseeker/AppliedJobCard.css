@@ -60,6 +60,8 @@
 /* Tags */
 .Opportunities-job-tags {
   margin-top: 10px;
+  display: flex;
+  justify-content: space-between;
 }
 
 .Opportunities-job-tag {
@@ -337,7 +339,24 @@
   z-index: 2;
   animation: badge-pulse 2s ease-in-out infinite;
 }
+.myjobs-card-header{
+    display:flex;
+    align-items:flex-start;
+}
 
+.myjobs-job-info{
+    min-width:0;
+    width:100%;
+}
+
+.myjobs-job-title{
+    margin:0;
+    line-height:1.4;
+
+    white-space:normal;
+    overflow-wrap:anywhere;
+    word-break:break-word;
+}
 @keyframes badge-pulse {
 
   0%,

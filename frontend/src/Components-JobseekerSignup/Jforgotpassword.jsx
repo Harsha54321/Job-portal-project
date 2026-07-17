@@ -22,7 +22,7 @@ export const Jforgotpassword = () => {
   const validateForm = () => {
     const newErrors = {}
 
-    const regexOfMail = /^[a-zA-Z][a-zA-Z0-9]*@(gmail|yahoo|outlook|hotmail)\.[a-zA-Z]{2,}$/;
+    const regexOfMail = /^[a-zA-Z][a-zA-Z0-9.]*@(gmail|yahoo|outlook|hotmail|thestackly)\.[a-zA-Z]{2,}$/;
 
     if (!formValues.email.trim()) {
       newErrors.email = "Email is required"

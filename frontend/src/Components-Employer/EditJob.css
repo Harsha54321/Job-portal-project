@@ -851,3 +851,22 @@
         font-size: 24px;
     }
 }
+/* replace with */
+.edit-job-card-wrapper .premium-badge {
+    background: linear-gradient(135deg, #FFD700, #FFA000);
+    color: #5D4037;
+    box-shadow: 0 2px 12px rgba(255, 215, 0, 0.4);
+}
+
+.edit-job-card-wrapper .job-badge.inline-highlight-badge {
+    position: static;
+    animation: none;
+    margin-left: auto;
+}
+
+.edit-job-card-wrapper .Opportunities-details-bottom {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}

@@ -25,11 +25,11 @@ export const SavedJobsCard = ({ job, onRemoved }) => {
 
     // Priority: Highlighted > Recent > Normal
     let cardClassName = "myjobs-job-card";
-    if (isHighlighted) {
-        cardClassName += " highlighted-job";
-    } else if (isRecent) {
-        cardClassName += " recent-job";
-    }
+    // if (isHighlighted) {
+    //     cardClassName += " highlighted-job";
+    // } else if (isRecent) {
+    //     cardClassName += " recent-job";
+    // }
 
     // Get badge text based on job status
     const getBadge = () => {
@@ -116,13 +116,23 @@ export const SavedJobsCard = ({ job, onRemoved }) => {
                     </p>
                 </div>
 
-                <div className="Opportunities-job-tags">
+                <div className="Opportunities-worktype-details">
+                    <div className="Opportunities-job-tags">
                     {job.job_category && (
                         <span className={`Opportunities-job-tag ${job.job_category.toLowerCase().replace(/\s+/g, '-')}`}>
                             {job.job_category}
                         </span>
                     )}
                 </div>
+                <div className="Opportunities-job-highlighted">
+                    {job.is_highlighted && (
+                      <span className="highlighted-job-label">
+                          ⭐ Highlighted Job
+                      </span>
+                  )}
+                </div>
+                </div>
+
             </div>
             <hr className="Opportunities-separator" />
 

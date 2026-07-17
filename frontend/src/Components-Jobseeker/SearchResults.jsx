@@ -237,38 +237,38 @@ export const SearchResults = () => {
         }
     }, [jobs]);
 
-    useEffect(() => {
-        const saved = sessionStorage.getItem("filters");
+    // useEffect(() => {
+    //     const saved = sessionStorage.getItem("filters");
 
-        if (saved && jobs.length > 0) {
-            const data = JSON.parse(saved);
+    //     if (saved && jobs.length > 0) {
+    //         const data = JSON.parse(saved);
 
-            setSelectedLocations(data.selectedLocations || []);
-            setselectedWorkType(data.selectedWorkType || []);
-            setSelectedCompany(data.SelectedCompany || []);
-            setSelectedEducation(data.SelectedEducation || []);
-            setSelectedPostDate(data.SelectedPostDate || []);
-            setSelectedIndustryType(data.SelectedIndustryType || []);
+    //         setSelectedLocations(data.selectedLocations || []);
+    //         setselectedWorkType(data.selectedWorkType || []);
+    //         setSelectedCompany(data.SelectedCompany || []);
+    //         setSelectedEducation(data.SelectedEducation || []);
+    //         setSelectedPostDate(data.SelectedPostDate || []);
+    //         setSelectedIndustryType(data.SelectedIndustryType || []);
 
-            setMinVal(data.minVal || 0);
-            setMaxVal(data.maxVal || MAX_SALARY_LPA);
-            setMinExp(data.minExp || 0);
-            setMaxExp(data.maxExp || 30);
+    //         setMinVal(data.minVal || 0);
+    //         setMaxVal(data.maxVal || MAX_SALARY_LPA);
+    //         setMinExp(data.minExp || 0);
+    //         setMaxExp(data.maxExp || 30);
 
-            setAppliedSidebarFilters({
-                locations: data.selectedLocations || [],
-                workType: data.selectedWorkType || [],
-                company: data.SelectedCompany || [],
-                education: data.SelectedEducation || [],
-                postedDate: data.SelectedPostDate || [],
-                industryType: data.SelectedIndustryType || [],
-                minSalary: data.minVal || 0,
-                maxSalary: data.maxVal || MAX_SALARY_LPA,
-                minExp: data.minExp || 0,
-                maxExp: data.maxExp || 30
-            });
-        }
-    }, [jobs]);
+    //         setAppliedSidebarFilters({
+    //             locations: data.selectedLocations || [],
+    //             workType: data.selectedWorkType || [],
+    //             company: data.SelectedCompany || [],
+    //             education: data.SelectedEducation || [],
+    //             postedDate: data.SelectedPostDate || [],
+    //             industryType: data.SelectedIndustryType || [],
+    //             minSalary: data.minVal || 0,
+    //             maxSalary: data.maxVal || MAX_SALARY_LPA,
+    //             minExp: data.minExp || 0,
+    //             maxExp: data.maxExp || 30
+    //         });
+    //     }
+    // }, [jobs]);
 
     // --- Convert searchExp to min/max and apply filter ---
     useEffect(() => {
@@ -409,24 +409,24 @@ export const SearchResults = () => {
             location: "",
             experience: ""
         }));
-        sessionStorage.setItem("filters", JSON.stringify({
-            selectedLocations,
-            selectedWorkType,
-            SelectedCompany,
-            SelectedEducation,
-            SelectedPostDate,
-            SelectedIndustryType,
-            minVal,
-            maxVal,
-            minExp,
-            maxExp
-        }));
+        // sessionStorage.setItem("filters", JSON.stringify({
+        //     selectedLocations,
+        //     selectedWorkType,
+        //     SelectedCompany,
+        //     SelectedEducation,
+        //     SelectedPostDate,
+        //     SelectedIndustryType,
+        //     minVal,
+        //     maxVal,
+        //     minExp,
+        //     maxExp
+        // }));
         setShowFilters(false);
     };
 
     // --- Clear Filters Handler ---
     const HandleClear = () => {
-        sessionStorage.removeItem("filters");
+        // sessionStorage.removeItem("filters");
 
         setSearchQuery("");
         setSearchLocation("");

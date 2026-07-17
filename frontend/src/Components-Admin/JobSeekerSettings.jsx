@@ -316,21 +316,26 @@ export const JobSeekerSettings = () => {
             <ToggleRow label="Job Seeker Registration" desc="Allow new users to register" active={formData.registration} onToggle={() => toggleSwitch('registration')} />
             <ToggleRow label="Email Verification" desc="Require email verification" active={formData.emailVer} onToggle={() => toggleSwitch('emailVer')} />
             <ToggleRow label="Phone Verification" desc="Require mobile verification" active={formData.phoneVer} onToggle={() => toggleSwitch('phoneVer')} />
-            <ToggleRow label="Email Domains Restriction" desc="Restrict specific domains" active={formData.domainRest} onToggle={() => toggleSwitch('domainRest')} />
+            {/* <ToggleRow label="Email Domains Restriction" desc="Restrict specific domains" active={formData.domainRest} onToggle={() => toggleSwitch('domainRest')} /> */}
           </div>
 
           <div className="jobset-col">
             <div className="jobset-field">
-              <label>Allowed Domains <span className="jobset-optional">(Optional)</span></label>
+              <label title="Upcoming feature to restrict domains in jobseeker (e.g., domain.com)">
+                Allowed Domains
+                <span className="jobset-optional">(Optional)</span>
+              </label>
               <p className="jobset-field-desc">Add email domains allowed to register</p>
               <input
                 type="text"
+                title="Upcoming feature to restrict domains in jobseeker (e.g., domain.com)"
                 placeholder="Enter domain and press Enter (e.g., domain.com)"
                 className={`jobset-input ${domainError ? 'jobset-input-error' : ''}`}
                 value={domainInput}
                 onChange={handleDomainInputChange}
                 onKeyDown={handleDomainKeyDown}
                 onBlur={handleDomainBlur}
+                disabled
               />
               {domainError && (
                 <div className="jobset-domain-error">
@@ -341,7 +346,7 @@ export const JobSeekerSettings = () => {
                 {formData.allowedDomains.map((domain, index) => (
                   <span key={index} className="jobset-tag">
                     {domain}
-                    <span className="jobset-tag-close" onClick={() => removeDomain(domain)}>×</span>
+                    {/* <span className="jobset-tag-close" onClick={() => removeDomain(domain)}>×</span> */}
                   </span>
                 ))}
               </div>

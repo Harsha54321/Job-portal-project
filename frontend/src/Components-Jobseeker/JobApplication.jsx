@@ -130,7 +130,7 @@ export const JobApplication = () => {
         else if (/[^a-zA-Z\s]/.test(value)) error = "Alphabets only";
         break;
       case "email":
-        const emailRegex = /^[a-zA-Z][a-zA-Z0-9]*@(gmail|yahoo|outlook|hotmail)\.[a-zA-Z]{2,}$/;
+        const emailRegex = /^[a-zA-Z][a-zA-Z0-9.]*@(gmail|yahoo|outlook|hotmail|thestackly)\.[a-zA-Z]{2,}$/;
         if (!value) error = "Email is Required";
         else if (!emailRegex.test(value)) error = "Format: name@domain.com";
         break;

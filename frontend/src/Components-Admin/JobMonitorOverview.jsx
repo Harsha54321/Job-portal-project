@@ -379,9 +379,7 @@ export const JobMonitorOverview = ({ jobId, setSelectedJobId }) => {
     const locationData = getLocationDisplay();
     const industryData = getIndustryDisplay();
     let cardClassName = "opp-overview-job-card";
-    if (isHighlighted) {
-        cardClassName += " highlighted-job";
-    }
+
 
     return (
         <div className='opp-overview-main'>
@@ -445,9 +443,15 @@ export const JobMonitorOverview = ({ jobId, setSelectedJobId }) => {
                                 </span>
                             )}
                         </div>
+
                         <div className="Opportunities-job-type">
                             {selectedJob.work_type || selectedJob.WorkType || 'N/A'}
                         </div>
+                        {isHighlighted && (
+                            <span className="job-badge premium-badge inline-highlight-badge">
+                                ⭐ Highlighted Job
+                            </span>
+                        )}
                     </div>
                     <hr className="Opportunities-separator" />
 

@@ -597,9 +597,11 @@ export const EmployerDashboard = () => {
                                                                         }
 
                                                                         return (
-                                                                            <div key={job.id} className={rowClassName} style={{ position: 'relative', overflow: 'visible' }}>
+                                                                            //   <div key={job.id} className={rowClassName} style={{ position: 'relative', overflow: 'visible' }}>
+                                                                            // replace with
+                                                                            <div key={job.id} className={rowClassName} style={{ position: 'relative', overflow: 'visible', zIndex: activeMenu === job.id ? 1000 : 1 }}>
                                                                                 {/* Badge only for highlighted jobs */}
-                                                                                {/* {isHighlighted && <span className="job-badge premium-badge">⭐ Featured</span>} */}
+                                                                                {isHighlighted && <span className="job-badge premium-badge">⭐ Highlighted job</span>}
 
                                                                                 <div className="postedjobs-info">
                                                                                     <h3>{job.job_title || job.title}</h3>

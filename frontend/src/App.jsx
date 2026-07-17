@@ -94,9 +94,16 @@ const Layout = () => {
 }
 
 const router = createBrowserRouter([
-
   {
     element: <Layout />,
+
+    // Add the errorElement right here!
+    errorElement: (
+      <div style={{ textAlign: "center", padding: "50px" }}>
+        <h2>404 - Page Not Found</h2>
+        <a href="/">Return to Home</a>
+      </div>
+    ),
 
     children: [
       { path: '/', element: <Landingpage /> },
@@ -105,7 +112,7 @@ const router = createBrowserRouter([
         element: <RoleLanding />,
       },
       {
-        path: '/Job-portal/signup-selection', 
+        path: '/Job-portal/signup-selection',
         element: <RoleSignupLanding />,
       },
 
@@ -186,7 +193,8 @@ const router = createBrowserRouter([
         ]
       },
       {
-        path: '/Job-portal/employer-chat/',
+        // Added :id to catch the chat ID in the URL
+        path: '/Job-portal/employer-chat/:id?',
         element: <EMessenger />
       },
       {

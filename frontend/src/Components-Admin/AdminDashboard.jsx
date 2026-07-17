@@ -80,7 +80,16 @@ export const AdminDashboard = () => {
         total_overview: {}
     });
 
-    // Add this function inside the AdminDashboard component
+    // ✅ CHECK TOKEN ON MOUNT - NEW
+    useEffect(() => {
+        const token = sessionStorage.getItem("access");
+        if (!token) {
+            // No token, redirect to role selection
+            window.location.href = "/Job-portal/role-selection";
+            return;
+        }
+    }, []);
+
     const formatDate = (dateString) => {
         if (!dateString) return 'N/A';
         try {
@@ -110,36 +119,17 @@ export const AdminDashboard = () => {
         }
     }, [subTab]);
 
-    // Fetch dashboard data from API
-    // useEffect(() => {
-    //     const fetchDashboardData = async () => {
-    //         setLoading(true);
-    //         setError(null);
-
-    //         try {
-    //             console.log("Fetching admin dashboard data...");
-    //             const response = await api.get('admin/dashboard/');
-
-    //             if (response.status === 200) {
-    //                 console.log("Dashboard data received:", response.data);
-    //                 setDashboardData(response.data);
-    //             }
-    //         } catch (err) {
-    //             console.error('Error fetching dashboard data:', err);
-    //             setError(err.response?.data?.message || err.message || 'Failed to load dashboard data');
-    //         } finally {
-    //             setLoading(false);
-    //         }
-    //     };
-
-    //     fetchDashboardData();
-    // }, []);
-
-    // AdminDashboard.jsx — lift fetchDashboardData out of useEffect
-
     const [lastUpdated, setLastUpdated] = useState(null);
 
+    // ✅ MODIFIED: fetchDashboardData with token validation
     const fetchDashboardData = async () => {
+        // ✅ Check token before making request
+        const token = sessionStorage.getItem("access");
+        if (!token) {
+            window.location.href = "/Job-portal/role-selection";
+            return;
+        }
+
         setLoading(true);
         setError(null);
         try {
@@ -149,17 +139,39 @@ export const AdminDashboard = () => {
                 setLastUpdated(new Date());
             }
         } catch (err) {
+            // ✅ If 401, redirect to role selection
+            if (err.response?.status === 401) {
+                console.log("Authentication failed - Redirecting to role selection");
+                sessionStorage.removeItem("access");
+                sessionStorage.removeItem("refresh");
+                sessionStorage.removeItem("user_type");
+                sessionStorage.removeItem("user_data");
+                sessionStorage.removeItem("user_id");
+                sessionStorage.removeItem("userRole");
+                sessionStorage.removeItem("userData");
+                sessionStorage.removeItem("token");
+                sessionStorage.removeItem("access_token");
+                sessionStorage.removeItem("admin_id");
+                window.location.href = "/Job-portal/role-selection";
+                return;
+            }
             setError(err.response?.data?.message || err.message || 'Failed to load dashboard data');
         } finally {
             setLoading(false);
         }
     };
 
+    // ✅ MODIFIED: Check token before fetching
     useEffect(() => {
-        fetchDashboardData();
+        const token = sessionStorage.getItem("access");
+        if (token) {
+            fetchDashboardData();
+        } else {
+            window.location.href = "/Job-portal/role-selection";
+        }
     }, []);
 
-    // Logout implementation mirroring the confirmation criteria[cite: 1]
+    // ✅ MODIFIED: Logout with role selection redirect
     const handleLogoutConfirm = async () => {
         setShowLogoutModal(false);
 
@@ -172,6 +184,7 @@ export const AdminDashboard = () => {
         } catch (err) {
             console.error("Logout failed:", err);
         } finally {
+            // ✅ Clear all session storage and redirect to role selection
             sessionStorage.removeItem("token");
             sessionStorage.removeItem("access_token");
             sessionStorage.removeItem("access");
@@ -180,10 +193,13 @@ export const AdminDashboard = () => {
             sessionStorage.removeItem("userData");
             sessionStorage.removeItem("user_type");
             sessionStorage.removeItem("admin_id");
-
+            sessionStorage.removeItem("adminActiveTab");
+            sessionStorage.removeItem("adminSubTab");
+            sessionStorage.removeItem("umIsDetailView");
+            sessionStorage.removeItem("umSelectedUser");
             sessionStorage.clear();
 
-            navigate("/");
+            navigate("/Job-portal/role-selection");
         }
     };
 
@@ -346,8 +362,6 @@ export const AdminDashboard = () => {
                                     <div className='Enav-item'>Blog Post</div>
                                 </div>
                             </div>
-
-
                             <div onClick={() => setActiveTab('settings')} className={activetab === "settings" ? "Admin-Active" : 'Admin-Navbar'}>
                                 <div className='Admin-Navbox'>
                                     {activetab === "settings" ? <img src={SettingsAct} width={15} height={15} alt="dashboard" />
@@ -480,7 +494,6 @@ export const AdminDashboard = () => {
                                 <div className='Enav-item'>Blog Post</div>
                             </div>
                         </div>
-
                         <div onClick={() => setActiveTab('settings')} className={activetab === "settings" ? "Admin-Active" : 'Admin-Navbar'}>
                             <div className='Admin-Navbox'>
                                 {activetab === "settings" ? <img src={SettingsAct} width={15} height={15} alt="dashboard" />
@@ -506,9 +519,6 @@ export const AdminDashboard = () => {
                             </div><br></br>
 
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                                {/* <span style={{ fontSize: "12px", color: "#1835ef" }}>
-                                    {lastUpdated ? `Last updated: ${lastUpdated.toLocaleTimeString()}` : ''}
-                                </span> */}
                                 <button onClick={fetchDashboardData} className="Admin-create-btn">
                                     ↻ Refresh
                                 </button>

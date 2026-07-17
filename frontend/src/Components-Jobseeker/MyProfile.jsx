@@ -842,7 +842,7 @@ const ContactDetails = ({ data, onChange, onReset, onNext }) => {
     };
     const mobileRegex = /^[6-9]\d{9}$/;
     const Pincode = /^[1-9][0-9]{5}$/;
-    const gmailAlphaRegex = /^[a-zA-Z][a-zA-Z0-9]*@(gmail|yahoo|outlook|hotmail)\.[a-zA-Z]{2,}$/;
+    const gmailAlphaRegex = /^[a-zA-Z][a-zA-Z0-9.]*@(gmail|yahoo|outlook|hotmail|thestackly)\.[a-zA-Z]{2,}$/;
     const addressRegex = /^(?=.*[A-Za-z])[A-Za-z0-9\s,./#-]+$/;
 
 
@@ -1954,20 +1954,42 @@ const EducationDetails = ({
             newErrors.hscpercentage = "should not be greater than 100";
 
         if (!data.hsc.location?.trim()) newErrors.hsclocation = "*Location is required";
-        if (!data.hsc.year) newErrors.hscyear = "*Year of completion is required";
-        else if (parseInt(data.hsc.year) > currentYear) newErrors.hscyear = "*Cannot be in future";
+        // if (!data.hsc.year) newErrors.hscyear = "*Year of completion is required";
+        // else if (parseInt(data.hsc.year) > currentYear) newErrors.hscyear = "*Cannot be in future";
         // else if (data.sslc.year && parseInt(data.hsc.year) <= parseInt(data.sslc.year))
         //     newErrors.hscyear = "*Must be after SSLC";
 
         // data.graduations.forEach((grad) => {
 
-        else if (data.hsc.year && parseInt(data.hsc.year) <= parseInt(data.sslc.year))
-            newErrors.hscyear = "*Must be after SSLC";
+        // else if (data.hsc.year && parseInt(data.hsc.year) <= parseInt(data.sslc.year))
+        //     newErrors.hscyear = "*Must be after SSLC";
 
         // const requiresGraduation = ["Under-Graduation", "Post-Graduation", "Doctorate"].includes(data.highestQual);
         // if (requiresGraduation && data.graduations.length === 0) {
         //     newErrors.graduationRequired = "*Please add your graduation details";
         // }
+        if (!data.hsc.year) {
+            newErrors.hscyear = "*Year of completion is required";
+        } else {
+            const hscDate = new Date(data.hsc.year);
+            const sslcDate = data.sslc.year ? new Date(data.sslc.year) : null;
+
+            if (hscDate > today) {
+                newErrors.hscyear = "*Cannot be in future";
+            } else if (sslcDate && hscDate <= sslcDate) {
+                newErrors.hscyear = "*HSC/Diploma date must be after SSLC completion date";
+            } else if (sslcDate) {
+                const totalMonths =
+                    (hscDate.getFullYear() - sslcDate.getFullYear()) * 12 +
+                    (hscDate.getMonth() - sslcDate.getMonth());
+
+                const minYears = data.hsc.stream === "Diploma" ? 3 : data.hsc.stream === "Intermediate" ? 2 : 1;
+
+                if (totalMonths < minYears * 12) {
+                    newErrors.hscyear = `*${data.hsc.stream || "This course"} typically takes at least ${minYears} year(s) after SSLC. Please check your dates.`;
+                }
+            }
+        }
 
         const requiredGradCount = {
             "Under-Graduation": 1,
@@ -1995,7 +2017,7 @@ const EducationDetails = ({
 
 
 
-        data.graduations.forEach((grad) => {
+        data.graduations.forEach((grad, index) => {
             if (!grad.degree || grad.degree.trim() === "") {
                 newErrors[`graddegree${grad.id}`] = "Degree is required";
 
@@ -2027,11 +2049,42 @@ const EducationDetails = ({
             const startDate = grad.startYear ? new Date(grad.startYear) : null;
             const endDate = grad.endYear ? new Date(grad.endYear) : null;
 
+            // if (!grad.startYear) {
+            //     newErrors[`gradstartYear${grad.id}`] = "*Starting year is required";
+            // }
+            // else if (startDate > today) {
+            //     newErrors[`gradstartYear${grad.id}`] = "*Starting year cannot be in future";
+            // }
+            // Determine what date this entry must come after
+            let priorDate = null;
+            let priorLabel = "";
+
+            if (index === 0) {
+                // First graduation entry (UG) must follow HSC, or SSLC if HSC is missing
+                if (data.hsc.year) {
+                    priorDate = new Date(data.hsc.year);
+                    priorLabel = "HSC/Diploma";
+                } else if (data.sslc.year) {
+                    priorDate = new Date(data.sslc.year);
+                    priorLabel = "SSLC";
+                }
+            } else {
+                // PG must follow UG's end date, Doctorate must follow PG's end date, etc.
+                const prevGrad = data.graduations[index - 1];
+                if (prevGrad?.endYear) {
+                    priorDate = new Date(prevGrad.endYear);
+                    priorLabel = getGradLabel(index - 1, data.graduations.length, data.highestQual);
+                }
+            }
+
             if (!grad.startYear) {
                 newErrors[`gradstartYear${grad.id}`] = "*Starting year is required";
             }
             else if (startDate > today) {
                 newErrors[`gradstartYear${grad.id}`] = "*Starting year cannot be in future";
+            }
+            else if (priorDate && startDate <= priorDate) {
+                newErrors[`gradstartYear${grad.id}`] = `*Starting year must be after your ${priorLabel} completion date`;
             }
 
             if (!grad.endYear) {
@@ -2050,20 +2103,23 @@ const EducationDetails = ({
             // ) {
             //     newErrors[`gradendYear${grad.id}`] = "*Course duration must be at least 1 year";
             // }
+            // else if (startDate && endDate < startDate) {
+            //     newErrors[`gradendYear${grad.id}`] = "*Ending year cannot be before starting year";
+            // }
+            // else if (startDate && endDate) {
+            //     const totalMonths =
+            //         (endDate.getFullYear() - startDate.getFullYear()) * 12 +
+            //         (endDate.getMonth() - startDate.getMonth());
+
+            //     const minYears = getMinYearsForDegree(grad.degree);
+
+            //     if (totalMonths < minYears * 12) {
+            //         newErrors[`gradendYear${grad.id}`] =
+            //             `*${grad.degree || "This degree"} typically requires at least ${minYears} year(s). Please check your dates.`;
+            //     }
+            // }
             else if (startDate && endDate < startDate) {
                 newErrors[`gradendYear${grad.id}`] = "*Ending year cannot be before starting year";
-            }
-            else if (startDate && endDate) {
-                const totalMonths =
-                    (endDate.getFullYear() - startDate.getFullYear()) * 12 +
-                    (endDate.getMonth() - startDate.getMonth());
-
-                const minYears = getMinYearsForDegree(grad.degree);
-
-                if (totalMonths < minYears * 12) {
-                    newErrors[`gradendYear${grad.id}`] =
-                        `*${grad.degree || "This degree"} typically requires at least ${minYears} year(s). Please check your dates.`;
-                }
             }
             if (!grad.city) {
                 newErrors[`gradcity${grad.id}`] = "City is required";

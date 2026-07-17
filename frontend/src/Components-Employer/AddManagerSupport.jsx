@@ -271,7 +271,7 @@ export const AddManagerSupport = () => {
 
             {contact.description && (
               <div className="employer-manager-row display-column-align-start">
-                <span className="label"> About</span>
+                <span className="label">About</span>
                 <span className="value text-bio-description">
                   {contact.description}
                 </span>
@@ -286,7 +286,7 @@ export const AddManagerSupport = () => {
               </button>
             )}
             <button className="employer-manager-btn employer-manager-btn-primary" onClick={() => handleEmailClick(contact.email)}>
-               Send Message
+              ✉ Send Message
             </button>
           </div>
 
@@ -298,7 +298,10 @@ export const AddManagerSupport = () => {
       </div>
     );
   }
-  
+
+  // ──────────────────────────────────────────────
+  // ALL CONTACTS LIST VIEW
+  // ──────────────────────────────────────────────
   return (
     <div className="employer-manager-container">
       <div className="employer-manager-card width-max-550">
@@ -319,12 +322,19 @@ export const AddManagerSupport = () => {
               key={index}
               onClick={() => handleContactClick(contact)}
               className={`employer-list-item-card ${contact.is_primary ? 'list-primary-border' : 'list-standard-border'}`}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  handleContactClick(contact);
+                }
+              }}
             >
               <div className="employer-list-avatar-frame">
-                <img 
-                  src={contact.profile_photo || ProfileIcon} 
-                  alt={contact.full_name} 
-                  className="employer-list-avatar-img" 
+                <img
+                  src={contact.profile_photo || ProfileIcon}
+                  alt={contact.full_name}
+                  className="employer-list-avatar-img"
                 />
               </div>
               <div className="employer-list-meta-column">
@@ -343,7 +353,7 @@ export const AddManagerSupport = () => {
         </div>
 
         <button onClick={fetchContacts} className="employer-manager-btn employer-manager-btn-secondary width-100-percent">
-          Back to main view
+          ← Back to main view
         </button>
 
         <div className="employer-plan-status-footer active-plan-theme">

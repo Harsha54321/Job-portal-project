@@ -21,11 +21,11 @@ export const AppliedJobCard = ({ appliedJob }) => {
 
   // Priority: Highlighted > Recent > Normal
   let cardClassName = "myjobs-job-card";
-  if (isHighlighted) {
-    cardClassName += " highlighted-job";
-  } else if (isRecent) {
-    cardClassName += " recent-job";
-  }
+  // if (isHighlighted) {
+  //   cardClassName += " highlighted-job";
+  // } else if (isRecent) {
+  //   cardClassName += " recent-job";
+  // }
 
   // Get badge text based on job status
   const getBadge = () => {
@@ -72,7 +72,7 @@ export const AppliedJobCard = ({ appliedJob }) => {
       {getBadge()}
 
       <div className="myjobs-card-header">
-        <div>
+        <div className="myjobs-job-info">
           <h2 className="myjobs-job-title">{opp.title}</h2>
         </div>
       </div>
@@ -120,6 +120,13 @@ export const AppliedJobCard = ({ appliedJob }) => {
             {job.job_category}
           </span>
         )}
+        <div className="Opportunities-job-highlighted">
+          {job.is_highlighted && (
+            <span className="highlighted-job-label">
+              ⭐ Highlighted Job
+            </span>
+          )}
+        </div>
       </div>
 
       <hr className="Opportunities-separator" />

@@ -54,7 +54,7 @@ export const ReportAJob = () => {
     const validate = () => {
         let newErrors = {};
 
-        const emailRegex = /^[a-zA-Z][a-zA-Z0-9]*@(gmail|yahoo|outlook|hotmail|fabaos)\.[a-zA-Z]{2,}$/;
+        const emailRegex = /^[a-zA-Z][a-zA-Z0-9.]*@(gmail|yahoo|outlook|hotmail|thestackly)\.[a-zA-Z]{2,}$/;
         if (!formValues.email) {
             newErrors.email = "Email is required";
         } else if (!emailRegex.test(formValues.email)) {

@@ -263,18 +263,25 @@
   border: 1px solid #e5e7eb;
   border-radius: 8px;
   background: #fff;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
 .file-info {
   display: flex;
   gap: 12px;
   align-items: center;
+  min-width: 0;
+  flex: 1;
 }
 
 .file-name {
   font-weight: 600;
   margin: 0;
   font-size: 14px;
+  word-wrap: break-word;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .file-size {
@@ -290,6 +297,7 @@
   border-radius: 6px;
   cursor: pointer;
   font-weight: 500;
+  flex-shrink: 0;
 }
 
 .college-name {
@@ -298,15 +306,7 @@
   margin-top: 2px;
 }
 
-.cover-letter-box {
-  padding: 15px;
-  background-color: #f9fafb;
-  border-radius: 8px;
-  line-height: 1.6;
-  color: #4b5563;
-  font-size: 14px;
-}
-
+/* ========== COVER LETTER WRAPPING FIX ========== */
 .cover-letter-box {
   background: #f9fafb;
   padding: 20px;
@@ -317,8 +317,17 @@
   border-left: 4px solid #cbd5e1;
   white-space: pre-wrap;
   overflow-wrap: break-word;
+  word-wrap: break-word;
   word-break: break-word;
   max-width: 100%;
+}
+
+.cover-letter-box p {
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  word-break: break-word;
+  margin: 0;
 }
 
 .tab-pane {

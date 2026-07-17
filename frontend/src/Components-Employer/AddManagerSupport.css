@@ -48,8 +48,15 @@
 }
 
 @keyframes pulseDot {
-  0%, 100% { opacity: 1; }
-  50% { opacity: .4; }
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: .4;
+  }
 }
 
 .employer-manager-title {
@@ -77,22 +84,35 @@
   gap: 14px;
 }
 
+/* ========== ROW STYLES WITH PROPER TEXT WRAPPING ========== */
 .employer-manager-row {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   font-size: 13px;
   padding: 4px 0;
+  gap: 12px;
+  width: 100%;
 }
 
 .employer-manager-row .label {
   color: #94a3b8;
   font-weight: 500;
+  min-width: 60px;
+  flex-shrink: 0;
+  padding-top: 1px;
 }
 
 .employer-manager-row .value {
   font-weight: 600;
   color: #334155;
+  text-align: right;
+  flex: 1;
+  word-wrap: break-word;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
+  max-width: 100%;
 }
 
 .employer-manager-row .value.contact {
@@ -104,6 +124,42 @@
   text-decoration: underline;
 }
 
+/* Special style for description/bio - left aligned with proper wrapping */
+.employer-manager-row.display-column-align-start {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.employer-manager-row.display-column-align-start .label {
+  min-width: auto;
+}
+
+.employer-manager-row.display-column-align-start .value {
+  text-align: left;
+  width: 100%;
+  padding: 8px 12px;
+  background-color: #ffffff;
+  border-radius: 8px;
+  border: 1px solid #e8ecf0;
+  line-height: 1.7;
+  font-weight: 400;
+  color: #1e293b;
+}
+
+.text-bio-description {
+  font-size: 13px;
+  font-weight: 400;
+  color: #475569;
+  line-height: 1.7;
+  word-wrap: break-word;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  white-space: pre-wrap;
+  hyphens: auto;
+}
+
+/* ========== BUTTONS ========== */
 .employer-manager-actions {
   display: flex;
   justify-content: flex-end;
@@ -111,6 +167,7 @@
   margin-top: 20px;
   padding-top: 16px;
   border-top: 1px solid #f1f5f9;
+  flex-wrap: wrap;
 }
 
 .employer-manager-btn {
@@ -137,6 +194,7 @@
 .employer-manager-btn-secondary {
   background-color: transparent;
   color: #64748b;
+  border: 1px solid #e2e8f0;
 }
 
 .employer-manager-btn-secondary:hover {
@@ -178,26 +236,58 @@
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
+/* ========== RESPONSIVE ========== */
 @media (max-width: 576px) {
   .employer-manager-card {
-    padding: 20px;
-  }
-  
-  .employer-manager-body {
     padding: 16px;
   }
-  
+
+  .employer-manager-body {
+    padding: 14px;
+  }
+
   .employer-manager-row {
     font-size: 12px;
     flex-direction: column;
     align-items: flex-start;
     gap: 4px;
   }
+
+  .employer-manager-row .label {
+    min-width: auto;
+  }
+
+  .employer-manager-row .value {
+    text-align: left;
+    width: 100%;
+  }
+
+  .employer-manager-row.display-column-align-start .value {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+
+  .employer-manager-actions {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .employer-manager-actions .employer-manager-btn {
+    width: 100%;
+    justify-content: center;
+    text-align: center;
+  }
 }
+
 /* ==========================================================================
    CLEAN VIEWPORTS & MULTI-CARD LIST ALIGNMENTS (EMPLOYER SUPPORT)
    ========================================================================== */
@@ -222,13 +312,39 @@
   font-weight: 500;
 }
 
-.margin-top-12 { margin-top: 12px; }
-.margin-top-16 { margin-top: 16px; }
-.margin-top-0  { margin-top: 0px; }
-.width-100-percent { width: 100%; }
-.width-max-550 { max-width: 550px; }
-.font-weight-600 { font-weight: 600; }
-.display-column-align-start { flex-direction: column; align-items: flex-start; gap: 4px; }
+.margin-top-12 {
+  margin-top: 12px;
+}
+
+.margin-top-16 {
+  margin-top: 16px;
+}
+
+.margin-top-0 {
+  margin-top: 0px;
+}
+
+.width-100-percent {
+  width: 100%;
+}
+
+.width-max-550 {
+  max-width: 550px;
+}
+
+.font-weight-600 {
+  font-weight: 600;
+}
+
+.display-column-align-start {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.text-transform-capitalize {
+  text-transform: capitalize;
+}
 
 .badge-warning-theme {
   background-color: #fef3c7;
@@ -255,6 +371,8 @@
   color: #64748b;
   display: flex;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
 .employer-plan-status-footer.active-plan-theme {
@@ -304,13 +422,6 @@
   object-fit: cover;
   border: 2px solid #e2e8f0;
   background-color: #f8fafc;
-}
-
-.text-bio-description {
-  font-size: 13px;
-  font-weight: 400;
-  color: #475569;
-  line-height: 1.6;
 }
 
 /* All Contacts Feed List Iterations */
@@ -374,6 +485,7 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
+  min-width: 0;
 }
 
 .employer-list-headline {
@@ -417,7 +529,9 @@
   color: #94a3b8;
   font-weight: 300;
   padding-left: 4px;
+  flex-shrink: 0;
 }
+
 .employer-plan-status-footer.active-plan-theme {
   display: flex;
   justify-content: space-between;

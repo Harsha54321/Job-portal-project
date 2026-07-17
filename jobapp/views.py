@@ -5859,7 +5859,7 @@ class UpdateCompanyStatusView(APIView):
         "Pending": ["Verified", "Reject", "Hold"],
         "Hold": ["Verified", "Reject","Pending"],
         "Reject": ["Pending","Hold","Verified"],
-        "Verified": []
+        "Verified": ["Hold", "Reject","Pending"]
     }
  
     def patch(self, request, pk):
@@ -6651,7 +6651,7 @@ class AdminDashboardStats(APIView):
     def get(self, request):
         data = {
             "total_jobs": PostAJob.objects.count(),
-            "total_companies": CompanyProfile.objects.count(),
+            "total_companies": CompanyVerification.objects.count(),
             "total_employers": User.objects.filter(user_type='employer').count(),
             "total_jobseekers": User.objects.filter(user_type='jobseeker').count(),
             "total_applications": JobApplication.objects.count(),
@@ -9172,7 +9172,7 @@ class AdminDashboardOverviewNewView(APIView):
         # OVERVIEW STATS
      
  
-        total_companies = CompanyProfile.objects.count()
+        total_companies = CompanyVerification.objects.count()
  
         # Get counts excluding admin
         total_employers = User.objects.filter(

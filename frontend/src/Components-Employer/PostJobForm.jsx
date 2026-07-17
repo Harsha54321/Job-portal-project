@@ -6,7 +6,7 @@ import './PostJobForm.css';
 import { locationsList } from "../Locations";
 import api from '../api/axios';
 
-const availableSkills = ["UI & UX", "UI/UX Design", "UI Design", "UX Design", "User Interface", "User Experience", "Figma", "Adobe XD", "Sketch", "Photoshop", "Illustrator", "InDesign", "Wireframing", "Prototyping",
+const availableSkills = ["UI & UX", "UI/UX Design", "UI Design", "UX Design", "Figma", "Adobe XD", "Sketch", "Photoshop", "Illustrator", "InDesign", "Wireframing", "Prototyping",
   "HTML", "HTML5", "CSS", "CSS3", "JavaScript", "TypeScript", "React", "React Native", "Angular", "Vue.js", "Next.js", "Nuxt.js", "Svelte", "SASS", "LESS", "Tailwind CSS", "Bootstrap", "Material UI", "Redux", "Webpack", "Babel", "DOM Manipulation", "AJAX", "JSON",
   "Node.js", "Express.js", "Python", "Django", "Flask", "FastAPI", "Java", "Spring Boot", "Hibernate", "C", "C++", "C#", ".NET", "ASP.NET", "PHP", "Laravel", "Symfony", "Ruby", "Ruby on Rails", "Go", "Rust", "Swift", "Kotlin", "Scala", "Elixir", "Erlang",
   "SQL", "MySQL", "PostgreSQL", "SQLite", "MongoDB", "Mongoose", "Redis", "Cassandra", "DynamoDB", "Firebase", "Oracle", "Microsoft SQL Server", "GraphQL", "REST API", "Prisma",
@@ -21,7 +21,7 @@ export const PostJobForm = ({ onCancel }) => {
   const formRef = useRef(null);
 
   // ============================================
-  // PLAN ACCESS STATE - Only check cancel/expiry
+  // PLAN ACCESS STATE
   // ============================================
   const [accessState, setAccessState] = useState({
     hasAccess: false,
@@ -35,10 +35,10 @@ export const PostJobForm = ({ onCancel }) => {
   const [isChecking, setIsChecking] = useState(false);
 
   // ============================================
-  // CHECK PLAN ACCESS - Only cancel/expiry
+  // CHECK PLAN ACCESS - ONLY ONCE ON MOUNT
   // ============================================
-  const checkPlanAccess = async (forceRefresh = false) => {
-    if (isChecking && !forceRefresh) return;
+  const checkPlanAccess = async () => {
+    if (isChecking) return;
 
     try {
       setIsChecking(true);
@@ -46,7 +46,6 @@ export const PostJobForm = ({ onCancel }) => {
 
       console.log('🔍 Checking plan access for job posting...');
 
-      // Get subscription
       const subRes = await api.get('/subscription/');
       const subscription = subRes.data;
       const plan = subscription?.plan;
@@ -61,7 +60,6 @@ export const PostJobForm = ({ onCancel }) => {
       const isCancelled = subscription?.status === 'cancelled';
       const isActive = subscription?.status === 'active';
 
-      // ✅ Access ONLY if active AND not expired
       const hasAccess = isActive && !isExpired;
 
       let message = '';
@@ -98,77 +96,22 @@ export const PostJobForm = ({ onCancel }) => {
   };
 
   // ============================================
-  // EFFECTS - CHECK ACCESS ON MOUNT + POLLING
+  // ONLY ON MOUNT - No intervals, no re-checks
   // ============================================
   useEffect(() => {
-    checkPlanAccess(true);
-
-    // Poll every 30 seconds to detect cancellation/expiry
-    const interval = setInterval(() => {
-      checkPlanAccess(false);
-    }, 30000);
-
-    return () => clearInterval(interval);
-  }, []);
-
-  // Check on tab visibility
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        console.log('👁️ Tab visible - re-checking plan access');
-        checkPlanAccess(true);
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, []);
-
-  // Check on page focus
-  useEffect(() => {
-    const handleFocus = () => {
-      console.log('🎯 Page focused - re-checking plan access');
-      checkPlanAccess(true);
-    };
-
-    window.addEventListener('focus', handleFocus);
-    return () => window.removeEventListener('focus', handleFocus);
+    checkPlanAccess();
   }, []);
 
   // ============================================
-  // HANDLE CANCEL
-  // ============================================
-  const handleCancel = () => {
-    if (onCancel) {
-      onCancel();
-    } else {
-      navigate(-1);
-    }
-  };
-
-  // ============================================
-  // HANDLE UPGRADE/REACTIVATE
-  // ============================================
-  const handleUpgrade = () => {
-    navigate('/Job-portal/Employer/Dashboard', {
-      state: { targetTab: 'Billing' }
-    });
-  };
-
-  const handleGoBack = () => {
-    navigate('/Job-portal/Employer/Dashboard', {
-      state: { targetTab: 'Dashboard' }
-    });
-  };
-
-  // ============================================
-  // ORIGINAL FORM STATE (unchanged)
+  // ORIGINAL FORM STATE
   // ============================================
   const categoryOptions = ["Aerospace & Defense", "Ai/MI", "Analytics", "Artificial Intelligence", "Automotive", "Big Data", "Biotechnology", "Business Consulting", "Business Intelligence", "Cloud Computing", "Cloud Services", "Construction", "Consulting", "Consumer Goods", "Consumer Tech", "Corporate", "Corporate Functions", "Customer Support", "Cybersecurity", "Data Infrastructure", "Data Science", "Design", "Digital Marketing", "Digital Media", "E-Commerce", "Ed-Tech", "Energy", "Enterprise Software", "Entertainment", "Finance", "Financial Services", "Fintech", "Fmcg", "Healthcare", "Hospital", "Hr Services", "Human Resources", "Internet", "It Consulting", "It Networking", "IT Services", "Logistics", "Marketing", "Marketing & Advertising", "Martech", "Mobile App Development", "Mobile Development", "Pharmaceutical", "Pharma", "Product Development", "Project Management", "Real Estate", "Recruitment", "Regional Sales", "Renewable Power", "Research", "Retail", "Retail Tech", "Saas", "Sales", "Site Reliability Engineering", "Software Development", "Software Product", "Software Testing", "Subscription Service", "Supply Chain", "Technology", "Telecommunications"];
+
   const educationOptions = [
     "BS", "B.A", "CA", "B.Ed", "M.Com", "B.Sc", "MCA", "BCA", "LLM", "MS/M.Sc", "Diploma", "B.Com", "M.Tech", "MBA/PGDM", "PG Diploma", "B.B.A/ B.M.S", "Medical-MS/MD", "B.Tech/B.E.", "Any Graduate", "Other Post Graduate", "ITI Certification", "Any Postgraduate", "Bachelor Of Science", "Business Economics", "Artificial Intelligence (AI)", "Machine Learning", "Data Science",
     "Cyber Security", "Cloud Computing",
   ];
+
   const departmentOptions = [
     "Engineering", "Marketing", "Sales", "Human Resources", "Finance",
     "Operations", "Product Management", "Customer Success", "Design",
@@ -203,7 +146,7 @@ export const PostJobForm = ({ onCancel }) => {
   const [errors, setErrors] = useState({});
 
   // ============================================
-  // ORIGINAL FORM FUNCTIONS (unchanged)
+  // ORIGINAL FORM FUNCTIONS
   // ============================================
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -397,7 +340,6 @@ export const PostJobForm = ({ onCancel }) => {
       return;
     }
 
-
     if (type === 'checkbox') {
       if (name.includes('.')) {
         const [group, field] = name.split('.');
@@ -418,7 +360,6 @@ export const PostJobForm = ({ onCancel }) => {
 
       if (!newSkill) return;
 
-
       if (skillsList.length >= 20) {
         setErrors({ ...errors, key_skills: "You can add a maximum of 20 skills." });
         return;
@@ -429,7 +370,6 @@ export const PostJobForm = ({ onCancel }) => {
         setErrors({ ...errors, key_skills: "Invalid skill name. Must contain at least one alphabetical letter." });
         return;
       }
-
 
       if (skillsList.some(s => s.toLowerCase() === newSkill.toLowerCase())) {
         setErrors({ ...errors, key_skills: "This skill has already been added." });
@@ -522,7 +462,6 @@ export const PostJobForm = ({ onCancel }) => {
             : 'Your subscription is not active. Please contact support.'
       );
 
-      // Redirect to billing
       navigate('/Job-portal/Employer/Dashboard', {
         state: { targetTab: 'Billing' }
       });
@@ -647,7 +586,11 @@ export const PostJobForm = ({ onCancel }) => {
 
             <div style={{ display: "flex", gap: "15px", justifyContent: "center", flexWrap: "wrap" }}>
               <button
-                onClick={handleUpgrade}
+                onClick={() => {
+                  navigate('/Job-portal/Employer/Dashboard', {
+                    state: { targetTab: 'Billing' }
+                  });
+                }}
                 style={{
                   padding: "12px 30px",
                   background: "#007bff",
@@ -662,7 +605,11 @@ export const PostJobForm = ({ onCancel }) => {
                 {isCancelled ? 'Reactivate Plan Now' : 'Renew Plan Now'}
               </button>
               <button
-                onClick={handleGoBack}
+                onClick={() => {
+                  navigate('/Job-portal/Employer/Dashboard', {
+                    state: { targetTab: 'Dashboard' }
+                  });
+                }}
                 style={{
                   padding: "12px 30px",
                   background: "#f1f5f9",
@@ -693,19 +640,6 @@ export const PostJobForm = ({ onCancel }) => {
           <header className="jobpost-form-header">
             <h1>Post a Job</h1>
             <p>Complete the steps below to reach thousands of qualified candidates</p>
-            {/* Plan Status Indicator */}
-            <div style={{
-              marginTop: "10px",
-              fontSize: "13px",
-              color: "#64748b",
-              display: "flex",
-              gap: "20px",
-              alignItems: "center",
-              flexWrap: "wrap"
-            }}>
-              {/* <span>Plan: <strong>{accessState.planName || 'N/A'}</strong></span>
-              <span>Status: <span style={{ color: "#22c55e" }}>Active</span></span> */}
-            </div>
           </header>
 
           <div className="jobpost-form-container">
@@ -1079,7 +1013,7 @@ export const PostJobForm = ({ onCancel }) => {
 
               {/* Action Buttons */}
               <div className="jobpost-actions">
-                <button type="button" className="jobpost-btn-cancel" onClick={handleCancel}>Cancel</button>
+                <button type="button" className="jobpost-btn-cancel" onClick={onCancel || (() => navigate(-1))}>Cancel</button>
                 <button type="button" className="jobpost-btn-preview" onClick={handleSubmit}>Preview</button>
               </div>
             </form>

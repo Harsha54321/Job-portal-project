@@ -179,8 +179,8 @@ export const RaiseTicket = () => {
 
         if (!formData.email.trim()) {
             errors.email = "Email is required";
-        } else if (!/^[a-zA-Z][a-zA-Z0-9]*@(gmail|yahoo|outlook|hotmail)\.[a-zA-Z]{2,}$/.test(formData.email)) {
-            errors.email = "Enter valid email (gmail, yahoo, outlook, hotmail)";
+        } else if (!/^[a-zA-Z][a-zA-Z0-9.]*@(gmail|yahoo|outlook|hotmail|thestackly)\.[a-zA-Z]{2,}$/.test(formData.email)) {
+            errors.email = "Enter valid email (gmail, yahoo, outlook, hotmail, thestackly)";
         }
 
         if (!formData.phone.trim()) {

@@ -12,6 +12,7 @@ import { useJobs } from '../JobContext';
 
 export const Header = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { notificationsData, showNotification, setShowNotification, fetchNotifications, chats, currentUserId } = useJobs();
 
   const newNotificationsCount = Array.isArray(notificationsData)

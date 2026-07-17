@@ -126,11 +126,14 @@ export const PostedJobs = ({ onViewApplicants }) => {
                 cardClassName += " highlighted-job";
               }
 
+              // return (
+              //   <div key={job.id} className={cardClassName} style={{ position: 'relative', overflow: 'visible' }}>
+              // replace with
               return (
-                <div key={job.id} className={cardClassName} style={{ position: 'relative', overflow: 'visible' }}>
+                <div key={job.id} className={cardClassName} style={{ position: 'relative', overflow: 'visible', zIndex: activeMenu === job.id ? 1000 : 1 }}>
                   {/* Badge only for highlighted jobs */}
-                  {/* {isHighlighted && <span className="job-badge premium-badge">⭐ Featured</span>}
-                   */}
+                  {isHighlighted && <span className="job-badge premium-badge">⭐ Highlighted job</span>}
+                  
                   <div className="postedjobs-info">
                     <h3>{job.job_title}</h3>
                     <p className="postedjobs-loc flex items-center gap-2">

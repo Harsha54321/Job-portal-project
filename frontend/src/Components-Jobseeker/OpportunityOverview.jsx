@@ -256,33 +256,30 @@ export const OpportunityOverview = () => {
 
   const locationDisplay = locationsList.length > 0 ? locationsList.join(", ") : "Location not specified";
 
-  // Determine card class for main job card
   let jobCardClassName = "opp-overview-job-card";
-  if (isHighlighted) {
-    jobCardClassName += " highlighted-job";
-  } else if (isRecent) {
-    jobCardClassName += " recent-job";
-  }
+  // if (isHighlighted) {
+  //   jobCardClassName += " highlighted-job";
+  // } else if (isRecent) {
+  //   jobCardClassName += " recent-job";
+  // }
 
-  // Determine card class for job details card
   let jobDetailsClassName = "opp-job-details-card";
-  if (isHighlighted) {
-    jobDetailsClassName += " highlighted-job";
-  } else if (isRecent) {
-    jobDetailsClassName += " recent-job";
-  }
+  // if (isHighlighted) {
+  //   jobDetailsClassName += " highlighted-job";
+  // } else if (isRecent) {
+  //   jobDetailsClassName += " recent-job";
+  // }
 
-  // Determine card class for similar job items
   const getSimilarJobClass = (similarJob) => {
     const isSimHighlighted = similarJob.is_highlighted === true;
     const isSimRecent = isRecentlyPosted(similarJob.posted_date || similarJob.created_at);
 
     let className = "opp-similar-job";
-    if (isSimHighlighted) {
-      className += " highlighted-job";
-    } else if (isSimRecent) {
-      className += " recent-job";
-    }
+    // if (isSimHighlighted) {
+    //   className += " highlighted-job";
+    // } else if (isSimRecent) {
+    //   className += " recent-job";
+    // }
     return className;
   };
 
@@ -306,7 +303,7 @@ export const OpportunityOverview = () => {
           <div className="opp-job-main">
             {/* Job Header - with dynamic styling */}
             <div className={jobCardClassName}>
-              <div className="Opportunities-job-header">
+              {/* <div className="Opportunities-job-header">
                 <div>
                   <h2 className="opp-topcard-job-title">{job.job_title}</h2>
                   <h5 className="Opportunities-job-company">
@@ -320,6 +317,36 @@ export const OpportunityOverview = () => {
                     </span>
                   </h5>
                 </div>
+                {job.company.logo || job.company.company_logo ? (
+                  <img
+                    src={job.company.logo || job.company.company_logo}
+                    alt={job.company?.company_name}
+                    className="Opportunities-job-logo"
+                  />
+                ) : (
+                  <div className="Opportunities-job-logo-placeholder">
+                    {job.company?.company_name?.[0]?.toUpperCase()}
+                  </div>
+                )}
+              </div> */}
+              <div className="Opportunities-job-header">
+                <div className="Opportunities-job-info">
+                  <h2 className="opp-topcard-job-title">{job.job_title}</h2>
+
+                  <h5 className="Opportunities-job-company">
+                    {job.company?.company_name}
+                    <span className="Opportunities-divider">|</span>
+                    <span className="star">
+                      <img src={starIcon} alt="star" />
+                    </span>
+                    {job.company?.rating || 0}
+                    <span className="Opportunities-divider">|</span>
+                    <span className="opp-reviews">
+                      {job.company?.review_count || 0} Reviews
+                    </span>
+                  </h5>
+                </div>
+
                 {job.company.logo || job.company.company_logo ? (
                   <img
                     src={job.company.logo || job.company.company_logo}
@@ -364,7 +391,7 @@ export const OpportunityOverview = () => {
                 </p>
               </div>
 
-              <div className='Opportunities-details-bottom'>
+              {/* <div className='Opportunities-details-bottom'>
                 <div className="Opportunities-job-tags">
                   {job.job_category && (
                     <span className={`Opportunities-job-tag ${job.job_category.toLowerCase().replace(/\s+/g, '-')}`}>
@@ -375,8 +402,28 @@ export const OpportunityOverview = () => {
                 <div className="Opportunities-job-type">
                   {job.work_type}
                 </div>
-              </div>
+              </div> */}
+              <div className="Opportunities-details-bottom">
 
+                <div className="Opportunities-details-left">
+                  {job.job_category && (
+                    <span className={`Opportunities-job-tag ${job.job_category.toLowerCase().replace(/\s+/g, '-')}`}>
+                      {job.job_category}
+                    </span>
+                  )}
+
+                  <span className="Opportunities-job-type">
+                    {job.work_type}
+                  </span>
+                </div>
+
+                {job.is_highlighted && (
+                  <span className="highlighted-job-label">
+                    ⭐ Highlighted Job
+                  </span>
+                )}
+
+              </div>
               <hr className="Opportunities-separator" />
 
               <div className="Opportunities-job-footer">
@@ -521,7 +568,7 @@ export const OpportunityOverview = () => {
                     className={simClassName}
                   >
                     <div className="Opportunities-job-header">
-                      <div>
+                      <div className="Opportunities-job-info">
                         <h2 className="similar-job-title">{sim.job_title}</h2>
                         <p className="similar-job-company">
                           {sim.company?.company_name}
@@ -529,7 +576,7 @@ export const OpportunityOverview = () => {
                           <span className="star"><img src={starIcon} alt="star" /></span>
                           {sim.company?.rating || 0}
                           <span className="Opportunities-divider">|</span>
-                          <span>{sim.company?.review_count || 0} reviews</span>
+                          <span>{sim.company?.review_count || 0} Reviews</span>
                         </p>
                       </div>
                       {sim.company.logo || sim.company.company_logo ? (
@@ -579,6 +626,11 @@ export const OpportunityOverview = () => {
                       <div className="Opportunities-job-type">
                         {sim.work_type}
                       </div>
+                      {sim.is_highlighted && (
+                        <span className="highlighted-job-label">
+                          ⭐ Highlighted Job
+                        </span>
+                      )}
                       <p className='similar-job-footer-posted'>
                         {formatPostedDate(sim.posted_date)}
                       </p>

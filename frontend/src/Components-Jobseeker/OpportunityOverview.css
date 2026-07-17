@@ -125,7 +125,7 @@ ul {
   font-weight: 500;
   color: #0d1b2a;
   background-color: #fff;
-  white-space: nowrap;
+  /* white-space: nowrap; */
   transition: all 0.2s ease-in-out;
   cursor: default;
 }
@@ -174,10 +174,13 @@ ul {
   cursor: pointer;
 }
 
+
 .similar-job-title {
-  color: #032240;
-  font-weight: 500;
-  font-size: 17px;
+  margin: 0;
+
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .similar-job-company {
@@ -207,10 +210,55 @@ ul {
   align-items: center;
   margin-top: 12px;
   color: #83858B;
+  padding: 8px;
+}
+
+.Opportunities-details-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 14px;
+  gap: 16px;
+}
+
+.Opportunities-details-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.Opportunities-details-right {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.status-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+
+  padding: 6px 14px;
+  border-radius: 18px;
+
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.status-pill.highlighted {
+  color: #B8860B;
+  background: #FFF8E1;
+  border: 1px solid #FFD54F;
+}
+
+.status-pill.recent {
+  color: #1565C0;
+  background: #E3F2FD;
+  border: 1px solid #64B5F6;
 }
 
 .similar-job-footer-posted {
-  margin-top: 2px;
+  margin: 0;
 }
 
 .Opportunities-job-type {
@@ -666,6 +714,37 @@ ul {
   right: 14px;
   z-index: 2;
   animation: badge-pulse 2s ease-in-out infinite;
+}
+
+.Opportunities-job-header {
+  display: grid;
+  grid-template-columns: 1fr 60px;
+  gap: 16px;
+  align-items: center;
+  padding-top: 8px;
+}
+
+.Opportunities-job-info {
+  min-width: 0;
+}
+
+.opp-topcard-job-title {
+  margin: 0;
+  color: #032240;
+  font-weight: 500;
+
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.Opportunities-job-logo,
+.Opportunities-job-logo-placeholder {
+  width: 60px;
+  height: 60px;
+
+  justify-self: end;
+  align-self: center;
 }
 
 @keyframes badge-pulse {

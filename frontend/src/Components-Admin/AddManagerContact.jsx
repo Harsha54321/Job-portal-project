@@ -197,6 +197,11 @@ export const AddManagerContact = () => {
         errorMsg = 'Please enter a valid phone number (10 digits, starting with 6, 7, 8, or 9).';
       }
     }
+    if (name === 'description') {
+      if (value && value.length > 200) {
+        errorMsg = 'Description must not exceed 200 characters. Current: ' + value.length + '/200';
+      }
+    }
     return errorMsg;
   };
 
@@ -219,6 +224,8 @@ export const AddManagerContact = () => {
       const fieldError = validateField(name, value);
       if (!fieldError) {
         setFormErrors(prev => ({ ...prev, [name]: '' }));
+      } else {
+        setFormErrors(prev => ({ ...prev, [name]: fieldError }));
       }
     }
   };
@@ -268,9 +275,16 @@ export const AddManagerContact = () => {
     const emailErr = validateField('email', formData.email);
     const phoneErr = validateField('phone', formData.phone);
     const titleErr = validateField('title', formData.title);
+    const descriptionErr = validateField('description', formData.description);
 
-    if (nameErr || emailErr || phoneErr || titleErr) {
-      setFormErrors({ full_name: nameErr, email: emailErr, phone: phoneErr, title: titleErr });
+    if (nameErr || emailErr || phoneErr || titleErr || descriptionErr) {
+      setFormErrors({
+        full_name: nameErr,
+        email: emailErr,
+        phone: phoneErr,
+        title: titleErr,
+        description: descriptionErr
+      });
       return;
     }
 
@@ -314,71 +328,61 @@ export const AddManagerContact = () => {
     setIsModalOpen(true);
   };
 
-  // const handleDelete = async (id) => {
-  //   if (!window.confirm('Are you sure you want to permanently delete this account manager?')) return;
-  //   try {
-  //     await api.delete(`/admin/account-managers/${id}/`);
-  //     triggerSuccess('Account manager deleted successfully!');
-  //     await fetchData(currentPage);
-  //   } catch (err) {
-  //     alert('Failed to delete user mapping configurations.');
-  //   }
-  // };
   const handleDelete = async (id) => {
-  // Find the manager to get their details
-  const manager = managers.find(m => m.id === id);
-  if (!manager) return;
+    // Find the manager to get their details
+    const manager = managers.find(m => m.id === id);
+    if (!manager) return;
 
-  // Get count of employers assigned to this manager
-  const assignedEmployers = getEmployersForManager(id);
-  const assignedCount = assignedEmployers.length;
+    // Get count of employers assigned to this manager
+    const assignedEmployers = getEmployersForManager(id);
+    const assignedCount = assignedEmployers.length;
 
-  // Build confirmation message
-  let confirmMessage = `Are you sure you want to permanently delete the account manager "${manager.full_name}"?`;
+    // Build confirmation message
+    let confirmMessage = `Are you sure you want to permanently delete the account manager "${manager.full_name}"?`;
 
-  if (assignedCount > 0) {
-    confirmMessage += `\n\n This manager is currently assigned to ${assignedCount} employer(s).`;
-    confirmMessage += `\nDeleting this manager will remove all these assignments.`;
-  } else {
-    confirmMessage += `\n\nThis manager has no active assignments.`;
-  }
-
-  confirmMessage += `\n\nDo you want to continue?`;
-
-  if (!window.confirm(confirmMessage)) return;
-
-  setLoading(true);
-  try {
-    // First, remove all assignments for this manager
     if (assignedCount > 0) {
-      for (const assign of assignedEmployers) {
-        try {
-          await api.delete(`/admin/employer-assignments/?employer_id=${assign.employer_id}&account_manager_id=${id}`);
-        } catch (err) {
+      confirmMessage += `\n\n This manager is currently assigned to ${assignedCount} employer(s).`;
+      confirmMessage += `\nDeleting this manager will remove all these assignments.`;
+    } else {
+      confirmMessage += `\n\nThis manager has no active assignments.`;
+    }
+
+    confirmMessage += `\n\nDo you want to continue?`;
+
+    if (!window.confirm(confirmMessage)) return;
+
+    setLoading(true);
+    try {
+      // First, remove all assignments for this manager
+      if (assignedCount > 0) {
+        for (const assign of assignedEmployers) {
           try {
-            await api.delete('/admin/employer-assignments/', {
-              data: {
-                employer_id: parseInt(assign.employer_id),
-                account_manager_id: parseInt(id)
-              }
-            });
-          } catch (err2) {
-            console.error(`Failed to remove assignment:`, err2);
+            await api.delete(`/admin/employer-assignments/?employer_id=${assign.employer_id}&account_manager_id=${id}`);
+          } catch (err) {
+            try {
+              await api.delete('/admin/employer-assignments/', {
+                data: {
+                  employer_id: parseInt(assign.employer_id),
+                  account_manager_id: parseInt(id)
+                }
+              });
+            } catch (err2) {
+              console.error(`Failed to remove assignment:`, err2);
+            }
           }
         }
       }
-    }
 
-    // Then delete the manager
-    await api.delete(`/admin/account-managers/${id}/`);
-    triggerSuccess(`Account manager "${manager.full_name}" deleted successfully! ${assignedCount > 0 ? `Removed from ${assignedCount} employer(s).` : ''}`);
-    await fetchData(currentPage);
-  } catch (err) {
-    alert(err.response?.data?.error || 'Failed to delete account manager. Please try again.');
-  } finally {
-    setLoading(false);
-  }
-};
+      // Then delete the manager
+      await api.delete(`/admin/account-managers/${id}/`);
+      triggerSuccess(`Account manager "${manager.full_name}" deleted successfully! ${assignedCount > 0 ? `Removed from ${assignedCount} employer(s).` : ''}`);
+      await fetchData(currentPage);
+    } catch (err) {
+      alert(err.response?.data?.error || 'Failed to delete account manager. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleAssign = async (e) => {
     e.preventDefault();
@@ -580,17 +584,24 @@ export const AddManagerContact = () => {
         </div>
 
         <div className="admin-form-group">
-          <label className="admin-form-label">Description / Bio</label>
+          <label className="admin-form-label">Description / Bio (Optional)</label>
           <textarea
             name="description"
-            placeholder="Brief description about the manager..."
+            placeholder="Brief description about the manager... (Max 200 characters)"
             value={formData.description}
             onChange={handleChange}
+            onBlur={handleBlur}
             tabIndex={activeTabIndex}
-            title="Optional: Provide a brief description or bio for the account manager."
-            className="admin-form-textarea"
+            title="Optional: Provide a brief description or bio for the account manager. Maximum 200 characters."
+            className={`admin-form-textarea ${formErrors.description ? 'input-error-border' : ''}`}
             rows="3"
+            maxLength="200"
           />
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px' }}>
+            <span className="admin-field-error-text" style={{ fontSize: '11px', color: formErrors.description ? '#dc2626' : '#64748b' }}>
+              {formErrors.description || `${formData.description.length}/200 characters`}
+            </span>
+          </div>
         </div>
 
         <div className="admin-toggle-row">
@@ -839,7 +850,7 @@ export const AddManagerContact = () => {
           {successMessage && (
             <div
               className="admin-status-alert admin-alert-success"
-              style={{marginTop: '10px', borderColor: successMessage.toLowerCase().includes('delet') || successMessage.toLowerCase().includes('remov') ? '#dc3545' : '#2e7d32' }}
+              style={{ marginTop: '10px', borderColor: successMessage.toLowerCase().includes('delet') || successMessage.toLowerCase().includes('remov') ? '#dc3545' : '#2e7d32' }}
             >
               <span
                 className="admin-status-dot admin-animate-pulse"

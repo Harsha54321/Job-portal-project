@@ -104,7 +104,7 @@ export const ContactUs = () => {
   const validateForm = () => {
     const newErrors = {};
     const nameRegex = /^[A-Za-z\s]+$/;
-    const emailRegex = /^[a-zA-Z][a-zA-Z0-9]*@(gmail|yahoo|outlook|hotmail)\.[a-zA-Z]{2,}$/;
+    const emailRegex = /^[a-zA-Z][a-zA-Z0-9.]*@(gmail|yahoo|outlook|hotmail|thestackly)\.[a-zA-Z]{2,}$/;
     const phoneRegex = /^[6-9]\d{9}$/;
 
     if (!formValues.name.trim()) {
@@ -116,7 +116,7 @@ export const ContactUs = () => {
     if (!formValues.email.trim()) {
       newErrors.email = "Email is required";
     } else if (!emailRegex.test(formValues.email)) {
-      newErrors.email = "Enter valid email (gmail, yahoo, outlook, hotmail)";
+      newErrors.email = "Enter valid email (gmail, yahoo, outlook, hotmail, thestackly)";
     }
 
     if (!formValues.contact.trim()) {
