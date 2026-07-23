@@ -9,56 +9,70 @@ import home_icon from '../assets/home_icon.png';
 import { AvatarMenu } from '../Components-Jobseeker/AvatarMenu';
 import { JNotification } from '../Components-Jobseeker/JNotification';
 import { useJobs } from '../JobContext';
-
+ 
 export const Header = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { notificationsData, showNotification, setShowNotification, fetchNotifications, chats, currentUserId } = useJobs();
-
+ 
   const newNotificationsCount = Array.isArray(notificationsData)
     ? notificationsData.filter(n => !n.isRead).length
     : 0;
-
+ 
   const unreadMessagesCount = chats.filter(
     chat => (chat.unread_count || 0) > 0
   ).length;
-
+ 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showPortalDropdown, setShowPortalDropdown] = useState(false);
-
+ 
   const isLoggedIn =
     location.pathname.includes('/jobseeker') &&
     !location.pathname.includes('/login') &&
     !location.pathname.includes('/signup');
-
+ 
   const navLinks = [
     { name: 'Home', path: '/Job-portal/jobseeker' },
     { name: 'Jobs', path: '/Job-portal/jobseeker/jobs' },
     { name: 'Companies', path: '/Job-portal/jobseeker/companies' },
   ];
-
+ 
   const navIcons = [
     { image: breifcase, path: '/Job-portal/jobseeker/myjobs', label: 'My Jobs' },
     { image: chat, path: '/Job-portal/jobseeker/chat', label: 'Chat' },
   ];
-
+ 
   const refreshNotifications = async () => {
     if (fetchNotifications) {
       await fetchNotifications();
     }
   };
-
+ 
   useEffect(() => {
     if (isLoggedIn && fetchNotifications) {
       fetchNotifications();
     }
   }, [isLoggedIn]);
-
-  const preventNav = (e) => {
+ 
+  const handleLandingPageNav = (e, sectionName) => {
     e.preventDefault();
     setMobileMenuOpen(false);
+ 
+    if (sectionName === 'Jobs') {
+      const jobsSection = document.getElementById('job-listings-section');
+      if (jobsSection) {
+        jobsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    } else if (sectionName === 'Companies') {
+      const companiesSection = document.getElementById('companies-section');
+      if (companiesSection) {
+        companiesSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    } else if (sectionName === 'Home') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   };
-
+ 
   // Handle keyboard events for notification toggle
   const handleNotificationKeyDown = (e) => {
     if (e.key === 'Enter' || e.key === ' ') {
@@ -66,7 +80,7 @@ export const Header = () => {
       setShowNotification(!showNotification);
     }
   };
-
+ 
   // Handle keyboard events for mobile menu toggle
   const handleMenuKeyDown = (e) => {
     if (e.key === 'Enter' || e.key === ' ') {
@@ -74,12 +88,12 @@ export const Header = () => {
       setMobileMenuOpen(prev => !prev);
     }
   };
-  
+ 
   const handleLogoClick = () => {
     const accessToken = sessionStorage.getItem("access");
     const userRole = sessionStorage.getItem("userRole");
     const currentRole = userRole ? userRole.toLowerCase() : "";
-
+ 
     if (accessToken && currentRole === "jobseeker") {
       navigate('/Job-portal/jobseeker');
     } else if (accessToken && currentRole === "employer") {
@@ -88,7 +102,7 @@ export const Header = () => {
       navigate('/');
     }
   };
-
+ 
   return (
     <header className="header">
       <div className="logo-container">
@@ -114,12 +128,12 @@ export const Header = () => {
           if (n.name === 'Home' && !isActive) {
             isActive = location.pathname === n.path + '/';
           }
-
+ 
           return (
             <NavLink
               key={n.name}
               to={isLoggedIn ? n.path : '#'}
-              onClick={!isLoggedIn ? preventNav : undefined}
+              onClick={!isLoggedIn ? (e) => handleLandingPageNav(e, n.name) : undefined}
               className={isActive ? 'nav-item nav-active' : 'nav-item'}
             >
               {n.name}
@@ -141,7 +155,7 @@ export const Header = () => {
                 }
               />
             </Link>
-
+ 
             {navIcons.map((IC, index) => {
               const isActive = location.pathname === IC.path;
               return (
@@ -184,7 +198,7 @@ export const Header = () => {
                 </Link>
               );
             })}
-
+ 
             {/* Changed from div to button for better accessibility */}
             <button
               onClick={() => setShowNotification(!showNotification)}
@@ -233,9 +247,9 @@ export const Header = () => {
                 </span>
               )} */}
             </button>
-
+ 
             <AvatarMenu />
-
+ 
             {/* <JNotification
               notificationsData={notificationsData.map(n => ({
                 id: n.id,
@@ -247,7 +261,7 @@ export const Header = () => {
               setShowNotification={setShowNotification}
               refreshNotifications={refreshNotifications}
             /> */}
-
+ 
             <JNotification />
           </>
         ) : (
@@ -262,9 +276,9 @@ export const Header = () => {
       {!isLoggedIn && mobileMenuOpen && (
         <div className="mobile-menu" role="dialog" aria-modal="true" aria-label="Mobile navigation menu">
           <div className="mobile-menu-links">
-            <a href="#" onClick={preventNav} className="active">Home</a>
-            <a href="#" onClick={preventNav}>Jobs</a>
-            <a href="#" onClick={preventNav}>Companies</a>
+            <a href="#" onClick={(e) => handleLandingPageNav(e, 'Home')} className="active">Home</a>
+            <a href="#" onClick={(e) => handleLandingPageNav(e, 'Jobs')}>Jobs</a>
+            <a href="#" onClick={(e) => handleLandingPageNav(e, 'Companies')}>Companies</a>
             <Link to="/Job-portal/role-selection" onClick={() => setMobileMenuOpen(false)}>Login</Link>
             <Link to="/Job-portal/signup-selection" onClick={() => setMobileMenuOpen(false)}>Sign up</Link>
             <Link to="/Job-portal/role-selection" onClick={() => setMobileMenuOpen(false)}>Choose Role</Link>
@@ -274,3 +288,5 @@ export const Header = () => {
     </header>
   );
 };
+ 
+ 

@@ -8,6 +8,20 @@ import { LocationDisplay } from "../Components-Jobseeker/LocationDisplay";
 export const JobPreviewModal = ({ job, onClose }) => {
   if (!job) return null;
 
+const formatSalary = (salary) => {
+  if (!salary) return 'Not Disclosed';
+
+  // Extract only numbers and decimal points (e.g., "₹ 15" -> "15")
+  const numericVal = parseFloat(String(salary).replace(/[^0-9.]/g, ''));
+
+  if (isNaN(numericVal)) return salary;
+
+  // Format based on value
+  return numericVal > 100
+    ? `₹ ${numericVal} / month`
+    : `₹ ${numericVal} LPA`;
+};
+
   // Helper function to format date
   const getTimeAgo = (dateString) => {
     if (!dateString) return 'Recently';
@@ -95,12 +109,13 @@ export const JobPreviewModal = ({ job, onClose }) => {
                   <span className="job-preview-reviews">55k+ reviews</span>
                 </div>
 
+
                 <div className="job-preview-meta-grid">
                   <div className="meta-item">
                     <img src={time} className='card-icons' alt="time" />
                     {job.experience || job.work_duration || 'N/A'}
                   </div>
-                  <div className="meta-item">{job.salary || 'Not Disclosed'}</div>
+                  <div className="meta-item">{formatSalary(job.salary)}</div>
                   <div className="meta-item">
                     <img src={place} className='card-icons' alt="loc" />
                     <LocationDisplay locations={location} />

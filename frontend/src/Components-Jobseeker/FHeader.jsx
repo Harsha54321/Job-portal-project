@@ -17,7 +17,7 @@ export function FHeader() {
       handleBack();
     }
   };
-  
+
   const handleLogoClick = () => {
     const accessToken = sessionStorage.getItem("access");
     const userRole = sessionStorage.getItem("userRole");
@@ -25,11 +25,11 @@ export function FHeader() {
 
     if (accessToken && currentRole === "jobseeker") {
       // Fixed: Routes to the exact path defined in your App.js for <Afterloginlanding />
-      navigate('/Job-portal/jobseeker'); 
+      navigate('/Job-portal/jobseeker');
     } else if (accessToken && currentRole === "employer") {
-      navigate('/Job-portal/Employer/Dashboard'); 
+      navigate('/Job-portal/Employer/Dashboard');
     } else {
-      navigate('/'); 
+      navigate('/');
     }
   };
 
@@ -55,11 +55,13 @@ export function FHeader() {
           alignItems: 'center',
           justifyContent: 'center'
         }}
+
       >
-        <img 
-          src={backicon} 
-          alt="Go back" 
+        <img
+          src={backicon}
+          alt="Go back"
           style={{ display: 'block' }}
+          title="Go back to previous page"
         />
       </button>
     </div>

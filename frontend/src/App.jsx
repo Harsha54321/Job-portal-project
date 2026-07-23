@@ -128,6 +128,7 @@ const router = createBrowserRouter([
           { path: 'ReportAJob/:id', element: <ReportAJob /> },
           { path: 'myjobs', element: <MyJobs /> },
           { path: 'jobs', element: <JobsTab /> },
+          {path: 'companies', element: <CompaniesTab />},
           { path: 'companies', element: <CompaniesTab /> },
           { path: 'companies/:companyId', element: <JobsThroughCompany /> },
           { path: 'myprofile', element: <MyProfile /> },

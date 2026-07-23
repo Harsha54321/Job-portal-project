@@ -284,6 +284,24 @@ export const EmployerDashboard = () => {
         };
     };
 
+    const handleDeleteClick = async (jobId) => {
+        setActiveMenu(null);
+        const isConfirmed = window.confirm("Are you sure you want to delete this job post?");
+        if (!isConfirmed) return;
+
+        try {
+            // CORRECTED ENDPOINT
+            await api.delete(`/jobs/${jobId}/delete/`);
+            alert("Job post deleted successfully!");
+            if (refreshEmployerData) {
+                await refreshEmployerData();
+            }
+        } catch (error) {
+            console.error("Error deleting job:", error);
+            alert("Failed to delete the job. Please try again.");
+        }
+    };
+
     const activeJobsCount = PostedJob.length;
     const initialLetter = currentEmployer?.hrName?.charAt(0).toUpperCase() || "U";
 

@@ -291,14 +291,18 @@
   outline: none;
 }
 
-/* --- Status Pills --- */
 .status-pill {
   padding: 6px 14px;
   border-radius: 50px;
   font-size: 12px;
   font-weight: 700;
-  display: inline-block;
+  
+  /* The brute-force fix */
+  display: inline-block !important;
+  white-space: nowrap !important;
+  width: max-content !important;
 }
+
 
 .status-pill.large { padding: 10px 20px; font-size: 13px; margin-top: 10px; }
 

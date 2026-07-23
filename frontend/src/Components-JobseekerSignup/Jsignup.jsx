@@ -407,10 +407,10 @@ export const Jsignup = () => {
   const validateForm = () => {
     const newErrors = {};
 
-    const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*])[A-Za-z\d!@#$%^?&*]{8,}$/;
+    const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{}|:;"'<>,.?/~`\\])[A-Za-z\d!@#$%^&*()_+\-=\[\]{}|:;"'<>,.?/~`\\]{8,}$/;
     const regexofUppercase = /^(?=.*[A-Z]).+$/;
     const regexofNumber = /^(?=.*\d).+$/;
-    const regexofSpecialChar = /^(?=.*[!@#$%^&*]).+$/;
+    const regexofSpecialChar = /^(?=.*[!@#$%^&*()_+\-=\[\]{}|:;"'<>,.?/~`\\]).+$/;
     const regexofUserName = /^[A-Za-z_][A-Za-z0-9_]{3,19}$/;
     const regexofMobile = /^[6-9]\d{9}$/;
 

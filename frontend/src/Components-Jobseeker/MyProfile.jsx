@@ -44,10 +44,13 @@ const EditableListItem = ({ title, onEdit }) => (
 
 // Filter drop down skills and languages
 
-const FilterableDropdown = ({ options, selectedValue, onSelect, placeholder }) => {
+const FilterableDropdown = ({ options, selectedValue, onSelect, placeholder, className = "" }) => {
     const [searchTerm, setSearchTerm] = useState("");
     const [isOpen, setIsOpen] = useState(false);
+    const [highlightedIndex, setHighlightedIndex] = useState(-1);
     const triggerRef = useRef(null);
+    const panelRef = useRef(null);
+    const inputRef = useRef(null);
 
     const filteredOptions = options.filter(opt =>
         opt.toLowerCase().includes(searchTerm.toLowerCase())
@@ -56,8 +59,9 @@ const FilterableDropdown = ({ options, selectedValue, onSelect, placeholder }) =
     const closeDropdown = (refocusTrigger = false) => {
         setIsOpen(false);
         setSearchTerm("");
+        setHighlightedIndex(-1);
         if (refocusTrigger && triggerRef.current) {
-            triggerRef.current.focus();
+            setTimeout(() => triggerRef.current.focus(), 10);
         }
     };
 
@@ -66,9 +70,119 @@ const FilterableDropdown = ({ options, selectedValue, onSelect, placeholder }) =
         closeDropdown(true);
     };
 
+
+    // Keyboard navigation
+    const handleKeyDown = (e) => {
+        if (!isOpen) {
+            if (e.key === "Enter" || e.key === " " || e.key === "ArrowDown") {
+                e.preventDefault();
+                setIsOpen(true);
+                setTimeout(() => {
+                    if (inputRef.current) {
+                        inputRef.current.focus();
+                    }
+                }, 50);
+            }
+            return;
+        }
+
+        switch (e.key) {
+            case "Escape":
+                e.preventDefault();
+                closeDropdown(true);
+                break;
+
+            case "ArrowDown":
+                e.preventDefault();
+                setHighlightedIndex(prev =>
+                    prev < filteredOptions.length - 1 ? prev + 1 : prev
+                );
+                break;
+
+            case "ArrowUp":
+                e.preventDefault();
+                setHighlightedIndex(prev => prev > 0 ? prev - 1 : -1);
+                break;
+
+            case "Enter":
+                e.preventDefault();
+                if (highlightedIndex >= 0 && highlightedIndex < filteredOptions.length) {
+                    handleOptionSelect(filteredOptions[highlightedIndex]);
+                }
+                else if (filteredOptions.length > 0) {
+                    handleOptionSelect(filteredOptions[0]);
+                }
+
+                break;
+
+            case "Tab":
+                closeDropdown();
+                break;
+
+
+            default:
+                break;
+        }
+    };
+
+    // Handle click outside
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (
+                panelRef.current &&
+                !panelRef.current.contains(event.target) &&
+                triggerRef.current &&
+                !triggerRef.current.contains(event.target)
+            ) {
+                closeDropdown();
+            }
+        };
+
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+        };
+    }, []);
+
+    // Handle scroll outside
+    useEffect(() => {
+        if (!isOpen) return;
+
+        const handleScroll = (e) => {
+            // Check if scroll is outside the dropdown panel
+            if (panelRef.current && !panelRef.current.contains(e.target)) {
+                closeDropdown();
+            }
+        };
+
+        document.addEventListener("scroll", handleScroll, true);
+        return () => {
+            document.removeEventListener("scroll", handleScroll, true);
+        };
+    }, [isOpen]);
+
+    // Scroll highlighted option into view
+    useEffect(() => {
+        if (highlightedIndex >= 0 && panelRef.current) {
+            const optionElements = panelRef.current.querySelectorAll('.jobpost-option-item');
+            if (optionElements[highlightedIndex]) {
+                optionElements[highlightedIndex].scrollIntoView({
+                    block: 'nearest',
+                    behavior: 'smooth'
+                });
+            }
+        }
+    }, [highlightedIndex]);
+
+
+
     return (
-        <div className="jobpost-dropdown" style={{ position: 'relative', width: '100%' }}>
-            <div
+        <div className="jobpost-dropdown" 
+            style={{ position: 'relative', width: '100%' }}
+            onKeyDown={handleKeyDown}>
+            
+
+            {/* <div
                 // className="jobpost-dropdown-trigger"
                 // onClick={() => setIsOpen(!isOpen)}
                 ref={triggerRef}
@@ -99,51 +213,202 @@ const FilterableDropdown = ({ options, selectedValue, onSelect, placeholder }) =
             >
                 {selectedValue || placeholder}
                 <i className={`fas fa-angle-down jobpost-arrow ${isOpen ? 'open' : ''}`} style={{ marginLeft: 'auto' }}></i>
+            </div> */}
+            <div
+                ref={triggerRef}
+                className={`jobpost-dropdown-trigger ${className}`}
+                role="combobox"
+                tabIndex={0}
+                aria-haspopup="listbox"
+                aria-expanded={isOpen}
+                aria-controls="dropdown-listbox"
+                onClick={() => {
+                    if (!isOpen) {
+                        setIsOpen(true);
+                        setTimeout(() => {
+                            if (inputRef.current) {
+                                inputRef.current.focus();
+                            }
+                        }, 50);
+                    } else {
+                        closeDropdown(true);
+                    }
+                }}
+                onKeyDown={handleKeyDown}
+                style={{
+                    height: '44px',
+                    border: '1px solid #E5E7EB',
+                    borderRadius: '6px',
+                    padding: '0 16px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    cursor: 'pointer',
+                    background: '#fff',
+                    justifyContent: 'space-between',
+                    ...(className?.includes('input-error') && {
+                        borderColor: '#FF6F61',
+                        backgroundColor: '#fff8f8'
+                    })
+                }}
+            >
+                <span style={{
+                    color: selectedValue ? '#032240' : '#999',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap'
+                }}>
+                    {selectedValue || placeholder || "Select..."}
+                </span>
+                <i
+                    className={`fas fa-angle-down jobpost-arrow ${isOpen ? 'open' : ''}`}
+                    style={{
+                        marginLeft: 'auto',
+                        transition: 'transform 0.2s',
+                        transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)'
+                    }}
+                />
             </div>
 
+
             {isOpen && (
-                <div className="jobpost-dropdown-panel" style={{ display: 'block', position: 'absolute', top: '100%', left: 0, width: '100%', zIndex: 1000, background: '#fff', border: '1px solid #E5E7EB', borderRadius: '8px', padding: '10px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
+                <div
+                    ref={panelRef}
+                    id="dropdown-listbox"
+                    role="listbox"
+                    className="jobpost-dropdown-panel"
+                    style={{
+                        display: 'block',
+                        position: 'absolute',
+                        top: 'calc(100% + 4px)',
+                        left: 0,
+                        width: '100%',
+                        zIndex: 1000,
+                        background: '#fff',
+                        border: '1px solid #E5E7EB',
+                        borderRadius: '8px',
+                        padding: '10px',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                        maxHeight: '250px',
+                        overflow: 'hidden',
+                        display: 'flex',
+                        flexDirection: 'column'
+                    }}
+                >
+                    {/* Search Input */}
                     <input
+                        ref={inputRef}
                         type="text"
                         className="jobpost-input"
                         placeholder="Search..."
-                        autoFocus
                         value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        style={{ marginBottom: '10px', height: '36px' }}
+                        onChange={(e) => {
+                            setSearchTerm(e.target.value);
+                            setHighlightedIndex(-1);
+                        }}
+                        onKeyDown={(e) => {
+                            if (e.key === "Escape") {
+                                closeDropdown(true);
+                            }
+                            e.stopPropagation();
+                        }}
+                        style={{
+                            marginBottom: '10px',
+                            height: '36px',
+                            padding: '0 12px',
+                            border: '1px solid #E5E7EB',
+                            borderRadius: '4px',
+                            fontSize: '14px',
+                            outline: 'none',
+                            flexShrink: 0
+                        }}
+                        onClick={(e) => e.stopPropagation()}
                     />
-                    <div className="jobpost-options-grid" style={{ gridTemplateColumns: '1fr', maxHeight: '150px', overflowY: 'auto' }}>
+
+                    {/* Options List */}
+                    <div
+                        className="jobpost-options-grid"
+                        style={{
+                            gridTemplateColumns: '1fr',
+                            maxHeight: '170px',
+                            overflowY: 'auto',
+                            flex: 1
+                        }}
+                        onWheel={(e) => e.stopPropagation()}
+                    >
                         {filteredOptions.length > 0 ? (
-                            filteredOptions.map(opt => (
-                                // <div
-                                //     key={opt}
-                                //     className="jobpost-option-item"
-                                //     onClick={() => { onSelect(opt); setIsOpen(false); setSearchTerm(""); }}
-                                //     style={{ padding: '8px', cursor: 'pointer' }}
-                                // >
+                            filteredOptions.map((opt, index) => (
                                 <div
+                                    key={opt}
                                     className="jobpost-option-item"
                                     role="option"
                                     aria-selected={opt === selectedValue}
-                                    tabIndex={0}
+                                    tabIndex={-1}
                                     onClick={() => handleOptionSelect(opt)}
-                                    onKeyDown={(e) => {
-                                        if (e.key === "Enter" || e.key === " ") {
-                                            e.preventDefault();
-                                            handleOptionSelect(opt);
-                                        }
+                                    onMouseEnter={() => setHighlightedIndex(index)}
+                                    style={{
+                                        padding: '8px 12px',
+                                        cursor: 'pointer',
+                                        borderRadius: '4px',
+                                        backgroundColor: highlightedIndex === index ? '#e7f3ff' : 'transparent',
+                                        color: highlightedIndex === index ? '#007bff' : '#032240',
+                                        transition: 'background 0.15s'
                                     }}
                                 >
                                     {opt}
                                 </div>
                             ))
                         ) : (
-                            <div style={{ padding: '8px', color: '#999' }}>No results found</div>
+                            <div style={{ padding: '8px', color: '#999', textAlign: 'center' }}>
+                                No results found
+                            </div>
                         )}
                     </div>
                 </div>
             )}
         </div>
+        //         <div className="jobpost-dropdown-panel" onWheel={(e) => e.stopPropagation()} style={{ display: 'block', position: 'absolute', top: '100%', left: 0, width: '100%', zIndex: 1000, background: '#fff', border: '1px solid #E5E7EB', borderRadius: '8px', padding: '10px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
+        //             <input
+        //                 type="text"
+        //                 className="jobpost-input"
+        //                 onWheel={(e) => e.stopPropagation()}
+        //                 placeholder="Search..."
+        //                 autoFocus
+        //                 value={searchTerm}
+        //                 onChange={(e) => setSearchTerm(e.target.value)}
+        //                 style={{ marginBottom: '10px', height: '36px' }}
+        //             />
+        //             <div className="jobpost-options-grid" style={{ gridTemplateColumns: '1fr', maxHeight: '150px', overflowY: 'auto' }}>
+        //                 {filteredOptions.length > 0 ? (
+        //                     filteredOptions.map(opt => (
+        //                         // <div
+        //                         //     key={opt}
+        //                         //     className="jobpost-option-item"
+        //                         //     onClick={() => { onSelect(opt); setIsOpen(false); setSearchTerm(""); }}
+        //                         //     style={{ padding: '8px', cursor: 'pointer' }}
+        //                         // >
+        //                         <div
+        //                             className="jobpost-option-item"
+        //                             role="option"
+        //                             aria-selected={opt === selectedValue}
+        //                             tabIndex={0}
+        //                             onClick={() => handleOptionSelect(opt)}
+        //                             onKeyDown={(e) => {
+        //                                 if (e.key === "Enter" || e.key === " ") {
+        //                                     e.preventDefault();
+        //                                     handleOptionSelect(opt);
+        //                                 }
+        //                             }}
+        //                         >
+        //                             {opt}
+        //                         </div>
+        //                     ))
+        //                 ) : (
+        //                     <div style={{ padding: '8px', color: '#999' }}>No results found</div>
+        //                 )}
+        //             </div>
+        //         </div>
+        //     )}
+        // </div>
     );
 };
 
@@ -533,6 +798,7 @@ const Profile = ({ data, onChange, onReset, onNext, setProfilePhoto, setRemovePh
                         <input
                             type="text"
                             name="fullName"
+                            maxLength={30}
                             value={data.fullName || ""}
                             onChange={handleChange}
                             className={errors.fullName ? "input-error" : ""}
@@ -590,23 +856,12 @@ const Profile = ({ data, onChange, onReset, onNext, setProfilePhoto, setRemovePh
                     </div>
                     <div className="form-group">
                         <label>Nationality*</label>
-                        {/* <input
-                            type="text"
-                            name="nationality"
-                            value={data.nationality || ""}
-                            onChange={(e) => {
-                                if (/^[A-Za-z\s]*$/.test(e.target.value)) {
-                                    handleChange(e);
-                                }
-                            }}
-                            className={errors.nationality ? "input-error" : ""}
-                            placeholder="Enter nationality"
-                        /> */}
                         <FilterableDropdown
                             options={nationalityOptions}
                             selectedValue={data.nationality}
                             onSelect={handleNationalitySelect}
                             placeholder="Select Nationality"
+                            className={errors.nationality ? "input-error" : ""}
                         />
                         {errors.nationality && (
                             <span className="error-message">{errors.nationality}</span>
@@ -634,10 +889,15 @@ const CurrentDetails = ({ data, onChange, onReset, onNext }) => {
     const handleChange = (e) => {
         const { name, value } = e.target;
 
+
         // Validation RegEx rules for live typing
         if (name === "jobTitle" && !AlphaOnlyWithSpace.test(value)) return;
         if (name === "company" && value !== "" && !/^(?=.*[A-Za-z])[A-Za-z0-9\s\.\-\'\,\&\(\)@#\$]*$/.test(value)) return;
         if ((name === "currentLocation" || name === "prefLocation") && !/^[A-Za-z\s,]*$/.test(value)) return;
+
+        if (name === "currentLocation" && value.length > 30) return;
+        if (name === "prefLocation" && value.length > 30) return;
+
 
         // Reset experience fields when switching to fresher
         if (name === "experienceType") {
@@ -668,9 +928,13 @@ const CurrentDetails = ({ data, onChange, onReset, onNext }) => {
             // 2. Validate locations (Required for BOTH Freshers and Experienced users)
             if (!data.currentLocation?.trim()) {
                 newErrors.currentLocation = "*Current location is required";
+            } else if (data.currentLocation.trim().length > 15) {
+                newErrors.currentLocation = "*Current location cannot exceed 15 characters";
             }
             if (!data.prefLocation?.trim()) {
                 newErrors.prefLocation = "*Preferred location is required";
+            } else if (data.prefLocation.trim().length > 30) {
+                newErrors.prefLocation = "*Preferred location cannot exceed 30 characters";
             }
 
             // 3. Separate Validation block strictly for Experienced users
@@ -757,6 +1021,7 @@ const CurrentDetails = ({ data, onChange, onReset, onNext }) => {
                             <input
                                 type="text"
                                 name="jobTitle"
+                                maxLength={40}
                                 value={data.jobTitle || ""}
                                 onChange={handleChange}
                                 className={errors.jobTitle ? "input-error" : ""}
@@ -770,6 +1035,7 @@ const CurrentDetails = ({ data, onChange, onReset, onNext }) => {
                             <input
                                 type="text"
                                 name="company"
+                                maxLength={40}
                                 value={data.company || ""}
                                 onChange={handleChange}
                                 className={errors.company ? "input-error" : ""}
@@ -803,11 +1069,13 @@ const CurrentDetails = ({ data, onChange, onReset, onNext }) => {
                     <input
                         type="text"
                         name="currentLocation"
+                        maxLength="30"
                         value={data.currentLocation || ""}
                         onChange={handleChange}
                         className={errors.currentLocation ? "input-error" : ""}
-                        placeholder="e.g., Bangalore"
+                        placeholder="e.g., Bangalore(max 30 characters)"
                     />
+
                     {errors.currentLocation && <span className="error-message">{errors.currentLocation}</span>}
                 </div>
 
@@ -816,11 +1084,14 @@ const CurrentDetails = ({ data, onChange, onReset, onNext }) => {
                     <input
                         type="text"
                         name="prefLocation"
+                        maxLength="100"
                         value={data.prefLocation || ""}
                         onChange={handleChange}
                         className={errors.prefLocation ? "input-error" : ""}
-                        placeholder="e.g., Bangalore, Chennai, Coimbatore"
+                        placeholder="e.g., Bangalore, Chennai, Coimbatore(max 100 characters)"
                     />
+
+
                     {errors.prefLocation && <span className="error-message">{errors.prefLocation}</span>}
                 </div>
             </div>
@@ -837,6 +1108,10 @@ const CurrentDetails = ({ data, onChange, onReset, onNext }) => {
 const ContactDetails = ({ data, onChange, onReset, onNext }) => {
     const [errors, setErrors] = useState({});
     const handleChange = (e) => {
+        if (name === "address" && value.length > 100) return;
+        if (name === "street" && value.length > 25) return;
+        if (name === "city" && value.length > 25) return;
+        if (name === "state" && value.length > 50) return;
         onChange(e);
         if (errors[e.target.name]) setErrors({ ...errors, [e.target.name]: "" });
     };
@@ -879,12 +1154,23 @@ const ContactDetails = ({ data, onChange, onReset, onNext }) => {
             newErrors.address = "*Full address is required";
         } else if (!addressRegex.test(data.address)) {
             newErrors.address = "*Enter a valid address";
+        } else if (data.address.trim().length > 100) {
+            newErrors.address = "*Address cannot exceed 100 characters";
         }
         if (!data.country) newErrors.country = "*Country is required";
         if (!data.state) newErrors.state = "*State is required";
+        else if (data.state.trim().length > 50) {
+            newErrors.state = "*State cannot exceed 50 characters";
+        }
         if (!data.street) newErrors.street = "*Street/Area is required";
+        else if (data.street.trim().length > 25) {
+            newErrors.street = "*Street/Area cannot exceed 25 characters";
+        }
         if (!data.pincode) newErrors.pincode = "*Pincode is required";
         if (!data.city) newErrors.city = "*City is required";
+        else if (data.city.trim().length > 25) {
+            newErrors.city = "*City cannot exceed 25 characters";
+        }
         else if (!Pincode.test(data.pincode))
             newErrors.pincode = "*Enter a valid 6-digit pincode";
 
@@ -950,6 +1236,7 @@ const ContactDetails = ({ data, onChange, onReset, onNext }) => {
                     <input
                         type="email"
                         name="email"
+                        maxLength={60}
                         value={data.email || ""}
                         onChange={handleChange}
                         className={errors.email ? "input-error" : ""}
@@ -963,6 +1250,7 @@ const ContactDetails = ({ data, onChange, onReset, onNext }) => {
                     <input
                         type="email"
                         name="altEmail"
+                        maxLength={60}
                         value={data.altEmail || ""}
                         onChange={handleChange}
                         className={errors.altEmail ? "input-error" : ""}
@@ -978,6 +1266,7 @@ const ContactDetails = ({ data, onChange, onReset, onNext }) => {
                     <input
                         type="text"
                         name="address"
+                        maxLength="50"
                         value={data.address || ""}
                         onChange={onChange}
                         className={errors.address ? "input-error" : ""}
@@ -993,6 +1282,7 @@ const ContactDetails = ({ data, onChange, onReset, onNext }) => {
                     <input
                         type="text"
                         name="street"
+                        maxLength="30"
                         value={data.street || ""}
                         onChange={handleChange}
                         placeholder="e.g., Flat 402"
@@ -1006,6 +1296,7 @@ const ContactDetails = ({ data, onChange, onReset, onNext }) => {
                     <input
                         type="text"
                         name="city"
+                        maxLength="30"
                         value={data.city || ""}
                         onChange={(e) => {
                             if (/^[A-Za-z\s]*$/.test(e.target.value)) handleChange(e);
@@ -1021,6 +1312,7 @@ const ContactDetails = ({ data, onChange, onReset, onNext }) => {
                     <input
                         type="text"
                         name="state"
+                        maxLength="50"
                         value={data.state || ""}
                         onChange={(e) => {
                             if (/^[A-Za-z\s]*$/.test(e.target.value)) handleChange(e);
@@ -1053,6 +1345,7 @@ const ContactDetails = ({ data, onChange, onReset, onNext }) => {
                     <input
                         type="text"
                         name="country"
+                        maxLength={30}
                         value={data.country || ""}
                         onChange={(e) => {
                             if (/^[A-Za-z\s]*$/.test(e.target.value)) handleChange(e);
@@ -1118,6 +1411,8 @@ const ResumeSection = ({
             e.target.value = "";
             return;
         }
+
+        // if (name==="portfolio_link"&& value.length>50) return;
 
         setResumeFile(file);
         setExistingResume(null); // Clear existing resume when new file is uploaded
@@ -1308,9 +1603,10 @@ const ResumeSection = ({
                     id="portfolioLink"
                     type="url"
                     name="portfolio_link"
+                    maxLength="100"
                     value={data.portfolio_link || ""}
                     onChange={onChange}
-                    placeholder="e.g., https://yourportfolio.com"
+                    placeholder="e.g., https://yourportfolio.com   (max 100 characters)"
                     className={errors.portfolio_link ? "input-error" : ""}
                     aria-label="Portfolio website link"
                 />
@@ -2271,6 +2567,7 @@ const EducationDetails = ({
                                     <input
                                         type="text"
                                         name="institution"
+                                        maxLength="40"
                                         value={data.sslc.institution}
                                         onChange={(e) => {
                                             const val = e.target.value;
@@ -2305,6 +2602,7 @@ const EducationDetails = ({
                                     <input
                                         type="text"
                                         name="location"
+                                        maxLength={40}
                                         value={data.sslc.location || ""}
                                         placeholder="e.g., Bangalore"
                                         className={errors.sslclocation ? "input-error" : ""}
@@ -2375,6 +2673,7 @@ const EducationDetails = ({
                                     <input
                                         type="text"
                                         name="institution"
+                                        maxLength={40}
                                         value={data.hsc.institution || ""}
                                         onChange={(e) => {
                                             const val = e.target.value;
@@ -2394,6 +2693,7 @@ const EducationDetails = ({
                                     <input
                                         type="text"
                                         name="location"
+                                        maxLength={40}
                                         value={data.hsc.location || ""}
                                         placeholder="e.g., Bangalore"
                                         className={errors.hsclocation ? "input-error" : ""}
@@ -2531,6 +2831,7 @@ const EducationDetails = ({
                                         <input
                                             type="text"
                                             name="dept"
+                                            maxLength={40}
                                             value={grad.dept}
                                             onChange={(e) => handleInputChange(e, 'grad', grad.id)}
                                             placeholder="e.g., Computer Science"
@@ -2582,6 +2883,7 @@ const EducationDetails = ({
                                         <input
                                             type="text"
                                             name="college"
+                                            maxLength={40}
                                             value={grad.college}
                                             onChange={(e) => {
                                                 const val = e.target.value;
@@ -2601,6 +2903,7 @@ const EducationDetails = ({
                                         <input
                                             type="text"
                                             name="city"
+                                            maxLength={40}
                                             value={grad.city}
                                             onChange={(e) => handleInputChange(e, 'grad', grad.id)}
                                             placeholder="e.g., Green park"
@@ -2613,6 +2916,7 @@ const EducationDetails = ({
                                         <input
                                             type="text"
                                             name="state"
+                                            maxLength={40}
                                             value={grad.state}
                                             onChange={(e) => handleInputChange(e, 'grad', grad.id)}
                                             placeholder="e.g., Tamil Nadu"
@@ -2625,6 +2929,7 @@ const EducationDetails = ({
                                         <input
                                             type="text"
                                             name="country"
+                                            maxLength={40}
                                             value={grad.country}
                                             onChange={(e) => handleInputChange(e, 'grad', grad.id)}
                                             placeholder="e.g., India"
@@ -2801,7 +3106,7 @@ const WorkExperience = ({
             <div className="form-grid">
                 <div className="form-group">
                     <label>Current Status (Synced with Basic Details)</label>
-                    {/* ✅ Show status but allow change with validation */}
+
                     <select
                         name="status"
                         value={data.status || "Fresher"}
@@ -2840,7 +3145,7 @@ const WorkExperience = ({
                                 <div className="form-group">
                                     <label>Job Title*</label>
                                     <input
-                                        type="text" name="title" value={entry.title}
+                                        type="text" name="title" value={entry.title} maxLength={40}
                                         onChange={(e) => handleEntryChange(entry.id, e)}
                                         className={errors[`title_${entry.id}`] ? "input-error" : ""}
                                         placeholder="e.g. Frontend Intern"
@@ -2852,6 +3157,7 @@ const WorkExperience = ({
                                     <input
                                         type="text"
                                         name="company"
+                                        maxLength={40}
                                         value={entry.company}
                                         onChange={(e) => handleEntryChange(entry.id, e)}
                                         placeholder="e.g., XYZ Company"
@@ -2923,6 +3229,7 @@ const WorkExperience = ({
                                     <input
                                         type="text"
                                         name="location"
+                                        maxLength={40}
                                         value={entry.location}
                                         placeholder="e.g., Bangalore"
                                         onChange={(e) => handleEntryChange(entry.id, e)}
@@ -2934,9 +3241,10 @@ const WorkExperience = ({
                                     <label>Key Responsibilities / Achievements*</label>
                                     <textarea
                                         name="responsibilities"
+                                        maxLength={500}
                                         value={entry.responsibilities || ""}
                                         onChange={(e) => handleEntryChange(entry.id, e)}
-                                        placeholder="Briefly describe your role, projects, or achievements..."
+                                        placeholder="Briefly describe your role, projects, or achievements...(max 500 characters)"
                                         className={errors[`responsibilities_${entry.id}`] ? "input-error" : ""}
                                         rows="3"
                                     />
@@ -3729,6 +4037,7 @@ const Preferences = ({ data, experienceType, onChange, onReset, onSubmitFinal, s
                     <input
                         type="text"
                         name="role"
+                        maxLength={30}
                         value={data.role || ""}
                         onChange={handleLocalChange}
                         placeholder="Enter preferred industry/role"

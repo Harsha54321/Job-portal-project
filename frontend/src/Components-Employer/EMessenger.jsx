@@ -291,7 +291,7 @@ const sidebarDisplayUsers =
           <div className="web-sidebar">
             <div className="sidebar-header">
               <Link to="/Job-portal/Employer/Dashboard">
-                <img src={home} style={{ height: "20px" }} alt="home" />
+                <img src={home} style={{ height: "20px" }} alt="home" title="Home" />
               </Link>
               <h3 style={{ color: "#007bff", textAlign: "center" }}>Active Chats</h3>
             </div>

@@ -821,7 +821,9 @@ export const AddManagerContact = () => {
                   className="admin-form-input"
                   required
                 >
-                  <option value="">Select Manager *</option>
+                  <option value="" hidden>
+                    Select Manager *
+                  </option>
                   {managers.filter(m => m.is_active).map(m => (
                     <option key={m.id} value={m.id}>
                       {m.full_name} - {m.department_display || m.department}

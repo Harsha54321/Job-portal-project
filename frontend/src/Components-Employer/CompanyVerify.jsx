@@ -496,8 +496,21 @@ export const CompanyVerify = () => {
                       }
                     }}
                     onKeyDown={(e) => {
+                      // 1. Handle Backspace for easy deletion
                       if (e.key === "Backspace" && !otpValues[otpKey]?.[index] && index > 0) {
                         document.getElementById(`otp-${type}-${index - 1}`).focus();
+                      }
+
+                      // 2. Handle Enter key for quick submission
+                      if (e.key === "Enter") {
+                        e.preventDefault(); // Prevent any background form submission
+
+                        // Check if the OTP is fully entered (6 digits) before triggering
+                        if (otpValues[otpKey]?.length === 6) {
+                          isEmail ? verifyCompanyEmailOtp(e) : verifyMobileOtp(e);
+                        } else {
+                          alert("Please enter the complete 6-digit OTP");
+                        }
                       }
                     }}
                     autoFocus={index === 0}

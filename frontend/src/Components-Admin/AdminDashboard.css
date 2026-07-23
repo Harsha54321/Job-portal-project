@@ -797,3 +797,38 @@
 .Admin-MainSec>*:last-child {
     margin-bottom: 30px;
 }
+
+.Admin-job-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 7px 20px; 
+    margin-bottom: 7px;
+    border-radius: 12px;
+    border: 1px solid rgb(231, 230, 230);
+    gap: 15px; 
+}
+
+.Admin-job-left {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0; 
+}
+
+.Admin-job-title {
+    font-size: 14px;
+    font-weight: 600;
+    margin: 0;
+    color: black;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap; 
+    word-break: break-word; 
+}
+
+.Admin-job-right {
+    display: flex;
+    gap: 20px; 
+    flex-shrink: 0; 
+}

@@ -1,19 +1,19 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react';
 import { Header } from "../Components-LandingPage/Header";
 import { Footer } from '../Components-LandingPage/Footer';
 import { useParams } from 'react-router-dom';
 import { useNavigate } from "react-router-dom";
-import './OpportunityOverview.css'
-import starIcon from '../assets/Star_icon.png'
-import time from '../assets/opportunity_time.png'
-import experience from '../assets/opportunity_bag.png'
-import place from '../assets/opportunity_location.png'
-import twitter from '../assets/socials-x.png'
-import linkedin from '../assets/socials-linkedin.png'
-import facebook from '../assets/socials-facebook.png'
+import './OpportunityOverview.css';
+import starIcon from '../assets/Star_icon.png';
+import time from '../assets/opportunity_time.png';
+import experience from '../assets/opportunity_bag.png';
+import place from '../assets/opportunity_location.png';
+import twitter from '../assets/socials-x.png';
+import linkedin from '../assets/socials-linkedin.png';
+import facebook from '../assets/socials-facebook.png';
 import { formatPostedDate, isRecentlyPosted } from './OpportunitiesCard';
 import { useJobs } from '../JobContext';
-import { SearchBar } from './SearchBar'
+import { SearchBar } from './SearchBar';
 import api from "../api/axios";
 
 // Custom hook for scroll lock
@@ -47,6 +47,7 @@ export const OpportunityOverview = () => {
     jobId: null,
     locations: []
   });
+  const [showLoginPopup, setShowLoginPopup] = useState(false);
 
   const { jobs, appliedJobs, toggleSaveJob, saveJob, isJobSaved } = useJobs();
   const saved = job ? isJobSaved(job.id) : false;
@@ -58,11 +59,19 @@ export const OpportunityOverview = () => {
   const isRecent = job ? isRecentlyPosted(job.posted_date || job.created_at) : false;
   const [isOpen, setIsOpen] = useState(false);
 
+  // Authentication helper function
+  const isAuthenticated = () => {
+    return !!sessionStorage.getItem("access") && 
+           sessionStorage.getItem("userRole") === "jobseeker";
+  };
+
   // Apply scroll lock for all popups
   useScrollLock(isOpen);
   useScrollLock(isLocationPopupOpen);
   useScrollLock(isIndustryPopupOpen);
   useScrollLock(similarLocationPopup.open);
+  useScrollLock(showLoginPopup);
+
   // Helper function for location display
   const getLocationDisplay = (location, maxDisplay = 3) => {
     if (!location) return { display: "Location not specified", allLocations: [], hasMore: false };
@@ -131,6 +140,11 @@ export const OpportunityOverview = () => {
   };
 
   const handleSave = async () => {
+    if (!isAuthenticated()) {
+      setShowLoginPopup(true);
+      return;
+    }
+    
     try {
       await saveJob(job.id);
       alert("Job saved successfully");
@@ -138,7 +152,7 @@ export const OpportunityOverview = () => {
       if (err.response?.status === 400) {
         alert("Job already saved");
       } else if (err.response?.status === 401) {
-        alert("Please login to save jobs");
+        setShowLoginPopup(true);
       } else {
         alert("Failed to save job");
       }
@@ -146,8 +160,22 @@ export const OpportunityOverview = () => {
   };
 
   const handleApply = () => {
+    if (!isAuthenticated()) {
+      setShowLoginPopup(true);
+      return;
+    }
+    
     if (isApplied) return;
     navigate(`/Job-portal/jobseeker/jobapplication/${job.id}`);
+  };
+
+  const handleReportClick = () => {
+    if (!isAuthenticated()) {
+      setShowLoginPopup(true);
+      return;
+    }
+    
+    navigate(`/Job-portal/jobseeker/ReportAJob/${job.id}`);
   };
 
   const handleSearch = () => {
@@ -160,12 +188,43 @@ export const OpportunityOverview = () => {
     });
   };
 
+  const handleLoginClick = () => {
+    setShowLoginPopup(false);
+    navigate("/Job-portal/jobseeker/login", {
+      state: { redirectTo: `/Job-portal/jobseeker/OpportunityOverview/${job?.id}` }
+    });
+  };
+
+  const handleSignupClick = () => {
+    setShowLoginPopup(false);
+    navigate("/Job-portal/jobseeker/signup", {
+      state: { redirectTo: `/Job-portal/jobseeker/OpportunityOverview/${job?.id}` }
+    });
+  };
+
   useEffect(() => {
     const fetchJobDetails = async () => {
       try {
+        setLoading(true);
+        
+        // First check if user is authenticated
+        const isAuth = isAuthenticated();
+        
+        if (!isAuth) {
+          // If not authenticated, redirect to login
+          navigate("/Job-portal/jobseeker/login", {
+            state: { 
+              redirectTo: `/Job-portal/jobseeker/OpportunityOverview/${id}` 
+            }
+          });
+          return;
+        }
+        
+        // Fetch job details with auth header
         const jobRes = await api.get(`/jobs/${id}/`);
         setJob(jobRes.data);
 
+        // Fetch all jobs for similar jobs
         const allJobsRes = await api.get(`/jobs/all/`);
         const jobsArray = allJobsRes.data.jobs || allJobsRes.data.results || [];
 
@@ -189,17 +248,36 @@ export const OpportunityOverview = () => {
         setLimitedSimilarJob(similar);
         setLoading(false);
       } catch (err) {
-        console.error(err);
-        setError("Failed to load job details");
-        setLoading(false);
+        console.error('Error fetching job details:', err);
+        
+        // Handle specific error cases
+        if (err.response?.status === 401) {
+          // Unauthorized - token expired or invalid
+          sessionStorage.clear();
+          navigate("/Job-portal/jobseeker/login", {
+            state: { 
+              redirectTo: `/Job-portal/jobseeker/OpportunityOverview/${id}` 
+            }
+          });
+        } else if (err.response?.status === 404) {
+          setError("Job not found");
+          setLoading(false);
+        } else if (err.response?.status === 403) {
+          setError("You don't have permission to view this job");
+          setLoading(false);
+        } else {
+          setError("Failed to load job details. Please try again.");
+          setLoading(false);
+        }
       }
     };
 
     if (id) {
       fetchJobDetails();
     }
-  }, [id]);
+  }, [id, navigate]);
 
+  // Loading state
   if (loading) return (
     <>
       <Header />
@@ -209,6 +287,7 @@ export const OpportunityOverview = () => {
     </>
   );
 
+  // Error state
   if (error) return (
     <>
       <Header />
@@ -216,9 +295,11 @@ export const OpportunityOverview = () => {
         <h2 style={{ color: "red" }}>{error}</h2>
         <button onClick={() => navigate(-1)}>Go Back</button>
       </div>
+      <Footer />
     </>
   );
 
+  // Job not found state
   if (!job) {
     return (
       <>
@@ -253,33 +334,16 @@ export const OpportunityOverview = () => {
   }
 
   const industryDisplay = getIndustryDisplay(job.industry_type);
-
   const locationDisplay = locationsList.length > 0 ? locationsList.join(", ") : "Location not specified";
 
   let jobCardClassName = "opp-overview-job-card";
-  // if (isHighlighted) {
-  //   jobCardClassName += " highlighted-job";
-  // } else if (isRecent) {
-  //   jobCardClassName += " recent-job";
-  // }
-
   let jobDetailsClassName = "opp-job-details-card";
-  // if (isHighlighted) {
-  //   jobDetailsClassName += " highlighted-job";
-  // } else if (isRecent) {
-  //   jobDetailsClassName += " recent-job";
-  // }
 
   const getSimilarJobClass = (similarJob) => {
     const isSimHighlighted = similarJob.is_highlighted === true;
     const isSimRecent = isRecentlyPosted(similarJob.posted_date || similarJob.created_at);
 
     let className = "opp-similar-job";
-    // if (isSimHighlighted) {
-    //   className += " highlighted-job";
-    // } else if (isSimRecent) {
-    //   className += " recent-job";
-    // }
     return className;
   };
 
@@ -301,34 +365,8 @@ export const OpportunityOverview = () => {
 
         <div className='opp-overview-main'>
           <div className="opp-job-main">
-            {/* Job Header - with dynamic styling */}
+            {/* Job Header */}
             <div className={jobCardClassName}>
-              {/* <div className="Opportunities-job-header">
-                <div>
-                  <h2 className="opp-topcard-job-title">{job.job_title}</h2>
-                  <h5 className="Opportunities-job-company">
-                    {job.company?.company_name}
-                    <span className="Opportunities-divider">|</span>
-                    <span className="star"><img src={starIcon} alt="star" /></span>
-                    {job.company?.rating || 0}
-                    <span className="Opportunities-divider">|</span>
-                    <span className="opp-reviews">
-                      {job.company?.review_count || 0} Reviews
-                    </span>
-                  </h5>
-                </div>
-                {job.company.logo || job.company.company_logo ? (
-                  <img
-                    src={job.company.logo || job.company.company_logo}
-                    alt={job.company?.company_name}
-                    className="Opportunities-job-logo"
-                  />
-                ) : (
-                  <div className="Opportunities-job-logo-placeholder">
-                    {job.company?.company_name?.[0]?.toUpperCase()}
-                  </div>
-                )}
-              </div> */}
               <div className="Opportunities-job-header">
                 <div className="Opportunities-job-info">
                   <h2 className="opp-topcard-job-title">{job.job_title}</h2>
@@ -391,20 +429,7 @@ export const OpportunityOverview = () => {
                 </p>
               </div>
 
-              {/* <div className='Opportunities-details-bottom'>
-                <div className="Opportunities-job-tags">
-                  {job.job_category && (
-                    <span className={`Opportunities-job-tag ${job.job_category.toLowerCase().replace(/\s+/g, '-')}`}>
-                      {job.job_category}
-                    </span>
-                  )}
-                </div>
-                <div className="Opportunities-job-type">
-                  {job.work_type}
-                </div>
-              </div> */}
               <div className="Opportunities-details-bottom">
-
                 <div className="Opportunities-details-left">
                   {job.job_category && (
                     <span className={`Opportunities-job-tag ${job.job_category.toLowerCase().replace(/\s+/g, '-')}`}>
@@ -422,7 +447,6 @@ export const OpportunityOverview = () => {
                     ⭐ Highlighted Job
                   </span>
                 )}
-
               </div>
               <hr className="Opportunities-separator" />
 
@@ -461,7 +485,7 @@ export const OpportunityOverview = () => {
               </div>
             </div>
 
-            {/* Job Details Card - with dynamic styling */}
+            {/* Job Details Card */}
             <div className={jobDetailsClassName}>
               <div className="opp-job-highlights">
                 <h3>Job Highlights</h3>
@@ -489,7 +513,6 @@ export const OpportunityOverview = () => {
 
               <p><strong>Role:</strong> {job.job_title}</p>
 
-              {/* Updated Industry Type with truncation */}
               <p><strong>Industry Type:</strong>
                 <span className="location-text-wrap">
                   {industryDisplay.hasMore ? (
@@ -546,7 +569,9 @@ export const OpportunityOverview = () => {
                     <div><img src={twitter} className='opp-socials-icon' title='Twitter' alt="twitter" /></div>
                   </div>
                 </div>
-                <button onClick={() => navigate(`/Job-portal/jobseeker/ReportAJob/${job.id}`)} className="opp-report-btn">Report this job</button>
+                <button onClick={handleReportClick} className="opp-report-btn">
+                  Report this job
+                </button>
               </div>
             </div>
           </div>
@@ -702,6 +727,34 @@ export const OpportunityOverview = () => {
               {similarLocationPopup.locations.map((loc, index) => (
                 <span key={index} className="opp-loc-chip">{loc}</span>
               ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Login Popup Modal for unauthenticated actions */}
+      {showLoginPopup && (
+        <div className="login-popup-overlay" onClick={() => setShowLoginPopup(false)}>
+          <div
+            className="login-popup-modal"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3>Login or sign up to continue</h3>
+            
+            <div className="login-popup-actions">
+              <button
+                className="login-popup-login-btn"
+                onClick={handleLoginClick}
+              >
+                Login
+              </button>
+              
+              <button
+                className="login-popup-signup-btn"
+                onClick={handleSignupClick}
+              >
+                Sign Up
+              </button>
             </div>
           </div>
         </div>

@@ -4124,6 +4124,10 @@ class SendLoginOTPView(APIView):
         user = User.objects.filter(email=email).first()
         if not user:
             return Response({"error": "User not found. Please sign up first."}, status=404)
+        
+        if user.user_type != "jobseeker":
+            return Response({"error": "This login is only for Jobseeker accounts. Please use the Employer login.","user_type": user.user_type             }, status=403)
+ 
  
         EmailOTP.objects.filter(email=email, purpose="login").delete()
  
@@ -4139,8 +4143,12 @@ class SendLoginOTPView(APIView):
         send_email_otp(email, otp, "login")
  
         print(f"🔐 Login OTP for {email}: {otp}")
+        return Response({
+                  "message": "OTP sent successfully",
+                 "user_type": user.user_type
+        })
  
-        return Response({"message": "OTP sent successfully"})
+        # return Response({"message": "OTP sent successfully"})
  
 
 class VerifyLoginOTPView(APIView):
@@ -4149,7 +4157,7 @@ class VerifyLoginOTPView(APIView):
     def post(self, request):
         email = request.data.get("email")
         otp = request.data.get("otp")
- 
+        
         if not email or not otp:
             return Response({"error": "Email and OTP are required"}, status=400)
  
@@ -4170,6 +4178,10 @@ class VerifyLoginOTPView(APIView):
         otp_obj.save()
  
         user = User.objects.get(email=email)
+        
+        if user.user_type != "jobseeker":
+            return Response({"error": "This login is only for Jobseeker accounts. Please use the Employer login."}, status=403)
+ 
         refresh = RefreshToken.for_user(user)
         from django.utils import timezone
         user.login_time = timezone.now()

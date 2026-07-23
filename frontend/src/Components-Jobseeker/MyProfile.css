@@ -666,3 +666,22 @@ select option {
 .education-degree-dropdown .degree-dropdown-trigger.input-error:focus-within {
     box-shadow: 0 0 0 3px rgba(255, 111, 97, 0.2);
 }
+.form-group .jobpost-dropdown-trigger {
+    color: #032240;
+    font-weight: 500;
+    font-size: 0.95rem;
+}
+ 
+.form-group .jobpost-dropdown-trigger:hover {
+    border-color: #007bff;
+}
+ 
+.form-group .jobpost-dropdown:focus-within .jobpost-dropdown-trigger {
+    border-color: #007bff;
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.12);
+}
+ 
+.form-group .jobpost-dropdown-trigger.input-error {
+    border-color: #FF6F61 !important;
+    background-color: #fff8f8;
+}

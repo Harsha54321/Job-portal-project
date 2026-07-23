@@ -186,6 +186,16 @@ export const Jlogin = () => {
         user_type: 'jobseeker'
       });
 
+       console.log('OTP Response:', response.data);
+
+      // Block right here if the backend tells us this isn't a jobseeker account
+      // (requires the backend to include "user_type" in the send-login-otp/ response)
+      if (response.data.user_type && response.data.user_type !== 'jobseeker') {
+        setErrors({ username: "This login is only for Jobseeker accounts. Please use the Employer login." });
+        setLoading(false);
+        return;
+      }
+
       console.log('OTP Response:', response.data);
       setOtpData(response.data);
       setOtpSent(true);

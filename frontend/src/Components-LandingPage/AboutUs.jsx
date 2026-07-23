@@ -46,7 +46,7 @@ export const AboutUs = () => {
                     <div className='Aboutus-Mid-Images'>
                         <img className='Aboutus-types-Images' src={forEmployees} alt='Employees' />
                     </div>
-                    <h4>For Employees</h4>
+                    <h4>Review Your Workplace</h4>
                     <p>We amplify your voice, so you can enhance your workplace experience. Leave reviews, search and post salaries, and join candid conversations about life at work.</p>
                 </div>
                 <div className='Aboutus-TypeDesc'>

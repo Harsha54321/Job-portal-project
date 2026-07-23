@@ -373,10 +373,10 @@ const isMessageFromMe = (msg) => {
 
             {/* Sidebar */}
             <div className="E-chat-name">
-                <div className="web-sidebar" style={{ height: "100vh" }}>
+                <div className="web-sidebar" style={{ height: "100vh" }} title="Sidebar">
 
                     <Link to="/Job-portal/jobseeker/">
-                        <img src={home} alt="home" style={{ height: "20px" }} />
+                        <img src={home} alt="home" style={{ height: "20px" }}  title="Home"/>
                     </Link>
 
                     <div className="sidebar-header">
