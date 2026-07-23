@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
  
+import os
 from pathlib import Path
 from datetime import timedelta
  
@@ -29,7 +30,8 @@ DEBUG = True
 ALLOWED_HOSTS = [
     "127.0.0.1",
     "localhost",
-    "54.183.89.14"
+    "54.183.89.14",
+    "jobportal.stacklycloud.com",
     ]
  
  
@@ -163,7 +165,8 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://localhost:5174",
     "https://112m0g3c-5173.inc1.devtunnels.ms",
-    "http://54.183.89.14"
+    "http://54.183.89.14",
+    "https://jobportal.stacklycloud.com"
    
 ]
 
@@ -298,11 +301,12 @@ RAZORPAY_WEBHOOK_SECRET = ''
  
 import os
  
-FRONTEND_URL = os.getenv("FRONTEND_URL", "http://54.183.89.14")
+# FRONTEND_URL = os.getenv("FRONTEND_URL", "http://54.183.89.14")
+FRONTEND_URL = os.getenv("FRONTEND_URL", "https://jobportal.stacklycloud.com")
 # FRONTEND_URL = FRONTEND_URL = "http://localhost:5173"
 
 # SITE_URL = "http://127.0.0.1:8000"
-SITE_URL = "http://54.183.89.14"
- 
+# SITE_URL = "http://54.183.89.14"
+SITE_URL = "https://jobportal.stacklycloud.com"
 GOOGLE_CLIENT_ID = "105293618059-al95762js6gc2o9umchkb3la0mnirhs1.apps.googleusercontent.com"
 #GOOGLE_CLIENT_ID = "146646258104-184rcr7uv1mpttpi8bjf9tjq2r2ijg1i.apps.googleusercontent.com"

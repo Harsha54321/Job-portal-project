@@ -9892,7 +9892,7 @@ class PlanListCreateView(APIView):
 
     def get_permissions(self):
         if self.request.method == 'POST':
-            return [IsAdminUser()]
+            return [IsAdminUserType()] 
         return [IsAuthenticated()]
 
     def get(self, request):
@@ -9925,7 +9925,7 @@ class PlanDetailView(APIView):
     def get_permissions(self):
         if self.request.method == 'GET':
             return [IsAuthenticated()]
-        return [IsAdminUser()]
+        return [IsAdminUserType()]
 
     def _get_plan(self, pk):
         try:
