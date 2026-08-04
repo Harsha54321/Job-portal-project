@@ -525,7 +525,7 @@ export const JobMonitorOverview = ({ jobId, setSelectedJobId }) => {
 
                     <p><strong>Shift:</strong> {selectedJob.shift || selectedJob.Shift || 'General'}</p>
                     <p><strong>Openings:</strong> {selectedJob.openings || 'N/A'}</p>
-                    <p><strong>Last Date to Apply:</strong> {selectedJob.last_date_to_apply || 'Not specified'}</p>
+                    {/* <p><strong>Last Date to Apply:</strong> {selectedJob.last_date_to_apply || 'Not specified'}</p> */}
 
                     <h3>Key Skills</h3>
                     <div className="opp-key-skills-container">

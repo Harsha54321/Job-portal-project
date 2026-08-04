@@ -32,7 +32,7 @@ ALLOWED_HOSTS = [
     "localhost",
     "54.183.89.14",
     "jobportal.stacklycloud.com",
-    ]
+]
  
  
  
@@ -196,27 +196,27 @@ WSGI_APPLICATION = 'jobportal.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
  
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',  
-    }
-}
-
 # DATABASES = {
 #     'default': {
-#         'ENGINE': 'django.db.backends.mysql',
-#         'NAME': 'jobportal_dev',
-#         'USER': 'jobportal_user',
-#         'PASSWORD': 'Jobportal@01',
-#         'HOST': '54.183.89.14',
-#         'PORT': '3306',
-#         'CONN_MAX_AGE':60,
-#         'OPTIONS': {
-#             'charset': 'utf8mb4',
-#         }
+#         'ENGINE': 'django.db.backends.sqlite3',
+#         'NAME': BASE_DIR / 'db.sqlite3',  
 #     }
 # }
+
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'jobportal_dev',
+        'USER': 'jobportal_user',
+        'PASSWORD': 'Jobportal@01',
+        'HOST': '54.183.89.14',
+        'PORT': '3306',
+        'CONN_MAX_AGE':60,
+        'OPTIONS': {
+            'charset': 'utf8mb4',
+        }
+    }
+}
  
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
  
@@ -303,7 +303,7 @@ import os
  
 # FRONTEND_URL = os.getenv("FRONTEND_URL", "http://54.183.89.14")
 FRONTEND_URL = os.getenv("FRONTEND_URL", "https://jobportal.stacklycloud.com")
-# FRONTEND_URL = FRONTEND_URL = "http://localhost:5173"
+# FRONTEND_URL = "http://localhost:5173"
 
 # SITE_URL = "http://127.0.0.1:8000"
 # SITE_URL = "http://54.183.89.14"

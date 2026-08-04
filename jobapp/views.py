@@ -3070,7 +3070,7 @@ class EmployerForgotPasswordView(APIView):
                     status=status.HTTP_200_OK
                 )
             
-            # JOBSEEKER - Show error (employer page lo jobseeker email enter cheste)
+            # JOBSEEKER - Show error
             if user.user_type == User.UserType.JOBSEEKER:
                 return Response(
                     {
@@ -3140,20 +3140,13 @@ class ResetPasswordConfirmView(APIView):
  
             user = reset_token.user
  
-            # ALLOW ONLY JOBSEEKERS
-
-            if user.user_type != User.UserType.JOBSEEKER:
-
+            #do not allow password reset for inactive users
+            if not user.is_active:
                 return Response(
-
                     {
-
-                        "error": "Password reset is available only for jobseekers."
-
+                        "error": "This account is inactive. Please contact support."
                     },
-
                     status=status.HTTP_400_BAD_REQUEST
-
                 )
  
             # Update password
@@ -4126,8 +4119,7 @@ class SendLoginOTPView(APIView):
             return Response({"error": "User not found. Please sign up first."}, status=404)
         
         if user.user_type != "jobseeker":
-            return Response({"error": "This login is only for Jobseeker accounts. Please use the Employer login.","user_type": user.user_type             }, status=403)
- 
+            return Response({"error": "This login is only for Jobseeker accounts. Please use the Employer login.","user_type": user.user_type }, status=403)
  
         EmailOTP.objects.filter(email=email, purpose="login").delete()
  

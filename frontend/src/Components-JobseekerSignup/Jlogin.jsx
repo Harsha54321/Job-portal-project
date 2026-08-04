@@ -614,7 +614,7 @@ export const Jlogin = () => {
               {errors.username && <span className="error-msg">{errors.username}</span>}
 
               <label>Password</label>
-              <div className="password-wrapper">
+              <div className="login-password-wrapper">
                 <input
                   type={passwordShow ? "password" : "text"}
                   placeholder="Enter your password"
@@ -627,7 +627,7 @@ export const Jlogin = () => {
                 />
                 <button
                     type="button"
-                    className="eye-icon"
+                    className="login-eye-icon"
                     onClick={togglePasswordView}
                     onKeyDown={(e) => {
                       if (e.key === "Enter" || e.key === " ") {

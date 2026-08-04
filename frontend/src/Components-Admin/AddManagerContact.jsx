@@ -9,6 +9,7 @@ export const AddManagerContact = () => {
   const [editingId, setEditingId] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [managers, setManagers] = useState([]);
+  const [allManagers, setAllManagers] = useState([]);
   const [assignments, setAssignments] = useState([]);
   const [showAssign, setShowAssign] = useState(false);
   const [selectedEmployer, setSelectedEmployer] = useState('');
@@ -55,38 +56,38 @@ export const AddManagerContact = () => {
   const fetchData = async (page = 1) => {
     setLoading(true);
     try {
-      const [managersRes, assignmentsRes] = await Promise.all([
+      const [managersRes, assignmentsRes, allManagersRes] = await Promise.all([
         api.get(`/admin/account-managers/?page=${page}&limit=${managersPerPage}`),
-        api.get('/admin/employer-assignments/')
+        api.get('/admin/employer-assignments/'),
+        api.get('/admin/account-managers/')
       ]);
 
       console.log('Managers Response:', managersRes.data);
       console.log('Assignments Response:', assignmentsRes.data);
+      console.log('All Managers Response:', allManagersRes.data);
 
       // Handle paginated response
       if (managersRes.data && managersRes.data.results) {
         setManagers(managersRes.data.results);
         setTotalManagers(managersRes.data.count || managersRes.data.results.length);
-        setCurrentPage(page);
       } else {
-        // Fallback for non-paginated response (client-side pagination)
         const sortedManagers = [...managersRes.data].sort((a, b) => b.id - a.id);
         setTotalManagers(sortedManagers.length);
 
-        // Calculate pagination for client-side
         const startIndex = (page - 1) * managersPerPage;
         const endIndex = startIndex + managersPerPage;
         setManagers(sortedManagers.slice(startIndex, endIndex));
-        setCurrentPage(page);
       }
 
+      // Store complete manager list for dropdown assignment
+      const completeList = allManagersRes.data.results || allManagersRes.data || [];
+      setAllManagers(completeList);
+
+      setCurrentPage(page);
       setAssignments(assignmentsRes.data);
 
-      // Update active target manager if exists
       if (activeTargetManager) {
-        const updated = managersRes.data.results
-          ? managersRes.data.results.find(m => m.id === activeTargetManager.id)
-          : managers.find(m => m.id === activeTargetManager.id);
+        const updated = completeList.find(m => m.id === activeTargetManager.id);
         if (updated) setActiveTargetManager(updated);
       }
     } catch (err) {
@@ -97,7 +98,6 @@ export const AddManagerContact = () => {
     }
   };
 
-  // Pagination handler
   const paginate = (pageNumber) => {
     if (pageNumber < 1) return;
     const totalPages = Math.ceil(totalManagers / managersPerPage);
@@ -105,38 +105,24 @@ export const AddManagerContact = () => {
     fetchData(pageNumber);
   };
 
-  // Calculate page numbers for pagination display
   const getPageNumbers = () => {
     const totalPages = Math.ceil(totalManagers / managersPerPage);
     const pageNumbers = [];
     const maxVisiblePages = 5;
 
     if (totalPages <= maxVisiblePages) {
-      for (let i = 1; i <= totalPages; i++) {
-        pageNumbers.push(i);
-      }
+      for (let i = 1; i <= totalPages; i++) pageNumbers.push(i);
     } else {
-      // Show first page, current page, last page, and pages around current
       pageNumbers.push(1);
-
-      if (currentPage > 3) {
-        pageNumbers.push('...');
-      }
+      if (currentPage > 3) pageNumbers.push('...');
 
       const startPage = Math.max(2, currentPage - 1);
       const endPage = Math.min(totalPages - 1, currentPage + 1);
 
-      for (let i = startPage; i <= endPage; i++) {
-        pageNumbers.push(i);
-      }
+      for (let i = startPage; i <= endPage; i++) pageNumbers.push(i);
 
-      if (currentPage < totalPages - 2) {
-        pageNumbers.push('...');
-      }
-
-      if (totalPages > 1) {
-        pageNumbers.push(totalPages);
-      }
+      if (currentPage < totalPages - 2) pageNumbers.push('...');
+      if (totalPages > 1) pageNumbers.push(totalPages);
     }
 
     return pageNumbers;
@@ -151,9 +137,7 @@ export const AddManagerContact = () => {
 
   const getEmployersForManager = (managerId) => {
     if (!managerId) return [];
-    return assignments.filter(assignment => {
-      return isManagerAssigned(assignment, managerId);
-    });
+    return assignments.filter(assignment => isManagerAssigned(assignment, managerId));
   };
 
   const getManagerPrimaryStatus = (assignment, managerId) => {
@@ -167,40 +151,28 @@ export const AddManagerContact = () => {
   const validateField = (name, value) => {
     let errorMsg = '';
     if (name === 'full_name') {
-      if (!value || !value.trim()) {
-        errorMsg = 'Full name is required.';
-      } else if (!/^[a-zA-Z\s]{2,50}$/.test(value.trim())) {
-        errorMsg = 'Name must contain only alphabets and spaces (2-50 characters).';
-      }
+      if (!value || !value.trim()) errorMsg = 'Full name is required.';
+      else if (!/^[a-zA-Z\s]{2,50}$/.test(value.trim())) errorMsg = 'Name must contain only alphabets and spaces (2-50 characters).';
     }
     if (name === 'title') {
-      if (!value || !value.trim()) {
-        errorMsg = 'Title is required.';
-      } else if (!/^[a-zA-Z\s]{2,50}$/.test(value.trim())) {
-        errorMsg = 'Title must contain only alphabets and spaces (2-50 characters).';
-      }
+      if (!value || !value.trim()) errorMsg = 'Title is required.';
+      else if (!/^[a-zA-Z\s]{2,50}$/.test(value.trim())) errorMsg = 'Title must contain only alphabets and spaces (2-50 characters).';
     }
     if (name === 'email') {
-      if (!value || !value.trim()) {
-        errorMsg = 'Email address is required.';
-      } else {
+      if (!value || !value.trim()) errorMsg = 'Email address is required.';
+      else {
         const emailRegex = /^[a-zA-Z0-9]{4,}@[a-zA-Z0-9]{2,}\.(com|in|net|org|gov|edu|site|io|int|jobs)$/;
         if (!emailRegex.test(value.trim())) {
-          errorMsg = 'Email must have at least 4 alphanumeric characters before @ and end with a valid domain Eg. (.com, .in, .net, .org).';
+          errorMsg = 'Email must have at least 4 alphanumeric characters before @ and end with a valid domain.';
         }
       }
     }
     if (name === 'phone') {
-      if (!value || !value.trim()) {
-        errorMsg = 'Phone number is required.';
-      } else if (!/^[6-9]\d{9}$/.test(value.trim())) {
-        errorMsg = 'Please enter a valid phone number (10 digits, starting with 6, 7, 8, or 9).';
-      }
+      if (!value || !value.trim()) errorMsg = 'Phone number is required.';
+      else if (!/^[6-9]\d{9}$/.test(value.trim())) errorMsg = 'Please enter a valid phone number (10 digits starting with 6-9).';
     }
     if (name === 'description') {
-      if (value && value.length > 200) {
-        errorMsg = 'Description must not exceed 200 characters. Current: ' + value.length + '/200';
-      }
+      if (value && value.length > 200) errorMsg = `Description must not exceed 200 characters. Current: ${value.length}/200`;
     }
     return errorMsg;
   };
@@ -215,30 +187,17 @@ export const AddManagerContact = () => {
     const { name, value, type, checked } = e.target;
     const finalValue = type === 'checkbox' ? checked : value;
 
-    setFormData(prev => ({
-      ...prev,
-      [name]: finalValue
-    }));
+    setFormData(prev => ({ ...prev, [name]: finalValue }));
 
     if (type !== 'checkbox') {
       const fieldError = validateField(name, value);
-      if (!fieldError) {
-        setFormErrors(prev => ({ ...prev, [name]: '' }));
-      } else {
-        setFormErrors(prev => ({ ...prev, [name]: fieldError }));
-      }
+      setFormErrors(prev => ({ ...prev, [name]: fieldError }));
     }
   };
 
   const checkDuplicates = (currentId) => {
-    // Get all managers for duplicate check
-    const allManagers = [...managers];
-    const emailDup = allManagers.some(m =>
-      m.email.toLowerCase() === formData.email.toLowerCase() && m.id !== currentId
-    );
-    const phoneDup = allManagers.some(m =>
-      m.phone === formData.phone && m.id !== currentId
-    );
+    const emailDup = allManagers.some(m => m.email.toLowerCase() === formData.email.toLowerCase() && m.id !== currentId);
+    const phoneDup = allManagers.some(m => m.phone === formData.phone && m.id !== currentId);
 
     let errors = {};
     if (emailDup) errors.email = 'An account manager with this email already exists.';
@@ -358,24 +317,16 @@ export const AddManagerContact = () => {
         for (const assign of assignedEmployers) {
           try {
             await api.delete(`/admin/employer-assignments/?employer_id=${assign.employer_id}&account_manager_id=${id}`);
-          } catch (err) {
-            try {
-              await api.delete('/admin/employer-assignments/', {
-                data: {
-                  employer_id: parseInt(assign.employer_id),
-                  account_manager_id: parseInt(id)
-                }
-              });
-            } catch (err2) {
-              console.error(`Failed to remove assignment:`, err2);
-            }
+          } catch {
+            await api.delete('/admin/employer-assignments/', {
+              data: { employer_id: parseInt(assign.employer_id), account_manager_id: parseInt(id) }
+            });
           }
         }
       }
 
-      // Then delete the manager
       await api.delete(`/admin/account-managers/${id}/`);
-      triggerSuccess(`Account manager "${manager.full_name}" deleted successfully! ${assignedCount > 0 ? `Removed from ${assignedCount} employer(s).` : ''}`);
+      triggerSuccess(`Account manager "${manager.full_name}" deleted successfully!`);
       await fetchData(currentPage);
     } catch (err) {
       alert(err.response?.data?.error || 'Failed to delete account manager. Please try again.');
@@ -392,8 +343,8 @@ export const AddManagerContact = () => {
     const parsedEmployerId = parseInt(selectedEmployer, 10);
     const managerIdParsed = parseInt(selectedManager, 10);
 
-    if (!selectedEmployer || isNaN(parsedEmployerId) || parsedEmployerId <= 0 || !/^\d+$/.test(selectedEmployer)) {
-      setAssignErrors({ employer_id: 'Please enter a valid, positive numeric Employer ID (Numbers only).' });
+    if (!selectedEmployer || isNaN(parsedEmployerId) || parsedEmployerId <= 0) {
+      setAssignErrors({ employer_id: 'Please enter a valid numeric Employer ID.' });
       return;
     }
 
@@ -404,8 +355,7 @@ export const AddManagerContact = () => {
 
     const isDuplicate = assignments.some(assign =>
       parseInt(assign.employer_id, 10) === parsedEmployerId &&
-      assign.assigned_managers &&
-      assign.assigned_managers.some(m => parseInt(m.id, 10) === managerIdParsed)
+      assign.assigned_managers?.some(m => parseInt(m.id, 10) === managerIdParsed)
     );
 
     if (isDuplicate) {
@@ -415,16 +365,11 @@ export const AddManagerContact = () => {
 
     setLoading(true);
     try {
-      const payload = {
+      await api.post('/admin/assign-account-manager/', {
         employer_id: parsedEmployerId,
         account_manager_id: managerIdParsed,
         is_primary: isPrimary
-      };
-
-      console.log('Sending assignment payload:', payload);
-
-      const response = await api.post('/admin/assign-account-manager/', payload);
-      console.log('Assignment response:', response.data);
+      });
 
       await fetchData(currentPage);
       setSelectedEmployer('');
@@ -432,7 +377,6 @@ export const AddManagerContact = () => {
       setIsPrimary(false);
       triggerSuccess('Manager assigned successfully!');
     } catch (err) {
-      console.error('Assignment error:', err.response?.data);
       setAssignErrors({ employer_id: err.response?.data?.error || 'Invalid Employer ID or Manager.' });
     } finally {
       setLoading(false);
@@ -446,11 +390,6 @@ export const AddManagerContact = () => {
   };
 
   const handleRemoveAssignment = async (employerId, managerId) => {
-    if (!employerId || !managerId) {
-      alert('Error: Missing structural mapping parameters.');
-      return;
-    }
-
     if (!window.confirm(`Are you sure you want to remove account manager from Employer #${employerId}?`)) return;
 
     setLoading(true);
@@ -458,20 +397,15 @@ export const AddManagerContact = () => {
       await api.delete(`/admin/employer-assignments/?employer_id=${employerId}&account_manager_id=${managerId}`);
       triggerSuccess('Employer assignment removed successfully.');
       await fetchData(currentPage);
-    } catch (err) {
-      console.error('Delete assignment error:', err);
+    } catch {
       try {
         await api.delete('/admin/employer-assignments/', {
-          data: {
-            employer_id: parseInt(employerId),
-            account_manager_id: parseInt(managerId)
-          }
+          data: { employer_id: parseInt(employerId), account_manager_id: parseInt(managerId) }
         });
         triggerSuccess('Employer assignment removed successfully.');
         await fetchData(currentPage);
       } catch (err2) {
-        console.error('Alternative layout deletion mapping failed:', err2);
-        alert(err2.response?.data?.error || 'Failed to remove workspace profile assignment configurations.');
+        alert(err2.response?.data?.error || 'Failed to remove assignment.');
       }
     } finally {
       setLoading(false);
@@ -479,14 +413,6 @@ export const AddManagerContact = () => {
   };
 
   const openTargetModal = (manager) => {
-    console.log('=== OPENING TARGET MODAL ===');
-    console.log('Selected Manager:', manager);
-    console.log('Manager ID:', manager.id);
-
-    const employerAssignments = getEmployersForManager(manager.id);
-    console.log('Employers for this manager:', employerAssignments);
-    console.log('Count:', employerAssignments.length);
-
     setActiveTargetManager(manager);
     setIsTargetModalOpen(true);
   };
@@ -560,9 +486,7 @@ export const AddManagerContact = () => {
               className="admin-form-input"
             >
               {departmentOptions.map(dept => (
-                <option key={dept.value} value={dept.value}>
-                  {dept.label}
-                </option>
+                <option key={dept.value} value={dept.value}>{dept.label}</option>
               ))}
             </select>
           </div>
@@ -592,7 +516,6 @@ export const AddManagerContact = () => {
             onChange={handleChange}
             onBlur={handleBlur}
             tabIndex={activeTabIndex}
-            title="Optional: Provide a brief description or bio for the account manager. Maximum 200 characters."
             className={`admin-form-textarea ${formErrors.description ? 'input-error-border' : ''}`}
             rows="3"
             maxLength="200"
@@ -731,25 +654,15 @@ export const AddManagerContact = () => {
                         const isPrimary = getManagerPrimaryStatus(assign, activeTargetManager.id);
                         return (
                           <tr key={assign.employer_id}>
+                            <td><span className="target-id-badge">{assign.employer_id}</span></td>
                             <td>
-                              <span className="target-id-badge">
-                                {assign.employer_id}
-                              </span>
-                            </td>
-                            <td>
-                              <strong className="target-employer-name">
-                                {assign.employer_name}
-                              </strong>
-                              <br />
+                              <strong className="target-employer-name">{assign.employer_name}</strong><br />
                               <small style={{ color: '#666' }}>{assign.employer_email}</small>
                             </td>
                             <td>
                               <span style={{
-                                background: assign.plan === 'Enterprise Plan' ? '#e8f5e9' :
-                                  assign.plan === 'Professional Plan' ? '#e3f2fd' : '#fff3e0',
-                                padding: '4px 8px',
-                                borderRadius: '4px',
-                                fontSize: '12px'
+                                background: assign.plan === 'Enterprise Plan' ? '#e8f5e9' : assign.plan === 'Professional Plan' ? '#e3f2fd' : '#fff3e0',
+                                padding: '4px 8px', borderRadius: '4px', fontSize: '12px'
                               }}>
                                 {assign.plan}
                               </span>
@@ -797,7 +710,8 @@ export const AddManagerContact = () => {
               <div className="admin-assignment-inputs-grid">
                 <div className="admin-input-wrapper-context">
                   <input
-                    type="number"
+                    type="text"
+                    inputMode="numeric"
                     placeholder="Employer ID *"
                     title="Open User Management page to get employer ID"
                     value={selectedEmployer}
@@ -813,8 +727,6 @@ export const AddManagerContact = () => {
                   {assignErrors.employer_id && <span className="admin-field-error-text inline-assign-error">{assignErrors.employer_id}</span>}
                 </div>
 
-
-
                 <select
                   value={selectedManager}
                   onChange={(e) => setSelectedManager(e.target.value)}
@@ -824,7 +736,8 @@ export const AddManagerContact = () => {
                   <option value="" hidden>
                     Select Manager *
                   </option>
-                  {managers.filter(m => m.is_active).map(m => (
+                  {/* Maps all active managers regardless of list pagination page */}
+                  {allManagers.filter(m => m.is_active).map(m => (
                     <option key={m.id} value={m.id}>
                       {m.full_name} - {m.department_display || m.department}
                     </option>
@@ -908,7 +821,7 @@ export const AddManagerContact = () => {
             )}
           </div>
 
-          {/* Pagination */}
+          {/* Pagination Controls */}
           {totalManagers > managersPerPage && (
             <div className="admin-pagination-container">
               <button

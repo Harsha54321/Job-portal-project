@@ -459,7 +459,7 @@ export const AdminLogin = () => {
                     {errors.adminID && <span className="error-msg">{errors.adminID}</span>}
 
                     <label>Password</label>
-                    <div className="password-wrapper">
+                    <div className="login-password-wrapper">
                         <input
                             type={passwordShow ? "password" : "text"}
                             placeholder="Enter your password"
@@ -468,7 +468,7 @@ export const AdminLogin = () => {
                             onChange={handleForm}
                             className={errors.password ? "input-error" : ""}
                         />
-                        <span className="eye-icon" onClick={togglePasswordView}>
+                        <span className="login-eye-icon" onClick={togglePasswordView}>
                             <img src={passwordShow ? eyeHide : eye} className='show-icon' alt='toggle' />
                         </span>
                     </div>

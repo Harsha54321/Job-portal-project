@@ -290,7 +290,7 @@ const FilterableDropdown = ({ options, selectedValue, onSelect, placeholder, cla
                         boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
                         maxHeight: '250px',
                         overflow: 'hidden',
-                        display: 'flex',
+                        // display: 'flex',
                         flexDirection: 'column'
                     }}
                 >
