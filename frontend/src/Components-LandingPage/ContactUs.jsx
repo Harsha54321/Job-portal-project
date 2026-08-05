@@ -24,6 +24,11 @@ export const ContactUs = () => {
   const SUBMISSION_COOLDOWN = 30000; // 30 seconds cooldown
   const formRef = useRef();
 
+  useEffect(() => {
+    const img = new Image();
+    img.src = ContactImage;
+  }, []);
+
   // Load and manage submitted messages from sessionStorage
   useEffect(() => {
     const loadSubmittedMessages = () => {
@@ -294,7 +299,7 @@ export const ContactUs = () => {
       <FHeader />
       <div className="contact-container">
         <div className="contact-left">
-          <img src={ContactImage} loading="eager" alt="Contact Us" />
+          <img src={ContactImage} loading="eager" alt="Contact Us" fetchpriority="high" />
         </div>
         <div className="contact-right">
           <h2>Contact Us</h2>

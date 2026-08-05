@@ -11,6 +11,20 @@ import { useEffect } from "react";
 import api from "../api/axios";
 import EducationDegreeDropdown, { degreeOptions } from "./EducationDegreeDropdown";
 
+const preloadImages = [
+    addPhoto,
+    editIcon,
+    uploadIcon,
+    deleteIcon,
+    resumeIcon
+];
+
+preloadImages.forEach(src => {
+    const img = new Image();
+    img.src = src;
+});
+
+
 const isValidValue = (value) => {
     if (!value) return false;
 
@@ -37,7 +51,7 @@ const EditableListItem = ({ title, onEdit }) => (
     <div className="skill-item">
         <span>{title}</span>
         <button type="button" onClick={onEdit} className="edit-skill-btn">
-            <img className="edit-icon-btn" src={editIcon} alt="edit" title="Edit" />
+            <img className="edit-icon-btn" src={editIcon} alt="edit" loading="eager" title="Edit" />
         </button>
     </div>
 );
@@ -177,10 +191,10 @@ const FilterableDropdown = ({ options, selectedValue, onSelect, placeholder, cla
 
 
     return (
-        <div className="jobpost-dropdown" 
+        <div className="jobpost-dropdown"
             style={{ position: 'relative', width: '100%' }}
             onKeyDown={handleKeyDown}>
-            
+
 
             {/* <div
                 // className="jobpost-dropdown-trigger"
@@ -480,9 +494,20 @@ const Profile = ({ data, onChange, onReset, onNext, setProfilePhoto, setRemovePh
     const [imageLoading, setImageLoading] = useState(false);
 
     useEffect(() => {
+        const preloadAddPhoto = new Image();
+        preloadAddPhoto.src = addPhoto;
+        preloadAddPhoto.loading = "eager";
+        preloadAddPhoto.fetchPriority = "high";
+    }, []);
+
+    useEffect(() => {
         if (data.profile_photo && !photoPreview) {
             if (typeof data.profile_photo === 'string') {
                 setPhotoPreview(data.profile_photo);
+                const preloadImg = new Image();
+                preloadImg.src = data.profile_photo;
+                preloadImg.loading = "eager";
+                preloadImg.fetchPriority = "high";
             } else if (data.profile_photo instanceof File) {
                 const objectUrl = URL.createObjectURL(data.profile_photo);
                 setPhotoPreview(objectUrl);
@@ -680,6 +705,8 @@ const Profile = ({ data, onChange, onReset, onNext, setProfilePhoto, setRemovePh
                             <img
                                 src={photoPreview}
                                 alt="Profile"
+                                loading="eager"
+                                fetchpriority="high"
                                 style={{
                                     width: "100%",
                                     height: "100%",
@@ -704,6 +731,8 @@ const Profile = ({ data, onChange, onReset, onNext, setProfilePhoto, setRemovePh
                                     className="photo-placeholder-icon"
                                     src={addPhoto}
                                     alt="upload"
+                                    loading="eager"
+                                    fetchPriority="high"
                                 />
                                 <p>Upload photo</p>
                             </>
@@ -750,6 +779,8 @@ const Profile = ({ data, onChange, onReset, onNext, setProfilePhoto, setRemovePh
                                         className="upload-icon-btn"
                                         src={uploadIcon}
                                         alt="upload"
+                                        loading="eager"
+                                        fetchPriority="high"
                                     />{" "}
                                     Upload Photo{" "}
                                 </div>
@@ -759,6 +790,8 @@ const Profile = ({ data, onChange, onReset, onNext, setProfilePhoto, setRemovePh
                                         className="upload-icon-btn"
                                         src={uploadIcon}
                                         alt="upload"
+                                        loading="eager"
+                                        fetchPriority="high"
                                     />{" "}
                                     Change Photo{" "}
                                 </div>
@@ -1540,7 +1573,7 @@ const ResumeSection = ({
                     {existingResume ? (
                         <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
                             <div className="ResumeName">
-                                <img src={resumeIcon} className="resume-icon" alt="resume" />
+                                <img src={resumeIcon} className="resume-icon" alt="resume" loading="eager" />
                                 <h4>{getFileName()}</h4>
                             </div>
                             <div className="ActionButtons">
@@ -1581,6 +1614,8 @@ const ResumeSection = ({
                                     className="upload-icon-btn"
                                     src={uploadIcon}
                                     alt="upload"
+                                    loading="eager"
+                                    fetchpriority="high"
                                 />{" "}
                                 Upload Resume*
                             </div>
@@ -2790,6 +2825,7 @@ const EducationDetails = ({
                                                 className="upload-icon-btn"
                                                 src={deleteIcon}
                                                 alt="delete"
+                                                loading="eager"
                                             />
                                         </button>
                                     </div>
@@ -3791,7 +3827,7 @@ const Certifications = ({
                             onClick={() => openEdit(index)}
                             className="edit-skill-btn"
                         >
-                            <img className="edit-icon-btn" title="Edit" src={editIcon} alt="edit" />
+                            <img className="edit-icon-btn" title="Edit" src={editIcon} alt="edit" loading="eager" />
                         </button>
                     </div>
                 ))}
@@ -3866,7 +3902,7 @@ const Certifications = ({
                 {previewType === "image" && (
                     <div className="preview-overlay" onClick={() => setPreviewType(null)}>
                         <div className="preview-box" onClick={(e) => e.stopPropagation()}>
-                            <img src={previewUrl || currentCert.existingFile} alt="Preview" />
+                            <img src={previewUrl || currentCert.existingFile} alt="Preview" loading="eager" fetchPriority="high" />
                         </div>
                     </div>
                 )}

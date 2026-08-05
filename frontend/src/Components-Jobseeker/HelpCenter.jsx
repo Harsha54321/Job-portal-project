@@ -5,6 +5,7 @@ import Helpcenterimg from "../assets/Helpcenter.png";
 import search from '../assets/icon_search.png';
 import { Link, useNavigate } from 'react-router-dom';
 import { FHeader } from './FHeader';
+import { Helmet } from 'react-helmet-async'; // Install: npm install react-helmet-async
 
 export const HelpCenter = () => {
     const [searchText, setSearchText] = useState("");
@@ -13,11 +14,13 @@ export const HelpCenter = () => {
     const [showLoginPrompt, setShowLoginPrompt] = useState(false);
     const [searchError, setSearchError] = useState("");
     const navigate = useNavigate();
+
     // Check authentication status
     useEffect(() => {
         const token = sessionStorage.getItem('access');
         setIsAuthenticated(!!token);
     }, []);
+
     const inputRef = useRef(null);
 
     const helpLinks = [
@@ -99,7 +102,7 @@ export const HelpCenter = () => {
         {
             title: "Raise a Ticket",
             path: "/Job-portal/jobseeker/help-center/raise-a-ticket",
-            requiresAuth: true // This requires authentication
+            requiresAuth: true
         },
         {
             title: "Live Chat",
@@ -128,14 +131,11 @@ export const HelpCenter = () => {
     // Handle navigation with authentication check
     const handleNavigate = (path, state = null, requiresAuth = false) => {
         if (requiresAuth && !isAuthenticated) {
-            // Show login prompt
             setShowLoginPrompt(true);
-            // Auto-hide after 30 seconds
             setTimeout(() => setShowLoginPrompt(false), 60000);
             return;
         }
 
-        // If authenticated or doesn't require auth, navigate
         navigate(path, { state });
         setSearchText("");
         setShowResults(false);
@@ -194,10 +194,21 @@ export const HelpCenter = () => {
 
     return (
         <>
+            <Helmet>
+                <link rel="preload" as="image" href={Helpcenterimg} />
+            </Helmet>
             <FHeader />
             <div className='Helpcenter-page'>
                 <div className="helpcenter-container">
-                    <img src={Helpcenterimg} alt="helpcenter" className="Helpcenter-Img" />
+                    <img
+                        src={Helpcenterimg}
+                        alt="helpcenter"
+                        className="Helpcenter-Img"
+                        loading="eager"
+                        fetchPriority="high"
+                        width="1920"
+                        height="450"
+                    />
 
                     <div className="Helpcenter-Img-content">
                         <h2>Hello, how can we support you?</h2>
@@ -418,7 +429,7 @@ export const HelpCenter = () => {
                                 Popular Articles / FAQs
                             </Link>
 
-                            {/* Raise a Ticket - Triggers your modal state on click */}
+                            {/* Raise a Ticket */}
                             <div
                                 className="helpcenter-support-item"
                                 onClick={handleRaiseTicket}
