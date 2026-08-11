@@ -705,3 +705,50 @@ def get_priority_from_reason(reason):
  
     # Default fallback
     return "Low"
+
+# jobapp/utils.py (FAQ Matching Functions)
+
+import re
+from .models import FAQ
+
+def get_best_faq_match(user_message):
+    """
+    Find the best matching FAQ based on keywords
+    """
+    user_message = user_message.lower()
+    
+    # Remove common words and extract keywords
+    stop_words = ['hi', 'hello', 'please', 'help', 'want', 'need', 'how', 'what', 
+                  'where', 'when', 'why', 'is', 'are', 'am', 'the', 'a', 'an', 'for']
+    words = re.findall(r'\b\w+\b', user_message)
+    keywords = [word for word in words if word not in stop_words and len(word) > 2]
+    
+    if not keywords:
+        return None
+    
+    # Find best match from FAQ
+    all_faqs = FAQ.objects.all()
+    best_match = None
+    best_score = 0
+    
+    for faq in all_faqs:
+        faq_keywords = faq.keywords.lower().split(',')
+        faq_keywords = [k.strip() for k in faq_keywords]
+        
+        # Calculate match score
+        score = 0
+        for keyword in keywords:
+            if keyword in ' '.join(faq_keywords):
+                score += 2
+            if keyword in faq.question.lower():
+                score += 1
+        
+        if score > best_score:
+            best_score = score
+            best_match = faq
+    
+    # Return if score is significant (at least 2 matches)
+    if best_score >= 2:
+        return best_match
+    
+    return None

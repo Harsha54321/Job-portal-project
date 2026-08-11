@@ -423,3 +423,14 @@ class EmployerAccountManagerAssignmentAdmin(admin.ModelAdmin):
     list_display = ['employer', 'account_manager', 'is_primary', 'assigned_at']
     list_filter = ['is_primary']
     search_fields = ['employer__email', 'account_manager__full_name']
+
+# jobapp/admin.py
+
+from .models import FAQ
+
+@admin.register(FAQ)
+class FAQAdmin(admin.ModelAdmin):
+    list_display = ['question', 'keywords', 'created_at']
+    search_fields = ['question', 'answer', 'keywords']
+    list_filter = ['created_at']
+    ordering = ['-created_at']

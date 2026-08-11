@@ -2568,25 +2568,32 @@ class EmployerInitiateChatView(APIView):
         })    
    
 
+# jobapp/views.py (Update chat_api)
+
+from .ai_service import get_ai_response
+
 @api_view(["POST"])
 def chat_api(request):
     user_message = request.data.get("message")
- 
+    
     if not user_message:
         return Response({"error": "Message is required"}, status=400)
- 
+    
+    # Save user message
     user_msg = ChatMessage.objects.create(
         sender="user",
         message=user_message
     )
- 
-    bot_reply_text = generate_bot_reply(user_message)
- 
+    
+    # Get AI response from FAQ
+    bot_reply_text = get_ai_response(user_message)
+    
+    # Save bot response
     bot_msg = ChatMessage.objects.create(
         sender="bot",
         message=bot_reply_text
     )
- 
+    
     return Response({
         "user": ChatMessageSerializer(user_msg).data,
         "bot": ChatMessageSerializer(bot_msg).data

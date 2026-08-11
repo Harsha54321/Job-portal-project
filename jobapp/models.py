@@ -2757,3 +2757,29 @@ class EmployerWeeklyReportToken(models.Model):
  
     class Meta:
         db_table = "EmployerWeeklyReportToken"
+
+# FAQ Model
+
+class FAQ(models.Model):
+    question = models.CharField(max_length=500)
+    answer = models.TextField()
+    keywords = models.CharField(max_length=500, help_text="Comma separated keywords for matching")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'FAQ'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return self.question
+
+class ChatSession(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
+    session_id = models.CharField(max_length=100, unique=True)
+    messages = models.JSONField(default=list)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'ChatSession'
