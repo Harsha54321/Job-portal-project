@@ -128,7 +128,7 @@ const router = createBrowserRouter([
           { path: 'ReportAJob/:id', element: <ReportAJob /> },
           { path: 'myjobs', element: <MyJobs /> },
           { path: 'jobs', element: <JobsTab /> },
-          {path: 'companies', element: <CompaniesTab />},
+          { path: 'companies', element: <CompaniesTab /> },
           { path: 'companies', element: <CompaniesTab /> },
           { path: 'companies/:companyId', element: <JobsThroughCompany /> },
           { path: 'myprofile', element: <MyProfile /> },
@@ -281,7 +281,7 @@ const router = createBrowserRouter([
 
 function App() {
   return (
-    <GoogleOAuthProvider clientId="105293618059-al95762js6gc2o9umchkb3la0mnirhs1.apps.googleusercontent.com">
+    <GoogleOAuthProvider clientId="534453822581-vvarj10pdfecp6ouht0qi1a4j6q333ak.apps.googleusercontent.com">
       <JobProvider>
         <RouterProvider router={router} />
       </JobProvider>

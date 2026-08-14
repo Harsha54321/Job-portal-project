@@ -269,6 +269,7 @@ USE_TZ = False
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
  
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'static'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
  
@@ -307,6 +308,7 @@ FRONTEND_URL = "http://localhost:5173"
 
 SITE_URL = "http://127.0.0.1:8000"
 # SITE_URL = "http://54.183.89.14"
-# SITE_URL = "https://jobportal.stacklycloud.com"
-GOOGLE_CLIENT_ID = "105293618059-al95762js6gc2o9umchkb3la0mnirhs1.apps.googleusercontent.com"
+#SITE_URL = "https://jobportal.stacklycloud.com"
+GOOGLE_CLIENT_ID = "534453822581-vvarj10pdfecp6ouht0qi1a4j6q333ak.apps.googleusercontent.com"
+# GOOGLE_CLIENT_ID = "105293618059-al95762js6gc2o9umchkb3la0mnirhs1.apps.googleusercontent.com"
 #GOOGLE_CLIENT_ID = "146646258104-184rcr7uv1mpttpi8bjf9tjq2r2ijg1i.apps.googleusercontent.com"
