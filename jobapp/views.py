@@ -388,6 +388,32 @@ class JobSeekerRegistrationView(APIView):
                 event_type="jobseeker_signup",
                 notification_type="system"
             )
+            #new added 
+
+            admins = User.objects.filter(
+                user_type="admin"
+            )
+
+            for admin in admins:
+
+                NotificationService.create_notification(
+
+                    recipient=admin,
+
+                    title="New Jobseeker Signup",
+
+                    message=(
+                        f"New jobseeker account "
+                        f"has been created: {user.email}"
+                    ),
+
+                    category="user_mgmt",
+
+                    event_type="jobseeker_signup",
+
+                    notification_type="system"
+                )
+                #--
             return Response(
                 {
                     "message": (
@@ -570,15 +596,29 @@ class EmployerRegistrationView(APIView):
         #     event_type="employer_signup",
         #     notification_type="system"
         # )
-        NotificationService.create_notification(
-            recipient=user,
-            title="Employer Account Created",
-            message="Your employer account has been created successfully.",
-
-            category="new_signup",
-            event_type="employer_signup",
-            notification_type="system"
+         #new added   
+        admins = User.objects.filter(
+            user_type="admin"
         )
+
+        for admin in admins:
+
+            NotificationService.create_notification(
+
+                recipient=admin,
+
+                title="New Employer Signup",
+
+                message=(
+                    f"New employer account "
+                    f"has been created: {user.email}"
+                ),
+
+                event_type="employer_signup",
+
+                notification_type="system"
+            )
+            #--
 
         # RESPONSE
         return Response(
@@ -1465,22 +1505,28 @@ class CreateJobPreviewView(generics.CreateAPIView):
             notification_type="system",
             related_object_id=job.id,
         )
- 
+        #new added 
         # ── Admin notifications ─────────────────────────────────────
         for admin in User.objects.filter(user_type="admin"):
+
             NotificationService.create_notification(
+
                 recipient=admin,
+
                 title="New Job Pending Approval",
+
                 message=(
                     f"New job '{job.job_title}' submitted "
                     f"for approval by {user.email}"
                 ),
-                category="alert",
+
                 event_type="job_pending_approval",
+
                 notification_type="system",
-                related_object_id=job.id,
+
+                related_object_id=job.id
             )
- 
+            #--
     def handle_exception(self, exc):
         print(f"Exception: {exc}")
         return super().handle_exception(exc)
@@ -2108,7 +2154,29 @@ class WithdrawApplicationView(generics.UpdateAPIView):
 
     related_object_id=application.id
 )
- 
+        #new added 
+        for admin in User.objects.filter(user_type="admin"):
+
+            NotificationService.create_notification(
+
+                recipient=admin,
+
+                title="Application Withdrawn",
+
+                message=(
+                    f"{application.user.username} "
+                    f"withdrew their application "
+                    f"for '{application.job.job_title}'."
+                ),
+
+                event_type="application_withdrawn",
+
+                notification_type="application",
+
+                related_object_id=application.id
+            )
+            #--
+        
 #-------------------------------------------------------------------------------------
 class JobApplicationDetailView(
     generics.RetrieveAPIView
@@ -3459,6 +3527,23 @@ class AdminResetPasswordConfirmView(APIView):
             # Mark token used
             reset_token.is_used = True
             reset_token.save(update_fields=["is_used"])
+            #new added 
+            NotificationService.create_notification(
+
+                            recipient=user,
+
+                            title="Password Reset Successful",
+
+                            message=(
+                                "Your admin account password "
+                                "has been reset successfully."
+                            ),
+
+                            event_type="password_reset_success",
+
+                            notification_type="system"
+                        )
+            #--
  
             # Generate new JWT tokens
             refresh = RefreshToken.for_user(user)
@@ -3504,7 +3589,30 @@ class ContactMessageCreateAPIView(APIView):
         serializer = ContactMessageSerializer(data=data)
 
         if serializer.is_valid():
-            serializer.save(user=user)
+            contact_message = serializer.save(user=user)
+            #newly added
+            for admin in User.objects.filter(user_type="admin"):
+
+                NotificationService.create_notification(
+
+                    recipient=admin,
+
+                    title="New Contact Message",
+
+                    message=(
+                        f"A new contact message "
+                        f"was submitted by "
+                        f"{user.email if user else 'Guest'}."
+                    ),
+
+                    event_type="contact_message_submitted",
+
+                    notification_type="system",
+
+                    related_object_id=contact_message.id
+                )
+                #--
+               
             return Response(
                 {
                     "status": True,
@@ -3698,9 +3806,33 @@ class SubmitCompanyVerification(APIView):
             )
         )
         if serializer.is_valid():
-            serializer.save(
-                employer=request.user
-            )
+            verification = serializer.save(
+        employer=request.user
+    )
+            #new added
+            for admin in User.objects.filter(
+                user_type="admin"
+            ):
+
+                NotificationService.create_notification(
+
+                    recipient=admin,
+
+                    title="New Company Verification",
+
+                    message=(
+                        f"Company verification submitted by "
+                        f"{request.user.email} "
+                        f"and is pending approval."
+                    ),
+
+                    event_type="company_verification_submitted",
+
+                    notification_type="system",
+
+                    related_object_id=verification.id
+                )
+                #--
             return Response(
                 {
                     "message": (
@@ -3865,7 +3997,29 @@ class CompanyProfileCreateView(APIView):
                 notification_type="system",
                 related_object_id=company.id
             )
+            #new added 
+            for admin in User.objects.filter(user_type="admin"):
 
+                NotificationService.create_notification(
+
+                    recipient=admin,
+
+                    title="New Company Profile Created",
+
+                    message=(
+                        f"Company profile "
+                        f"'{company.company_name}' "
+                        f"has been created by "
+                        f"{request.user.email}."
+                    ),
+
+                    event_type="company_profile_created",
+
+                    notification_type="system",
+
+                    related_object_id=company.id
+                )
+            #--
             return Response(
                 {
                     "message": (
@@ -4514,6 +4668,30 @@ class CreatePlanView(APIView):  # newly added 14-05
 
                 related_object_id=plan.id
             )
+
+            # new added
+            for admin in User.objects.filter(
+                user_type="admin"
+            ):
+
+                NotificationService.create_notification(
+
+                    recipient=admin,
+
+                    title="New Subscription Plan Created",
+
+                    message=(
+                        f"A new subscription plan "
+                        f"'{plan.name}' "
+                        f"has been created."
+                    ),
+
+                    event_type="new_subscription_plan",
+
+                    notification_type="system",
+
+                    related_object_id=plan.id
+                )
 #---------------------------------------------------------------------------------------------
         # Create settings for this plan
 
@@ -4603,6 +4781,32 @@ class CreateOrderView(APIView):
             amount=total_price,
             status="pending",
         )
+        #new added 
+        for admin in User.objects.filter(
+            user_type="admin"
+        ):
+
+            NotificationService.create_notification(
+
+                recipient=admin,
+
+                title="New Subscription Order",
+
+                message=(
+                    f"{request.user.email} "
+                    f"created a new order for "
+                    f"'{plan.name}' "
+                    f"with a total amount of "
+                    f"₹{total_price}."
+                ),
+
+                event_type="subscription_order_created",
+
+                notification_type="system",
+
+                related_object_id=payment.id
+            )
+            #--
         
         # Optional: Store price breakdown in a separate variable or log it
         price_breakdown = {
@@ -4709,6 +4913,30 @@ class CancelSubscriptionView(APIView):
                 notification_type="system",
                 related_object_id=sub.id
             )
+                        # new added
+            for admin in User.objects.filter(
+                user_type="admin"
+            ):
+
+                NotificationService.create_notification(
+
+                    recipient=admin,
+
+                    title="Subscription Cancelled",
+
+                    message=(
+                        f"{request.user.email} "
+                        f"cancelled their subscription "
+                        f"for '{sub.plan.name}'."
+                    ),
+
+                    event_type="subscription_cancelled",
+
+                    notification_type="system",
+
+                    related_object_id=sub.id
+                )
+                #--
     
             return Response(
                 {
@@ -5928,6 +6156,29 @@ class UpdateCompanyStatusView(APIView):
             notification_type="system",
             related_object_id=obj.id
         )
+        #newly added
+        for admin in User.objects.filter(user_type="admin").exclude(id=request.user.id):
+
+            NotificationService.create_notification(
+
+                recipient=admin,
+
+                title="Company Verification Updated",
+
+                message=(
+                    f"Company verification for "
+                    f"{obj.employer.email} "
+                    f"was changed from "
+                    f"'{previous}' to '{new_status}'."
+                ),
+
+                event_type="company_verification_updated",
+
+                notification_type="system",
+
+                related_object_id=obj.id
+            )
+            #--
  
         return Response({
             "message": "Updated successfully",
@@ -6254,6 +6505,29 @@ class AdminJobApproveView(APIView):
  
             related_object_id=job.id
         )
+        #new added
+        for admin in User.objects.filter(user_type="admin").exclude(id=request.user.id):
+
+            NotificationService.create_notification(
+
+                recipient=admin,
+
+                title="Job Approved",
+
+                message=(
+                    f"Job '{job.job_title}' "
+                    f"submitted by {job.employer.email} "
+                    f"has been approved by "
+                    f"{request.user.email}."
+                ),
+
+                event_type="job_approved",
+
+                notification_type="system",
+
+                related_object_id=job.id
+            )
+            #--
 
         return Response({
             "message": "Job approved successfully",
@@ -6300,6 +6574,33 @@ class AdminJobRejectView(APIView):
             notification_type="system",
             related_object_id=job.id
         )
+        #newly added
+        for admin in User.objects.filter(
+            user_type="admin"
+        ).exclude(
+            id=request.user.id
+        ):
+
+            NotificationService.create_notification(
+
+                recipient=admin,
+
+                title="Job Rejected",
+
+                message=(
+                    f"Job '{job.job_title}' "
+                    f"submitted by {job.employer.email} "
+                    f"was rejected by "
+                    f"{request.user.email}."
+                ),
+
+                event_type="job_rejected",
+
+                notification_type="system",
+
+                related_object_id=job.id
+            )
+            #--
 
         return Response({
             "message": "Job rejected successfully",
@@ -6336,7 +6637,30 @@ class AdminJobFlagView(APIView):
                 event_type="job_flagged",
                 notification_type="system",
                 related_object_id=job.id
-            )       
+            )
+            #--
+            for admin in User.objects.filter(user_type="admin").exclude(id=request.user.id):
+
+                NotificationService.create_notification(
+
+                    recipient=admin,
+
+                    title="Job Flagged",
+
+                    message=(
+                        f"Job '{job.job_title}' "
+                        f"submitted by {job.employer.email} "
+                        f"was flagged by "
+                        f"{request.user.email}."
+                    ),
+
+                    event_type="job_flagged",
+
+                    notification_type="system",
+
+                    related_object_id=job.id
+                )  
+                #--     
         return Response({
             "message": f"Job {'flagged' if job.flagged else 'unflagged'} successfully",
             "job_id": job.id,
@@ -6515,46 +6839,285 @@ class AdminJobDetailView(APIView):
         serializer = JobDetailSerializer(job)
         return Response(serializer.data)
 
+    
+#new added full view 
 class AdminUpdateJobStatusView(APIView):
+
     permission_classes = [
         IsAuthenticated,
         IsAdminUserType
     ]
+
     def patch(self, request, pk):
+
         try:
             job = PostAJob.objects.get(id=pk)
+
         except PostAJob.DoesNotExist:
+
             return Response(
                 {"error": "Job not found"},
                 status=404
             )
+
         action = request.data.get("action")
+
+        # =====================================================
+        # APPROVE
+        # =====================================================
+
         if action == "approve":
+
             job.approval_status = "approved"
             job.flagged = False
             job.is_published = True
+
+            job.save()
+
+            # Employer notification
+            NotificationService.create_notification(
+
+                recipient=job.employer,
+
+                title="Job Approved",
+
+                message=(
+                    f"Your job "
+                    f"'{job.job_title}' "
+                    f"has been approved and is now live!"
+                ),
+
+                event_type="job_approved",
+
+                notification_type="system",
+
+                related_object_id=job.id
+            )
+
+            # Other admins
+            for admin in User.objects.filter(
+                user_type="admin"
+            ).exclude(
+                id=request.user.id
+            ):
+
+                NotificationService.create_notification(
+
+                    recipient=admin,
+
+                    title="Job Approved",
+
+                    message=(
+                        f"Job '{job.job_title}' "
+                        f"submitted by {job.employer.email} "
+                        f"was approved by "
+                        f"{request.user.email}."
+                    ),
+
+                    event_type="job_approved",
+
+                    notification_type="system",
+
+                    related_object_id=job.id
+                )
+
+        # =====================================================
+        # HOLD
+        # =====================================================
+
         elif action == "hold":
+
             job.approval_status = "pending"
             job.is_published = False
+
+            job.save()
+
+            # Employer notification
+            NotificationService.create_notification(
+
+                recipient=job.employer,
+
+                title="Job Put On Hold",
+
+                message=(
+                    f"Your job "
+                    f"'{job.job_title}' "
+                    f"has been put on hold "
+                    f"by admin."
+                ),
+
+                event_type="job_hold",
+
+                notification_type="system",
+
+                related_object_id=job.id
+            )
+
+            # Other admins
+            for admin in User.objects.filter(
+                user_type="admin"
+            ).exclude(
+                id=request.user.id
+            ):
+
+                NotificationService.create_notification(
+
+                    recipient=admin,
+
+                    title="Job Put On Hold",
+
+                    message=(
+                        f"Job '{job.job_title}' "
+                        f"submitted by {job.employer.email} "
+                        f"was put on hold by "
+                        f"{request.user.email}."
+                    ),
+
+                    event_type="job_hold",
+
+                    notification_type="system",
+
+                    related_object_id=job.id
+                )
+
+        # =====================================================
+        # FLAG
+        # =====================================================
+
         elif action == "flag":
+
             job.flagged = True
+
+            job.save()
+
+            # Employer notification
+            NotificationService.create_notification(
+
+                recipient=job.employer,
+
+                title="Job Flagged",
+
+                message=(
+                    f"Your job "
+                    f"'{job.job_title}' "
+                    f"was flagged by admin."
+                ),
+
+                event_type="job_flagged",
+
+                notification_type="system",
+
+                related_object_id=job.id
+            )
+
+            # Other admins
+            for admin in User.objects.filter(
+                user_type="admin"
+            ).exclude(
+                id=request.user.id
+            ):
+
+                NotificationService.create_notification(
+
+                    recipient=admin,
+
+                    title="Job Flagged",
+
+                    message=(
+                        f"Job '{job.job_title}' "
+                        f"submitted by {job.employer.email} "
+                        f"was flagged by "
+                        f"{request.user.email}."
+                    ),
+
+                    event_type="job_flagged",
+
+                    notification_type="system",
+
+                    related_object_id=job.id
+                )
+
+        # =====================================================
+        # DELETE
+        # =====================================================
+
         elif action == "delete":
+
+            # Save values before deleting
+            job_id = job.id
+            job_title = job.job_title
+            employer = job.employer
+
+            # Employer notification BEFORE delete
+            NotificationService.create_notification(
+
+                recipient=employer,
+
+                title="Job Deleted",
+
+                message=(
+                    f"Your job "
+                    f"'{job_title}' "
+                    f"has been permanently deleted by admin."
+                ),
+
+                event_type="job_deleted",
+
+                notification_type="system",
+
+                related_object_id=job_id
+            )
+
+            # Other admins
+            for admin in User.objects.filter(
+                user_type="admin"
+            ).exclude(
+                id=request.user.id
+            ):
+
+                NotificationService.create_notification(
+
+                    recipient=admin,
+
+                    title="Job Deleted",
+
+                    message=(
+                        f"Job '{job_title}' "
+                        f"submitted by {employer.email} "
+                        f"was deleted by "
+                        f"{request.user.email}."
+                    ),
+
+                    event_type="job_deleted",
+
+                    notification_type="system",
+
+                    related_object_id=job_id
+                )
+
             job.delete()
+
             return Response({
                 "message": "Job deleted successfully"
             })
+
+        # =====================================================
+        # INVALID ACTION
+        # =====================================================
+
         else:
+
             return Response(
                 {"error": "Invalid action"},
                 status=400
             )
-        job.save()
+
         return Response({
             "message": "Job updated successfully",
             "approval_status": job.approval_status,
             "flagged": job.flagged
         })
- 
+#--
  
 class AdminJobDeleteView(APIView):
     """Admin permanently delete a job"""
@@ -7083,6 +7646,33 @@ class RoleCreateView(APIView):
                 module=module,
                 read=False, create=False, update=False, delete=False
             )
+        
+        #new added
+        for admin in User.objects.filter(
+            user_type="admin"
+        ).exclude(
+            id=request.user.id
+        ):
+
+            NotificationService.create_notification(
+
+                recipient=admin,
+
+                title="New Role Created",
+
+                message=(
+                    f"Admin {request.user.email} "
+                    f"created a new role "
+                    f"'{role.name}'."
+                ),
+
+                event_type="role_created",
+
+                notification_type="system",
+
+                related_object_id=role.id
+            )
+            #--
 
         serializer = RoleSerializer(role)
         return Response(
@@ -7092,24 +7682,90 @@ class RoleCreateView(APIView):
 
 
 # ── DELETE a role ────────────────────────────────────────────────────────────
+# class RoleDeleteView(APIView):
+#     permission_classes = [IsAdminUserType]
+
+#     def delete(self, request, role_id):
+#         role = get_object_or_404(Role, id=role_id)
+
+#         # Prevent deleting built-in roles
+#         if role.name.lower() in ['candidate', 'employer']:
+#             return Response(
+#                 {"error": "Built-in roles cannot be deleted."},
+#                 status=status.HTTP_400_BAD_REQUEST
+#             )
+
+#         role.delete()
+#         return Response(
+#             {"message": f"Role deleted successfully."},
+#             status=status.HTTP_200_OK
+#         )
+#full view added 
 class RoleDeleteView(APIView):
+
     permission_classes = [IsAdminUserType]
 
     def delete(self, request, role_id):
-        role = get_object_or_404(Role, id=role_id)
+
+        role = get_object_or_404(
+            Role,
+            id=role_id
+        )
 
         # Prevent deleting built-in roles
-        if role.name.lower() in ['candidate', 'employer']:
+        if role.name.lower() in [
+            "candidate",
+            "employer"
+        ]:
+
             return Response(
-                {"error": "Built-in roles cannot be deleted."},
+                {
+                    "error":
+                    "Built-in roles cannot be deleted."
+                },
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+        # Save values before deletion
+        role_id = role.id
+        role_name = role.name
+
         role.delete()
+
+        # Notify other admins
+        for admin in User.objects.filter(
+            user_type="admin"
+        ).exclude(
+            id=request.user.id
+        ):
+
+            NotificationService.create_notification(
+
+                recipient=admin,
+
+                title="Role Deleted",
+
+                message=(
+                    f"Role '{role_name}' "
+                    f"was deleted by "
+                    f"{request.user.email}."
+                ),
+
+                event_type="role_deleted",
+
+                notification_type="system",
+
+                related_object_id=role_id
+            )
+
         return Response(
-            {"message": f"Role deleted successfully."},
+            {
+                "message":
+                "Role deleted successfully."
+            },
             status=status.HTTP_200_OK
         )
+#--
 
 
 # ── GET permissions for a specific role ──────────────────────────────────────
@@ -8141,6 +8797,25 @@ class VerifyAdmin2FAOTPView(APIView):
             status="SUCCESS",
             extra_data={"method": method}
         )
+        # new added
+        NotificationService.create_notification(
+
+            recipient=user,
+
+            title="Two-Factor Authentication Enabled",
+
+            message=(
+                "Two-factor authentication has been enabled "
+                "for your admin account. "
+                "You will need to complete two-step verification "
+                "when logging in."
+            ),
+
+            event_type="admin_2fa_enabled",
+
+            notification_type="system"
+        )
+        #--
  
         return Response({
             "success": True,
@@ -10435,7 +11110,34 @@ class AdminAccountManagerListView(ListCreateAPIView):
     serializer_class = AccountManagerSerializer
 
     def perform_create(self, serializer):
-        serializer.save(created_by=self.request.user)
+        account_manager = serializer.save(created_by=self.request.user)
+         # newly added
+        for admin in User.objects.filter(
+            user_type="admin"
+        ).exclude(
+            id=self.request.user.id
+        ):
+
+            NotificationService.create_notification(
+
+                recipient=admin,
+
+                title="New Account Manager Created",
+
+                message=(
+                    f"Account manager "
+                    f"'{account_manager.name}' "
+                    f"was created by "
+                    f"{self.request.user.email}."
+                ),
+
+                event_type="account_manager_created",
+
+                notification_type="system",
+
+                related_object_id=account_manager.id
+            )
+            #--
 
 
 class AdminAccountManagerDetailView(RetrieveUpdateDestroyAPIView):
@@ -10510,6 +11212,34 @@ class AdminAssignAccountManagerView(APIView):
             notification_type="system",
             related_object_id=manager.id
         )
+        # new added
+        for admin in User.objects.filter(
+            user_type="admin"
+        ).exclude(
+            id=request.user.id
+        ):
+
+            NotificationService.create_notification(
+
+                recipient=admin,
+
+                title="Account Manager Assigned",
+
+                message=(
+                    f"'{manager.full_name}' from "
+                    f"{manager.get_department_display()} "
+                    f"department has been assigned to "
+                    f"{employer.email}'s account by "
+                    f"{request.user.email}."
+                ),
+
+                event_type="account_manager_assigned",
+
+                notification_type="system",
+
+                related_object_id=manager.id
+            )
+            #--
 
         return Response({
             "message": "Account Manager assigned successfully",
@@ -10628,6 +11358,32 @@ class AdminEmployerAssignmentsView(APIView):
             notification_type="system",
             related_object_id=manager.id
         )
+        # newly added
+        for admin in User.objects.filter(
+            user_type="admin"
+        ).exclude(
+            id=request.user.id
+        ):
+
+            NotificationService.create_notification(
+
+                recipient=admin,
+
+                title="Account Manager Removed",
+
+                message=(
+                    f"'{manager.full_name}' "
+                    f"was removed from "
+                    f"{employer.email}'s account by "
+                    f"{request.user.email}."
+                ),
+
+                event_type="account_manager_removed",
+
+                notification_type="system",
+
+                related_object_id=manager.id
+            )
  
         return Response({
             "message": "Account Manager removed successfully",
