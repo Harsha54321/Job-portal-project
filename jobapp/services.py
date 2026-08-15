@@ -1,7 +1,9 @@
+from zoneinfo import ZoneInfo
+
 import razorpay
 from django.conf import settings
 from rest_framework_simplejwt.tokens import AccessToken
-from datetime import timedelta
+from datetime import datetime, timedelta
 import uuid
 from datetime import timedelta
  
@@ -955,6 +957,9 @@ EVENT_CATEGORY_MAP = {
     "jobseeker_signup": "user_mgmt",
     "employer_signup": "user_mgmt",
     "password_reset_success": "user_mgmt",
+    "role_created": "user_mgmt",
+    "role_deleted": "user_mgmt",
+    "admin_2fa_enabled": "user_mgmt",
 
     # JOB MANAGEMENT
 
@@ -963,6 +968,8 @@ EVENT_CATEGORY_MAP = {
     "job_flagged": "job_mgmt",
     "job_deleted": "job_mgmt",
     "job_saved": "job_mgmt",
+    "job_hold": "job_mgmt",
+    
 
     # APPLICATIONS
 
@@ -975,6 +982,9 @@ EVENT_CATEGORY_MAP = {
 
     "company_verification_updated": "companies",
     "company_profile_created" : "companies",
+    "company_verification_submitted": "companies",
+    "account_manager_assigned": "companies",
+    "account_manager_removed": "companies",
 
     # REPORTS
 
@@ -991,6 +1001,8 @@ EVENT_CATEGORY_MAP = {
     "payment_method_added": "general",
     "payment_method_removed": "general",
     "new_subscription_plan": "general",
+    "contact_message_submitted": "general",
+    "subscription_order_created": "general",
 }
 
 
@@ -1101,8 +1113,11 @@ class NotificationService:
     # =====================================================
     # QUIET HOURS CHECK
     # ADMIN ONLY
-    # =====================================================
+        # =====================================================
+    
 
+    from datetime import datetime, timedelta
+    from zoneinfo import ZoneInfo
     @staticmethod
     def _is_admin_quiet_hours(recipient):
 
@@ -1117,25 +1132,50 @@ class NotificationService:
         if not quiet_hours:
             return False
 
-        current_time = timezone.localtime().time()
+        current_datetime = datetime.now(
+            ZoneInfo(quiet_hours.timezone)
+        )
+
+        current_time = current_datetime.time()
+        current_day = current_datetime.strftime("%a")
 
         start_time = quiet_hours.start_time
         end_time = quiet_hours.end_time
+        active_days = quiet_hours.active_days or []
 
+        # ==========================================
         # SAME DAY RANGE
+        # ==========================================
 
         if start_time < end_time:
+
+            if current_day not in active_days:
+                return False
 
             return (
                 start_time <= current_time <= end_time
             )
 
+        # ==========================================
         # OVERNIGHT RANGE
+        # Example: 18:00 -> 06:00
+        # ==========================================
 
-        return (
-            current_time >= start_time or
-            current_time <= end_time
-        )
+        if current_time >= start_time:
+
+            # Quiet hours started today
+            return current_day in active_days
+
+        if current_time <= end_time:
+
+            # Quiet hours started yesterday
+            yesterday = (
+                current_datetime - timedelta(days=1)
+            ).strftime("%a")
+
+            return yesterday in active_days
+
+        return False
 
     # =====================================================
     # MAIN NOTIFICATION METHOD
@@ -1320,6 +1360,7 @@ class NotificationService:
 
             allow_email = False
             allow_sms = False
+            allow_inapp = False
             allow_push = False
         
         # =================================================

@@ -1,6 +1,23 @@
+# Python virtual environments
+venv/
+myenv/
+.venv/
+env/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
 
 # Firebase / Google Cloud credentials
 jobapp/firebase/firebase-service-account.json
 
-# Python virtual environment
-myenv/
+# Node
+node_modules/
+
+# Environment variables
+.env
+.env.*
+
+# Django
+db.sqlite3
