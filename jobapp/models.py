@@ -104,6 +104,7 @@ class JobSeekerProfile(models.Model):
     # Resume & Portfolio
     resume_file = models.FileField(upload_to='resumes/', null=True, blank=True)
     portfolio_link = models.URLField(blank=True, null=True)
+    intro_video = models.FileField(upload_to='intro_videos/', null=True, blank=True) # ← ADD THIS LINE
 
     # Career Preferences (FIXED DECIMALS)
     total_experience_years = models.DecimalField(

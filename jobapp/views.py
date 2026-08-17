@@ -704,6 +704,11 @@ class JobSeekerProfileView(generics.RetrieveUpdateAPIView):
                     combined_data['delete_profile_photo'] = request.data.get('delete_profile_photo') == 'true'
                     print(f"📸 Found delete_profile_photo flag: {combined_data['delete_profile_photo']}")
 
+                    # IMPORTANT: Check for delete_intro_video flag in FormData
+                if 'delete_intro_video' in request.data:
+                    combined_data['delete_intro_video'] = request.data.get('delete_intro_video') == 'true'
+                    print(f"🎥 Found delete_intro_video flag: {combined_data['delete_intro_video']}")
+
                 # Add file data
                 for key, value in request.data.items():
                     if key != 'data':
@@ -1617,6 +1622,32 @@ class UpdateJobView(generics.UpdateAPIView):
         print("PATCH request received for job update")
         print("Request data:", request.data)
         print("=" * 50)
+ 
+        job = self.get_object()
+        if job.approval_status == PostAJob.ApprovalStatus.APPROVED:
+            subscription = Subscription.objects.filter(
+                user=request.user,
+                status='active'
+            ).select_related('plan').first()
+ 
+            platform = None
+            if subscription:
+                platform = EmployerPlatformSettings.objects.filter(
+                    plan=subscription.plan,
+                    account_status=request.user.status
+                ).first()
+                if not platform:
+                    # Fallback if no row exists for this exact account_status
+                    platform = EmployerPlatformSettings.objects.filter(
+                        plan=subscription.plan
+                    ).first()
+ 
+            if not platform or not platform.allow_edit_after_approval:
+                return Response(
+                    {"detail": "Editing approved jobs is disabled."},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+ 
         return super().patch(request, *args, **kwargs)
  
 
@@ -4660,6 +4691,21 @@ class CurrentSubscriptionView(APIView):
         data["is_expired"] = (
             sub.end_date
             and sub.end_date < timezone.now()
+        )
+ 
+     # Expose the platform's "edit after approval" toggle for this plan
+        # so the employer UI can enable/disable the Edit Job option.
+        platform = EmployerPlatformSettings.objects.filter(
+            plan=sub.plan,
+            account_status=request.user.status
+        ).first()
+        if not platform:
+            # Fallback if no row exists for this exact account_status
+            platform = EmployerPlatformSettings.objects.filter(
+                plan=sub.plan
+            ).first()
+        data["allow_edit_after_approval"] = (
+            platform.allow_edit_after_approval if platform else False
         )
  
         return Response(data)

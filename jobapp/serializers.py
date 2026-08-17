@@ -370,6 +370,7 @@ class JobSeekerProfileReadSerializer(serializers.ModelSerializer):
     user = UserReadSerializer(read_only=True)
     profile_photo_url = serializers.SerializerMethodField()
     resume_url = serializers.SerializerMethodField()
+    intro_video_url = serializers.SerializerMethodField()
     email = serializers.EmailField(source="user.email", read_only=True)
     phone = serializers.CharField(source="user.phone", read_only=True)
     highest_qualification = serializers.SerializerMethodField()
@@ -402,6 +403,9 @@ class JobSeekerProfileReadSerializer(serializers.ModelSerializer):
  
     def get_resume_url(self, obj):
         return obj.resume_file.url if obj.resume_file else None
+
+    def get_intro_video_url(self, obj):
+        return obj.intro_video.url if obj.intro_video else None
    
     def get_highest_qualification(self, obj):
         """Calculate highest qualification from education entries"""
@@ -508,6 +512,7 @@ class JobSeekerProfileWriteSerializer(WritableNestedModelSerializer):
     highest_qualification = serializers.CharField(required=False, allow_null=True)
     
     delete_profile_photo = serializers.BooleanField(write_only=True, required=False, default=False)
+    delete_intro_video = serializers.BooleanField(write_only=True, required=False, default=False)
 
     class Meta:
         model = JobSeekerProfile
@@ -522,6 +527,8 @@ class JobSeekerProfileWriteSerializer(WritableNestedModelSerializer):
             'street', 'city', 'state', 'pincode', 'country',
             'resume_file',
             'portfolio_link',
+            'intro_video',
+            'delete_intro_video',
             'current_ctc', 'expected_ctc', 'preferred_job_type',
             'preferred_role_industry', 'ready_to_start_immediately',
             'willing_to_relocate',
@@ -596,6 +603,8 @@ class JobSeekerProfileWriteSerializer(WritableNestedModelSerializer):
         if highest_qual:
             print(f" Setting highest_qualification to: {highest_qual}")
         delete_photo = validated_data.pop('delete_profile_photo', False)
+
+        delete_video = validated_data.pop('delete_intro_video', False)
  
         if delete_photo and instance.profile_photo:
             try:
@@ -603,6 +612,15 @@ class JobSeekerProfileWriteSerializer(WritableNestedModelSerializer):
             except Exception as e:
                 print(f"Error deleting file: {e}")
             instance.profile_photo = None
+
+        # 2. ADD THIS: Physically delete the video and clear the database field
+        if delete_video and instance.intro_video:
+            try:
+                instance.intro_video.delete(save=False)
+                print("🗑️ Intro video successfully deleted from backend.")
+            except Exception as e:
+                print(f"Error deleting video: {e}")
+            instance.intro_video = None
  
         skills_data = validated_data.pop('skills', None)
         languages_data = validated_data.pop('languages', None)
