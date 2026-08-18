@@ -73,7 +73,8 @@ import { Acreatepassword } from './Components-Admin/Acreatepassword'
 import React, { useEffect } from 'react'
 import { requestAndRegisterNotificationPermission, listenForForegroundMessages } from "./firebaseTokenHandler";
 import RoleSignupLanding from './Components-LandingPage/RoleSignupLanding';
-
+import  WeeklySummary  from './Components-Employer/WeeklySummary';
+import RaisedTickets from './Components-Jobseeker/RaisedTickets';
 
 const Layout = () => {
   useInactivityLogout()
@@ -128,7 +129,7 @@ const router = createBrowserRouter([
           { path: 'ReportAJob/:id', element: <ReportAJob /> },
           { path: 'myjobs', element: <MyJobs /> },
           { path: 'jobs', element: <JobsTab /> },
-          { path: 'companies', element: <CompaniesTab /> },
+          { path: 'companies', element: <CompaniesTab />},
           { path: 'companies', element: <CompaniesTab /> },
           { path: 'companies/:companyId', element: <JobsThroughCompany /> },
           { path: 'myprofile', element: <MyProfile /> },
@@ -141,6 +142,7 @@ const router = createBrowserRouter([
           { path: 'Settings', element: <Settings /> },
           { path: 'ContactUs', element: <ContactUs /> },
           { path: 'FAQ', element: <FAQ /> },
+          { path: 'mytickets', element: <RaisedTickets role="jobseeker" /> },
           {
             path: 'Blogs',
             children: [
@@ -261,6 +263,10 @@ const router = createBrowserRouter([
           //   element: <CompanyVerify />
           // }
 
+          {
+            path: 'WeeklySummary',
+            element: <WeeklySummary/>
+          },
         ]
 
       },

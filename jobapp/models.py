@@ -879,6 +879,87 @@ class Notification(models.Model):
         return f"{self.user.email} - {self.message}"
 
 
+class PendingNotification(models.Model):
+ 
+    STATUS_CHOICES = (
+        ("pending", "Pending"),
+        ("processed", "Processed"),
+        ("failed", "Failed"),
+    )
+ 
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="pending_notifications"
+    )
+ 
+    title = models.CharField(
+        max_length=255
+    )
+ 
+    message = models.TextField()
+ 
+    category = models.CharField(
+        max_length=50,
+        null=True,
+        blank=True
+    )
+ 
+    event_type = models.CharField(
+        max_length=100,
+        null=True,
+        blank=True
+    )
+ 
+    notification_type = models.CharField(
+        max_length=50,
+        null=True,
+        blank=True
+    )
+ 
+    related_object_id = models.PositiveIntegerField(
+        null=True,
+        blank=True
+    )
+ 
+    job = models.ForeignKey(
+        'PostAJob',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='pending_notifications'
+    )
+ 
+    created_at = models.DateTimeField(
+        auto_now_add=True
+    )
+ 
+    processed_at = models.DateTimeField(
+        null=True,
+        blank=True
+    )
+ 
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default="pending"
+    )
+ 
+    error_message = models.TextField(
+        null=True,
+        blank=True
+    )
+ 
+    class Meta:
+        db_table = "PendingNotification"
+        ordering = ["created_at"]
+ 
+    def __str__(self):
+        return (
+            f"{self.user.email} - "
+            f"{self.title} - "
+            f"{self.status}"
+        )
 # Chat
 
 from django.conf import settings
@@ -1633,6 +1714,13 @@ class Subscription(models.Model):
     start_date = models.DateTimeField(auto_now_add=True)
     end_date = models.DateTimeField(blank=True, null=True)
     duration = models.CharField(max_length=20, default='monthly')  # Store which duration they paid for
+    payment = models.ForeignKey(
+        'Payment', 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True,
+        related_name='subscriptions'
+    )
  
     def save(self, *args, **kwargs):
         if not self.end_date:
@@ -2784,3 +2872,16 @@ class ChatSession(models.Model):
 
     class Meta:
         db_table = 'ChatSession'
+
+class JobseekerSecurityProfile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='security')
+    two_factor_enabled = models.BooleanField(default=False)
+    two_factor_method = models.CharField(max_length=10, choices=[('email', 'Email'), ('sms', 'SMS')], null=True, blank=True)
+    email_verified = models.BooleanField(default=False)
+    sms_verified = models.BooleanField(default=False)
+ 
+    class Meta:
+        db_table = 'JobseekerSecurityProfile'
+ 
+    def __str__(self):
+        return f"{self.user.email} 2FA Profile"

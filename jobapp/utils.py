@@ -95,52 +95,22 @@ def send_email_otp(email, otp, purpose="signup"):
         subject = "Email Verification OTP"
         expiry = "10 minutes"
         digits = "6-digit"
-        message = f"""
-Hello,
- 
-Your {digits} OTP for email verification is: {otp}
- 
-This OTP will expire in {expiry}.
- 
-If you didn't request this, please ignore this email.
-"""
+        message = f"Hello,\n\nYour {digits} OTP for email verification is: {otp}\n\nThis OTP will expire in {expiry}.\n\nIf you didn't request this, please ignore this email."
     elif purpose == "login":
         subject = "Login OTP"
         expiry = "5 minutes"
         digits = "4-digit"
-        message = f"""
-Hello,
- 
-Your {digits} OTP for login is: {otp}
- 
-This OTP will expire in {expiry}.
- 
-If you didn't request this, please ignore this email.
-"""
-    elif purpose == "admin_2fa":
-        subject = "Admin 2FA OTP"
+        message = f"Hello,\n\nYour {digits} OTP for login is: {otp}\n\nThis OTP will expire in {expiry}.\n\nIf you didn't request this, please ignore this email."
+    elif purpose in ["admin_2fa", "jobseeker_2fa"]:
+        subject = "Your 2FA Verification Code"
         expiry = "5 minutes"
         digits = "6-digit"
-        message = f"""
-Hello,
- 
-Your {digits} OTP for admin two-factor authentication is: {otp}
- 
-This OTP will expire in {expiry}.
- 
-If you didn't request this, please secure your account immediately.
-"""
+        message = f"Hello,\n\nYour {digits} OTP for two-factor authentication is: {otp}\n\nThis OTP will expire in {expiry}.\n\nIf you didn't request this, please secure your account immediately."
     else:
         subject = "OTP Verification"
         expiry = "10 minutes"
-        message = f"""
-Hello,
- 
-Your OTP is: {otp}
- 
-This OTP will expire in {expiry}.
-"""
- 
+        message = f"Hello,\n\nYour OTP is: {otp}\n\nThis OTP will expire in {expiry}."
+
     send_mail(
         subject,
         message,

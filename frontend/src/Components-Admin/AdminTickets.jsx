@@ -87,6 +87,23 @@ export const AdminTickets = () => {
         fetchTickets();
     }, []);
 
+    // Notification click deep-link: open the specific ticket once tickets load.
+    useEffect(() => {
+        if (!raisedTickets || raisedTickets.length === 0) return;
+
+        const highlightType = sessionStorage.getItem('adminNotifHighlightType');
+        const highlightId = sessionStorage.getItem('adminNotifHighlightId');
+
+        if (highlightType === 'ticket' && highlightId) {
+            const match = raisedTickets.find(t => String(t.id) === String(highlightId));
+            if (match) {
+                setSelectedTickets(match);
+            }
+            sessionStorage.removeItem('adminNotifHighlightType');
+            sessionStorage.removeItem('adminNotifHighlightId');
+        }
+    }, [raisedTickets]);
+
     const statusOrder = { "Pending": 1, "In Progress": 2, "Resolved": 3 };
 
     // Filter tickets matching Subject, Priority, Status, Category, Formatted ID, or Combined Username

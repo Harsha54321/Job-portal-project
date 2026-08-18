@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import './SupportHub.css'
 import { AdminTickets } from './AdminTickets'
 import { Escalation } from './Escalation'
@@ -8,7 +8,17 @@ import { Enquiries } from './Enquiries'
 // import { Enquiries } from './Enquiries'
 
 export const SupportHub = () => {
-    const [activeTab, setActiveTab] = useState("Tickets")
+    // If a notification click asked for a specific sub-tab (Tickets /
+    // Escalation / Enquiries), open straight into it, then clear the flag
+    // so a normal visit to SupportHub still defaults to Tickets.
+    const [activeTab, setActiveTab] = useState(() => {
+        const requested = sessionStorage.getItem('adminSupportHubTab')
+        return requested || "Tickets"
+    })
+
+    useEffect(() => {
+        sessionStorage.removeItem('adminSupportHubTab')
+    }, [])
 
     return (
         <div className="SupportHub-container">

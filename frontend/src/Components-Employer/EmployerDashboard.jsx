@@ -40,6 +40,9 @@ import api from "../api/axios";
 import AdminManager from '../assets/Employer/User.png'
 import { AddManagerSupport } from './AddManagerSupport'
 import { LocationDisplay } from '../Components-Jobseeker/LocationDisplay';
+// import { MyTickets } from './MyTickets'
+import RaisedTickets from '../Components-Jobseeker/RaisedTickets'
+import TicketIcon from '../assets/AdminAssets/Tickets.png'
 
 export const EmployerDashboard = () => {
     const { currentEmployer, getJobStats, refreshEmployerData } = useJobs();
@@ -52,6 +55,8 @@ export const EmployerDashboard = () => {
     const [isDataLoading, setIsDataLoading] = useState(true);
     const [editJobData, setEditJobData] = useState(null);
     const [allowEditAfterApproval, setAllowEditAfterApproval] = useState(true);
+    const [pendingTargetApplicationId, setPendingTargetApplicationId] = useState(null);
+    const [pendingTargetTicketId, setPendingTargetTicketId] = useState(null);
 
     const [verificationStatus, setVerificationStatus] = useState({
         isLoading: true,
@@ -65,6 +70,8 @@ export const EmployerDashboard = () => {
     });
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
     const [selectedJob, setSelectedJob] = useState(null);
+    const [pendingTargetManagerId, setPendingTargetManagerId] = useState(null);
+
 
     // --- NEW SCROLL EFFECT ---
     // This ensures EVERY time you change a tab, the dashboard content scrolls to the top
@@ -213,42 +220,36 @@ export const EmployerDashboard = () => {
 
     // Add this hook layout inside your Jobseeker Dashboard view file
     useEffect(() => {
-        if (location.state?.targetTab) {
-            setActiveTab(location.state.targetTab);
+        const targetTab = location.state?.targetTab;
+        const targetJobId = location.state?.targetJobId;
+        const targetApplicationId = location.state?.targetApplicationId;
+        const targetManagerId = location.state?.targetManagerId;
+        const targetTicketId = location.state?.targetTicketId;
 
-            // Wipe path records cleanly so future user actions function natively
-            window.history.replaceState({ ...window.history.state, targetTab: undefined }, document.title);
-        }
-    }, [location.state]);
+        if (!targetTab) return;
 
-    useEffect(() => {
-        // 1. Define the handler at the top level of the useEffect so cleanup can see it
-        const handleStateRefresh = () => {
-            // Read directly from window history to bypass race-condition wipes
-            const currentHistoryState = window.history.state;
-            if (currentHistoryState?.targetTab) {
-                setActiveTab(currentHistoryState.targetTab);
-                sessionStorage.setItem("employerActiveTab", currentHistoryState.targetTab);
+        if (targetTab === 'ViewApplicants' && targetJobId) {
+            const job = PostedJob.find(j => String(j.id) === String(targetJobId));
+            if (job) {
+                setSelectedJob(job);
+                setActiveTab('ViewApplicants');
+                setPendingTargetApplicationId(targetApplicationId ?? null);
+            } else {
+                // job not loaded yet, or doesn't exist -> fall back to the list
+                setActiveTab('My job post');
             }
-        };
-
-        // 2. Attach the window event listener
-        window.addEventListener('popstate', handleStateRefresh);
-
-        // 3. Process the state values
-        if (location.state?.targetTab) {
-            const targetTab = location.state.targetTab;
-
-            setActiveTab(targetTab);
-            sessionStorage.setItem("employerActiveTab", targetTab);
-
-            window.history.replaceState({ ...window.history.state, targetTab: undefined }, document.title);
         } else {
-            handleStateRefresh();
+            setActiveTab(targetTab);
+            if (targetTab === 'AccountManager') {
+                setPendingTargetManagerId(targetManagerId ?? null);   // ← add this
+            }
+            if (targetTab === 'MyTickets') {
+                setPendingTargetTicketId(targetTicketId ?? null);
+            }
         }
 
-        return () => window.removeEventListener('popstate', handleStateRefresh);
-    }, [location.state, location.pathname]);
+        navigate(location.pathname, { replace: true, state: {} });
+    }, [location.state, PostedJob]);
 
     // ============ MEMOIZED STATS ============
     const jobStats = useMemo(() => {
@@ -474,6 +475,11 @@ export const EmployerDashboard = () => {
                                     )}
                                     <div className='Enav-item'>Account Manager</div>
                                 </div>
+                                <div onClick={() => setActiveTab('MyTickets')} className={activetab === 'MyTickets' ? "Active" : 'Navbox'}>
+                                    <img src={TicketIcon} height={15} width={15} alt="My Tickets" />
+                                    <div className='Enav-item'>My Tickets</div>
+                                </div>
+
                                 <div onClick={() => setShowLogoutModal(true)} className={activetab === 'Logout' ? "Active" : 'Navbox'} >
                                     {activetab === 'Logout' ? <img src={LogoutAct} height={15} width={15} alt="Logout" /> : <img src={Logout} height={15} width={15} alt="Logout" />}
                                     <div className='Enav-item'>Logout</div>
@@ -518,6 +524,9 @@ export const EmployerDashboard = () => {
                                     ) : (
                                         <img src={AdminManager} height={15} width={15} alt="Account Manager" />
                                     )}
+                                </div>
+                                <div onClick={() => setActiveTab('MyTickets')} className={activetab === 'MyTickets' ? "Active1" : 'Navbox1'} title="My Tickets">
+                                    <img src={TicketIcon} height={15} width={15} alt="My Tickets" />
                                 </div>
                                 <div onClick={() => setShowLogoutModal(true)} className={activetab === 'Logout' ? "Active1" : 'Navbox1'} style={{ cursor: 'pointer' }} title="Logout from your account">
                                     {activetab === 'Logout' ? <img src={LogoutAct} height={15} width={15} alt="Logout" /> : <img src={Logout} height={15} width={15} alt="Logout" />}
@@ -753,7 +762,6 @@ export const EmployerDashboard = () => {
                     )}
 
                     {activetab === 'Post a Job' && verificationStatus.isVerified && (
-                       
                         <PostJobForm
                             onCancel={() => { setEditJobData(null); setActiveTab('Dashboard'); }}
                             showHomeIcon={location.state?.fromFooter}
@@ -771,9 +779,9 @@ export const EmployerDashboard = () => {
                             <ViewApplicants
                                 job={selectedJob}
                                 onBack={() => setActiveTab('My job post')}
+                                targetApplicationId={pendingTargetApplicationId}
                             />
                         )}
-
                     {activetab === 'Find Talent' && verificationStatus.isVerified && (
                         <FindTalent showHomeIcon={location.state?.fromFooter} />
                     )}
@@ -789,7 +797,10 @@ export const EmployerDashboard = () => {
                     {activetab === 'My Profile' && (
                         <AboutYourCompany hideNavigation={true} setActiveTab={setActiveTab} />
                     )}
-                    {activetab === 'AccountManager' && <AddManagerSupport />}
+                    {activetab === 'AccountManager' && <AddManagerSupport targetManagerId={pendingTargetManagerId} />}
+                    {activetab === 'MyTickets' && (
+                        <RaisedTickets role="employer" onBack={() => setActiveTab('Dashboard')} targetTicketId={pendingTargetTicketId} />
+                    )}
                 </div>
             </div>
             <LogoutModal show={showLogoutModal} onClose={() => setShowLogoutModal(false)} onConfirm={handleLogoutConfirm} />

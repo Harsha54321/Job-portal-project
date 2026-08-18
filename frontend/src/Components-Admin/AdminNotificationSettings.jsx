@@ -39,6 +39,7 @@ export const AdminNotificationSettings = () => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
+  const [quietHoursEnabled, setQuietHoursEnabled] = useState(false);
   const [startTime, setStartTime] = useState("22:00");
   const [endTime, setEndTime] = useState("07:00");
   const [activeDays, setActiveDays] = useState(["Mon", "Tue", "Wed", "Thu", "Fri"]);
@@ -92,6 +93,7 @@ export const AdminNotificationSettings = () => {
 
       // ── Quiet hours ───────────────────────────────────────
       const qh = quietRes.data?.quiet_hours || {};
+      if (typeof qh.enabled === 'boolean') setQuietHoursEnabled(qh.enabled);
       if (qh.start_time) setStartTime(qh.start_time.slice(0, 5));
       if (qh.end_time) setEndTime(qh.end_time.slice(0, 5));
       if (qh.timezone) setTimezone(qh.timezone);
@@ -125,6 +127,7 @@ export const AdminNotificationSettings = () => {
         }),
         api.patch('quiet-hours/update/', {
           quiet_hours: {
+            enabled: quietHoursEnabled,
             start_time: startTime,
             end_time: endTime,
             timezone: timezone,
@@ -384,11 +387,27 @@ export const AdminNotificationSettings = () => {
           </div>
 
           {/* Quiet Hours panel */}
-          <div className="Adm-Not-panel Adm-Not-quiet-hours-panel" title="Under Implementation" style={{ opacity: 0.5 }}>
-            <h2 className="Adm-Not-panel-title">Quiet Hours</h2>
-            <p className="Adm-Not-panel-subtitle">Set quiet hours to avoid notification at certain times</p>
+          <div className="Adm-Not-panel Adm-Not-quiet-hours-panel">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div>
+                <h2 className="Adm-Not-panel-title">Quiet Hours</h2>
+                <p className="Adm-Not-panel-subtitle">Set quiet hours to avoid notification at certain times(only for admin) </p>
+            </div>
 
-            <div className="Adm-Not-time-inputs">
+              <label className="Adm-Not-switch">
+                <input
+                  type="checkbox"
+                  checked={quietHoursEnabled}
+                  onChange={() => setQuietHoursEnabled(prev => !prev)}
+                />
+                <span className="Adm-Not-slider"></span>
+              </label>
+            </div>
+
+            <div
+              className="Adm-Not-time-inputs"
+              style={{ opacity: quietHoursEnabled ? 1 : 0.5 }}
+            >
               <div className="Adm-Not-time-group">
                 <label>Start time</label>
                 <div className="Adm-Not-time-select-wrapper">
@@ -398,7 +417,7 @@ export const AdminNotificationSettings = () => {
                     type="time"
                     onChange={(e) => setStartTime(e.target.value)}
                     value={startTime}
-                    disabled
+                    disabled={!quietHoursEnabled}
                   />
                 </div>
               </div>
@@ -411,31 +430,37 @@ export const AdminNotificationSettings = () => {
                     type="time"
                     onChange={(e) => setEndTime(e.target.value)}
                     value={endTime}
-                    disabled
+                    disabled={!quietHoursEnabled}
                   />
                 </div>
               </div>
             </div>
 
-            <div className="Adm-Not-day-picker">
+            <div
+              className="Adm-Not-day-picker"
+              style={{ opacity: quietHoursEnabled ? 1 : 0.5 }}
+            >
               {daysOfWeek.map(day => (
                 <button
                   key={day}
                   className={activeDays.includes(day) ? "day-btn active" : "day-btn"}
                   onClick={() => toggleDay(day)}
-                  disabled
+                  disabled={!quietHoursEnabled}
                 >
                   {day}
                 </button>
               ))}
             </div>
 
-            <div className="Adm-Not-timezone-select-wrapper">
+            <div
+              className="Adm-Not-timezone-select-wrapper"
+              style={{ opacity: quietHoursEnabled ? 1 : 0.5 }}
+            >
               <select
                 className="Adm-Not-timezone-select"
                 value={timezone}
                 onChange={(e) => setTimezone(e.target.value)}
-                disabled
+                disabled={!quietHoursEnabled}
               >
                 {timezoneOptions.map(opt => (
                   <option key={opt.value} value={opt.value}>

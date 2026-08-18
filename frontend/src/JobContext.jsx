@@ -96,6 +96,8 @@ export const JobProvider = ({ children }) => {
                 id: notification.id,
                 text: notification.message,
                 isRead: notification.is_read,
+                related_obj_id: notification.related_object_id,
+                event_type: notification.event_type,
                 time: new Date(notification.created_at).toLocaleString('en-GB', {
                     day: 'numeric',
                     month: 'short',
@@ -104,7 +106,7 @@ export const JobProvider = ({ children }) => {
                     minute: '2-digit',
                     hour12: true
                 }),
-                targetId: notification.user
+                // targetId: notification.user
             }));
 
             const userType = sessionStorage.getItem("user_type");

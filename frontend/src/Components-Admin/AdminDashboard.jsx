@@ -42,6 +42,7 @@ import Highlight from '../assets/Employer/HighLight-Active.png'
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { HighligtedJobs } from './HighligtedJobs'
 import { PublishedPlans } from './PublishedPlans'
+import { MembershipHub } from './MembershipHub'
 import { SupportHub } from './SupportHub'
 import { AdminSettings } from './AdminSettings'
 import api from '../api/axios'
@@ -195,6 +196,8 @@ export const AdminDashboard = () => {
             sessionStorage.removeItem("admin_id");
             sessionStorage.removeItem("adminActiveTab");
             sessionStorage.removeItem("adminSubTab");
+            sessionStorage.removeItem("adminSupportHubTab");
+            sessionStorage.removeItem("adminMembershipTab");
             sessionStorage.removeItem("umIsDetailView");
             sessionStorage.removeItem("umSelectedUser");
             sessionStorage.clear();
@@ -712,7 +715,7 @@ export const AdminDashboard = () => {
                         <ActivityMonitor currentTab={subTab} onTabChange={setSubTab} />
                     )}
                     {activetab === 'User Management' && (<UserManagement />)}
-                    {activetab === 'Membership' && (<PublishedPlans />)}
+                    {activetab === 'Membership' && (<MembershipHub />)}
                     {activetab === 'SupportHub' && (<SupportHub />)}
                     {activetab === 'AccountManager' && <AddManagerContact />}
                     {activetab === 'settings' && (<AdminSettings />)}

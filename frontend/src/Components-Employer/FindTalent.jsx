@@ -534,6 +534,10 @@ export const FindTalent = ({ onUpgradeClick }) => {
       const userType = user.user?.user_type || user.user_type || user.role || user.profile?.user_type;
       if (userType === 'employer') return false;
 
+      // if (user.settings?.hide_cv || user.hide_cv) return false;
+      // if (user.profile?.hide_cv || user.hide_cv) return false;
+      if (user.hide_cv) return false;
+
       const extractText = (data) => {
         if (!data) return [];
         const arr = Array.isArray(data) ? data : [data];

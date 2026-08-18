@@ -80,6 +80,9 @@ from .serializers import (
     SaveDeviceTokenSerializer,
     AccountManagerSerializer,
     EmployerAccountManagerAssignmentSerializer,
+    Payment,
+    JobseekerChangePasswordSerializer,
+    Jobseeker2FAStatusSerializer,
 
 )
 
@@ -388,6 +391,32 @@ class JobSeekerRegistrationView(APIView):
                 event_type="jobseeker_signup",
                 notification_type="system"
             )
+            #new added 
+
+            admins = User.objects.filter(
+                user_type="admin"
+            )
+
+            for admin in admins:
+
+                NotificationService.create_notification(
+
+                    recipient=admin,
+
+                    title="New Jobseeker Signup",
+
+                    message=(
+                        f"New jobseeker account "
+                        f"has been created: {user.email}"
+                    ),
+
+                    category="user_mgmt",
+
+                    event_type="jobseeker_signup",
+
+                    notification_type="system"
+                )
+                #--
             return Response(
                 {
                     "message": (
@@ -518,7 +547,7 @@ class EmployerRegistrationView(APIView):
             if 'username' in errors:
                 return Response(
                     {
-                        "error": "Username already exists. Please choose a different username.",
+                        "error": "Username already exists. Please choose a different username.or wait for admin approval",
                         "field": "username",
                         "details": errors['username']
                     },
@@ -570,15 +599,29 @@ class EmployerRegistrationView(APIView):
         #     event_type="employer_signup",
         #     notification_type="system"
         # )
-        NotificationService.create_notification(
-            recipient=user,
-            title="Employer Account Created",
-            message="Your employer account has been created successfully.",
-
-            category="new_signup",
-            event_type="employer_signup",
-            notification_type="system"
+         #new added   
+        admins = User.objects.filter(
+            user_type="admin"
         )
+
+        for admin in admins:
+
+            NotificationService.create_notification(
+
+                recipient=admin,
+
+                title="New Employer Signup",
+
+                message=(
+                    f"New employer account "
+                    f"has been created: {user.email}"
+                ),
+
+                event_type="employer_signup",
+
+                notification_type="system"
+            )
+            #--
 
         # RESPONSE
         return Response(
@@ -778,6 +821,7 @@ class JobSeekerListView(generics.ListAPIView):
             'experiences',
             'certifications',
         )
+        qs = qs.exclude(user__settings__hide_cv=True)
  
         # Search filter
         search = self.request.query_params.get('search', '').strip()
@@ -1483,7 +1527,7 @@ class CreateJobPreviewView(generics.CreateAPIView):
                 category="alert",
                 event_type="job_pending_approval",
                 notification_type="system",
-                related_object_id=job.id,
+                related_object_id=job.id
             )
  
     def handle_exception(self, exc):
@@ -1622,32 +1666,6 @@ class UpdateJobView(generics.UpdateAPIView):
         print("PATCH request received for job update")
         print("Request data:", request.data)
         print("=" * 50)
- 
-        job = self.get_object()
-        if job.approval_status == PostAJob.ApprovalStatus.APPROVED:
-            subscription = Subscription.objects.filter(
-                user=request.user,
-                status='active'
-            ).select_related('plan').first()
- 
-            platform = None
-            if subscription:
-                platform = EmployerPlatformSettings.objects.filter(
-                    plan=subscription.plan,
-                    account_status=request.user.status
-                ).first()
-                if not platform:
-                    # Fallback if no row exists for this exact account_status
-                    platform = EmployerPlatformSettings.objects.filter(
-                        plan=subscription.plan
-                    ).first()
- 
-            if not platform or not platform.allow_edit_after_approval:
-                return Response(
-                    {"detail": "Editing approved jobs is disabled."},
-                    status=status.HTTP_403_FORBIDDEN
-                )
- 
         return super().patch(request, *args, **kwargs)
  
 
@@ -1887,7 +1905,7 @@ class ApplyJobView(generics.CreateAPIView):
                 category="alert",
                 event_type="new_job_application",
                 notification_type="application",
-                related_object_id=job.id
+                related_object_id=instance.id
             )
             NotificationService.create_notification(
                 recipient=request.user,
@@ -1899,7 +1917,7 @@ class ApplyJobView(generics.CreateAPIView):
                 category="application_update",
                 event_type="application_submitted",
                 notification_type="application",
-                related_object_id=job.id
+                related_object_id=instance.id
             )
         detail_serializer = (
 
@@ -2139,7 +2157,29 @@ class WithdrawApplicationView(generics.UpdateAPIView):
 
     related_object_id=application.id
 )
- 
+        #new added 
+        for admin in User.objects.filter(user_type="admin"):
+
+            NotificationService.create_notification(
+
+                recipient=admin,
+
+                title="Application Withdrawn",
+
+                message=(
+                    f"{application.user.username} "
+                    f"withdrew their application "
+                    f"for '{application.job.job_title}'."
+                ),
+
+                event_type="application_withdrawn",
+
+                notification_type="application",
+
+                related_object_id=application.id
+            )
+            #--
+        
 #-------------------------------------------------------------------------------------
 class JobApplicationDetailView(
     generics.RetrieveAPIView
@@ -2397,6 +2437,13 @@ class ConversationDetailView(generics.RetrieveAPIView):
    
     def get_serializer_context(self):
         return {'request': self.request}
+    def retrieve(self, request, *args, **kwargs):
+        # Update user activity timestamp
+        User.objects.filter(id=request.user.id).update(
+            is_online=True,
+            last_seen=timezone.now()
+        )
+        return super().retrieve(request, *args, **kwargs)
  
 
 class ConversationMessagesView(APIView):
@@ -2410,6 +2457,11 @@ class ConversationMessagesView(APIView):
                 {'error': 'You are not a participant in this conversation'},
                 status=status.HTTP_403_FORBIDDEN
             )
+        # Update user activity timestamp
+        User.objects.filter(id=request.user.id).update(
+            is_online=True,
+            last_seen=timezone.now()
+        )
        
         messages = conversation.messages.all()
         serializer = MessageSerializer(messages, many=True)
@@ -2440,6 +2492,9 @@ class SendMessageView(APIView):
     permission_classes = [IsAuthenticated]
    
     def post(self, request):
+        request.user.is_online = True
+        request.user.last_seen = timezone.now()
+        request.user.save(update_fields=['is_online', 'last_seen'])
         serializer = SendMessageSerializer(
             data=request.data,
             context={'request': request}
@@ -2457,7 +2512,7 @@ class SendMessageView(APIView):
                 category="message",
                 event_type="new_message",
                 notification_type="message",
-                related_object_id=message.id
+                related_object_id=message.conversation_id
             )
 #----------------------------------------------------------------------------------------------------------------------
             return Response(
@@ -3490,6 +3545,23 @@ class AdminResetPasswordConfirmView(APIView):
             # Mark token used
             reset_token.is_used = True
             reset_token.save(update_fields=["is_used"])
+            #new added 
+            NotificationService.create_notification(
+
+                            recipient=user,
+
+                            title="Password Reset Successful",
+
+                            message=(
+                                "Your admin account password "
+                                "has been reset successfully."
+                            ),
+
+                            event_type="password_reset_success",
+
+                            notification_type="system"
+                        )
+            #--
  
             # Generate new JWT tokens
             refresh = RefreshToken.for_user(user)
@@ -3535,7 +3607,30 @@ class ContactMessageCreateAPIView(APIView):
         serializer = ContactMessageSerializer(data=data)
 
         if serializer.is_valid():
-            serializer.save(user=user)
+            contact_message = serializer.save(user=user)
+            #newly added
+            for admin in User.objects.filter(user_type="admin"):
+
+                NotificationService.create_notification(
+
+                    recipient=admin,
+
+                    title="New Contact Message",
+
+                    message=(
+                        f"A new contact message "
+                        f"was submitted by "
+                        f"{user.email if user else 'Guest'}."
+                    ),
+
+                    event_type="contact_message_submitted",
+
+                    notification_type="system",
+
+                    related_object_id=contact_message.id
+                )
+                #--
+               
             return Response(
                 {
                     "status": True,
@@ -3729,9 +3824,33 @@ class SubmitCompanyVerification(APIView):
             )
         )
         if serializer.is_valid():
-            serializer.save(
-                employer=request.user
-            )
+            verification = serializer.save(
+        employer=request.user
+    )
+            #new added
+            for admin in User.objects.filter(
+                user_type="admin"
+            ):
+
+                NotificationService.create_notification(
+
+                    recipient=admin,
+
+                    title="New Company Verification",
+
+                    message=(
+                        f"Company verification submitted by "
+                        f"{request.user.email} "
+                        f"and is pending approval."
+                    ),
+
+                    event_type="company_verification_submitted",
+
+                    notification_type="system",
+
+                    related_object_id=verification.id
+                )
+                #--
             return Response(
                 {
                     "message": (
@@ -3896,7 +4015,29 @@ class CompanyProfileCreateView(APIView):
                 notification_type="system",
                 related_object_id=company.id
             )
+            #new added 
+            for admin in User.objects.filter(user_type="admin"):
 
+                NotificationService.create_notification(
+
+                    recipient=admin,
+
+                    title="New Company Profile Created",
+
+                    message=(
+                        f"Company profile "
+                        f"'{company.company_name}' "
+                        f"has been created by "
+                        f"{request.user.email}."
+                    ),
+
+                    event_type="company_profile_created",
+
+                    notification_type="system",
+
+                    related_object_id=company.id
+                )
+            #--
             return Response(
                 {
                     "message": (
@@ -4215,7 +4356,9 @@ class VerifyLoginOTPView(APIView):
         refresh = RefreshToken.for_user(user)
         from django.utils import timezone
         user.login_time = timezone.now()
-        user.save(update_fields=["login_time"])
+        user.is_online = True
+        user.last_seen = timezone.now()    
+        user.save(update_fields=["login_time", "is_online", "last_seen"])
  
         return Response({
             "message": "Login successful",
@@ -4545,6 +4688,30 @@ class CreatePlanView(APIView):  # newly added 14-05
 
                 related_object_id=plan.id
             )
+
+            # new added
+            for admin in User.objects.filter(
+                user_type="admin"
+            ):
+
+                NotificationService.create_notification(
+
+                    recipient=admin,
+
+                    title="New Subscription Plan Created",
+
+                    message=(
+                        f"A new subscription plan "
+                        f"'{plan.name}' "
+                        f"has been created."
+                    ),
+
+                    event_type="new_subscription_plan",
+
+                    notification_type="system",
+
+                    related_object_id=plan.id
+                )
 #---------------------------------------------------------------------------------------------
         # Create settings for this plan
 
@@ -4611,6 +4778,55 @@ class CreateOrderView(APIView):
         tax_rate = Decimal(str(plan.tax)) if plan.tax else Decimal('18')
         gst_amount = price_after_discount * (tax_rate / Decimal('100'))
         total_price = price_after_discount + gst_amount
+            # =============================================
+        # IDEMPOTENCY GUARD: prevent duplicate orders from
+        # double-clicks / double form submits. If this same
+        # user already created a pending order for this exact
+        # plan+amount in the last 60 seconds, reuse it instead
+        # of creating a brand new Payment + Razorpay order.
+        # =============================================
+        from datetime import timedelta
+        from django.utils import timezone as dj_timezone
+        from django.conf import settings
+ 
+        recent_pending = Payment.objects.filter(
+            user=request.user,
+            plan=plan,
+            status="pending",
+            amount=total_price,
+            created_at__gte=dj_timezone.now() - timedelta(seconds=60)
+        ).order_by('-created_at').first()
+        if recent_pending:
+            price_breakdown = {
+                'duration': duration,
+                'duration_days': duration_days,
+                'base_price': float(base_price),
+                'discount_percent': float(discount_percent),
+                'discount_amount': float(discount_amount),
+                'price_after_discount': float(price_after_discount),
+                'tax_rate': float(tax_rate),
+                'tax_amount': float(gst_amount),
+                'cgst': float(gst_amount / 2),
+                'sgst': float(gst_amount / 2),
+                'total': float(total_price)
+            }
+ 
+            return Response({
+                "order_id": recent_pending.razorpay_order_id,
+                "amount": int(total_price * 100),
+                "currency": "INR",
+                "payment_db_id": recent_pending.id,
+                "razorpay_key": settings.RAZORPAY_KEY,
+                "duration": duration,
+                "duration_days": duration_days,
+                "plan": {
+                    "id": plan.id,
+                    "name": plan.name,
+                    "color": plan.color,
+                    "summary": plan.summary
+                },
+                "price_breakdown": price_breakdown
+            })
         
         # Create Razorpay order
         import razorpay
@@ -4634,6 +4850,32 @@ class CreateOrderView(APIView):
             amount=total_price,
             status="pending",
         )
+        #new added 
+        for admin in User.objects.filter(
+            user_type="admin"
+        ):
+
+            NotificationService.create_notification(
+
+                recipient=admin,
+
+                title="New Subscription Order",
+
+                message=(
+                    f"{request.user.email} "
+                    f"created a new order for "
+                    f"'{plan.name}' "
+                    f"with a total amount of "
+                    f"₹{total_price}."
+                ),
+
+                event_type="subscription_order_created",
+
+                notification_type="system",
+
+                related_object_id=payment.id
+            )
+            #--
         
         # Optional: Store price breakdown in a separate variable or log it
         price_breakdown = {
@@ -4693,21 +4935,6 @@ class CurrentSubscriptionView(APIView):
             and sub.end_date < timezone.now()
         )
  
-     # Expose the platform's "edit after approval" toggle for this plan
-        # so the employer UI can enable/disable the Edit Job option.
-        platform = EmployerPlatformSettings.objects.filter(
-            plan=sub.plan,
-            account_status=request.user.status
-        ).first()
-        if not platform:
-            # Fallback if no row exists for this exact account_status
-            platform = EmployerPlatformSettings.objects.filter(
-                plan=sub.plan
-            ).first()
-        data["allow_edit_after_approval"] = (
-            platform.allow_edit_after_approval if platform else False
-        )
- 
         return Response(data)
     
     
@@ -4755,6 +4982,30 @@ class CancelSubscriptionView(APIView):
                 notification_type="system",
                 related_object_id=sub.id
             )
+                        # new added
+            for admin in User.objects.filter(
+                user_type="admin"
+            ):
+
+                NotificationService.create_notification(
+
+                    recipient=admin,
+
+                    title="Subscription Cancelled",
+
+                    message=(
+                        f"{request.user.email} "
+                        f"cancelled their subscription "
+                        f"for '{sub.plan.name}'."
+                    ),
+
+                    event_type="subscription_cancelled",
+
+                    notification_type="system",
+
+                    related_object_id=sub.id
+                )
+                #--
     
             return Response(
                 {
@@ -4811,6 +5062,15 @@ class CancelSubscriptionView(APIView):
     
             sub.status = "active"
             sub.save()
+            for admin in User.objects.filter(user_type="admin"):
+                NotificationService.create_notification(
+                    recipient=admin,
+                    title="Subscription Reactivated",
+                    message=f"{request.user.email} reactivated their subscription for '{sub.plan.name}'.",
+                    event_type="subscription_reactivated",
+                    notification_type="system",
+                    related_object_id=sub.id
+                )
     
             return Response(
                 {
@@ -4997,7 +5257,8 @@ class VerifyPaymentView(APIView):
                 user=request.user,
                 plan=payment.plan,
                 status='active',
-                end_date=end_date
+                end_date=end_date,
+                payment=payment,
             )
 
               # ─────────────────────────────
@@ -5382,7 +5643,7 @@ class GoogleLoginView(APIView):
                 # ✅ UPDATE LOGIN_TIME FOR EXISTING USER
                 from django.utils import timezone
                 user.login_time = timezone.now()
-                user.save(update_fields=["login_time"])
+                user.save(update_fields=['is_online', 'last_seen'])
                 
                 return Response(
                     {
@@ -5486,7 +5747,7 @@ from .models import (
     AdminTrustedDevice
 
 )
- 
+
 from .services import Admin2FAService, AdminSecurityService
 logger = logging.getLogger(__name__)
 class AdminLoginView(APIView):
@@ -5909,7 +6170,131 @@ class AdminCompanyDetailView(APIView):
         )
 
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+# ── Admin: Billing (Order + Subscription combined) ─────────────────────────
+# Backs the single, combined Admin Membership > Billing screen. Lets both
+# subscription_order_created and subscription_cancelled notifications
+# deep-link into the same list (matching on Payment.id or the linked
+# Subscription.id respectively).
  
+class AdminBillingListView(APIView):
+    # permission_classes = [IsAuthenticated, IsAdminUserType]  # enable in prod
+ 
+    def get(self, request):
+        queryset = Payment.objects.select_related(
+            'user', 'plan', 'user__employer_profile', 'user__employer_profile__company'
+        ).prefetch_related('subscriptions').order_by('-created_at')
+        serializer = AdminBillingSerializer(queryset, many=True)
+        return Response(serializer.data)
+ 
+ 
+class AdminBillingDetailView(APIView):
+    # permission_classes = [IsAuthenticated, IsAdminUserType]  # enable in prod
+ 
+    def get(self, request, pk):
+        payment = get_object_or_404(
+            Payment.objects.select_related(
+                'user', 'plan', 'user__employer_profile', 'user__employer_profile__company'
+            ).prefetch_related('subscriptions'), pk=pk
+        )
+        serializer = AdminBillingSerializer(payment)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+ 
+ 
+ 
+    STATUS_TRANSITIONS = {
+        "Pending": ["Verified", "Reject", "Hold"],
+        "Hold": ["Verified", "Reject","Pending"],
+        "Reject": ["Pending","Hold","Verified"],
+        "Verified": ["Hold", "Reject","Pending"]
+    }
+ 
+    def patch(self, request, pk):
+        try:
+            obj = CompanyVerification.objects.get(id=pk)
+        except CompanyVerification.DoesNotExist:
+            return Response(
+                {"error": "Company not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+ 
+        # 🔹 Only status allowed
+        if set(request.data.keys()) != {"status"}:
+            return Response(
+                {"error": "Only 'status' field is allowed"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+ 
+        new_status = request.data.get("status")
+ 
+        valid_values = [choice[0] for choice in CompanyVerification.STATUS_CHOICES]
+ 
+        # Validate value
+        if new_status not in valid_values:
+            return Response(
+                {"error": f"Invalid value. Allowed: {valid_values}"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+ 
+        #  Transition check
+        allowed = self.STATUS_TRANSITIONS.get(obj.status, [])
+ 
+        if new_status not in allowed:
+            return Response(
+                {
+                    "error": f"Cannot change from {obj.status} to {new_status}",
+                    "allowed": allowed
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+ 
+        previous = obj.status
+        obj.status = new_status
+        obj.save()
+        NotificationService.create_notification(
+            recipient=obj.employer,
+            title="Company Verification Updated",
+            message=(
+                f"Your company verification "
+                f"status has been changed from "
+                f"'{previous}' to '{new_status}'."
+            ),
+            category="verification",
+            event_type="company_verification_updated",
+            notification_type="system",
+            related_object_id=obj.id
+        )
+        #newly added
+        for admin in User.objects.filter(user_type="admin").exclude(id=request.user.id):
+ 
+            NotificationService.create_notification(
+ 
+                recipient=admin,
+ 
+                title="Company Verification Updated",
+ 
+                message=(
+                    f"Company verification for "
+                    f"{obj.employer.email} "
+                    f"was changed from "
+                    f"'{previous}' to '{new_status}'."
+                ),
+ 
+                event_type="company_verification_updated",
+ 
+                notification_type="system",
+ 
+                related_object_id=obj.id
+            )
+            #--
+ 
+        return Response({
+            "message": "Updated successfully",
+            "previous": previous,
+            "current": obj.status
+        })
+
+
 class UpdateCompanyStatusView(APIView):
  
     STATUS_TRANSITIONS = {
@@ -5974,6 +6359,29 @@ class UpdateCompanyStatusView(APIView):
             notification_type="system",
             related_object_id=obj.id
         )
+        #newly added
+        for admin in User.objects.filter(user_type="admin").exclude(id=request.user.id):
+
+            NotificationService.create_notification(
+
+                recipient=admin,
+
+                title="Company Verification Updated",
+
+                message=(
+                    f"Company verification for "
+                    f"{obj.employer.email} "
+                    f"was changed from "
+                    f"'{previous}' to '{new_status}'."
+                ),
+
+                event_type="company_verification_updated",
+
+                notification_type="system",
+
+                related_object_id=obj.id
+            )
+            #--
  
         return Response({
             "message": "Updated successfully",
@@ -6300,6 +6708,29 @@ class AdminJobApproveView(APIView):
  
             related_object_id=job.id
         )
+        #new added
+        for admin in User.objects.filter(user_type="admin").exclude(id=request.user.id):
+
+            NotificationService.create_notification(
+
+                recipient=admin,
+
+                title="Job Approved",
+
+                message=(
+                    f"Job '{job.job_title}' "
+                    f"submitted by {job.employer.email} "
+                    f"has been approved by "
+                    f"{request.user.email}."
+                ),
+
+                event_type="job_approved",
+
+                notification_type="system",
+
+                related_object_id=job.id
+            )
+            #--
 
         return Response({
             "message": "Job approved successfully",
@@ -6346,6 +6777,33 @@ class AdminJobRejectView(APIView):
             notification_type="system",
             related_object_id=job.id
         )
+        #newly added
+        for admin in User.objects.filter(
+            user_type="admin"
+        ).exclude(
+            id=request.user.id
+        ):
+
+            NotificationService.create_notification(
+
+                recipient=admin,
+
+                title="Job Rejected",
+
+                message=(
+                    f"Job '{job.job_title}' "
+                    f"submitted by {job.employer.email} "
+                    f"was rejected by "
+                    f"{request.user.email}."
+                ),
+
+                event_type="job_rejected",
+
+                notification_type="system",
+
+                related_object_id=job.id
+            )
+            #--
 
         return Response({
             "message": "Job rejected successfully",
@@ -6382,7 +6840,30 @@ class AdminJobFlagView(APIView):
                 event_type="job_flagged",
                 notification_type="system",
                 related_object_id=job.id
-            )       
+            )
+            #--
+            for admin in User.objects.filter(user_type="admin").exclude(id=request.user.id):
+
+                NotificationService.create_notification(
+
+                    recipient=admin,
+
+                    title="Job Flagged",
+
+                    message=(
+                        f"Job '{job.job_title}' "
+                        f"submitted by {job.employer.email} "
+                        f"was flagged by "
+                        f"{request.user.email}."
+                    ),
+
+                    event_type="job_flagged",
+
+                    notification_type="system",
+
+                    related_object_id=job.id
+                )  
+                #--     
         return Response({
             "message": f"Job {'flagged' if job.flagged else 'unflagged'} successfully",
             "job_id": job.id,
@@ -6561,35 +7042,273 @@ class AdminJobDetailView(APIView):
         serializer = JobDetailSerializer(job)
         return Response(serializer.data)
 
+    
+#new added full view 
 class AdminUpdateJobStatusView(APIView):
+
     permission_classes = [
         IsAuthenticated,
         IsAdminUserType
     ]
+
     def patch(self, request, pk):
+
         try:
             job = PostAJob.objects.get(id=pk)
+
         except PostAJob.DoesNotExist:
+
             return Response(
                 {"error": "Job not found"},
                 status=404
             )
+
         action = request.data.get("action")
+
+        # =====================================================
+        # APPROVE
+        # =====================================================
+
         if action == "approve":
             job.approval_status = "approved"
             job.flagged = False
             job.is_published = True
+
+            job.save()
+
+            # Employer notification
+            NotificationService.create_notification(
+
+                recipient=job.employer,
+
+                title="Job Approved",
+
+                message=(
+                    f"Your job "
+                    f"'{job.job_title}' "
+                    f"has been approved and is now live!"
+                ),
+
+                event_type="job_approved",
+
+                notification_type="system",
+
+                related_object_id=job.id
+            )
+
+            # Other admins
+            for admin in User.objects.filter(
+                user_type="admin"
+            ).exclude(
+                id=request.user.id
+            ):
+
+                NotificationService.create_notification(
+
+                    recipient=admin,
+
+                    title="Job Approved",
+
+                    message=(
+                        f"Job '{job.job_title}' "
+                        f"submitted by {job.employer.email} "
+                        f"was approved by "
+                        f"{request.user.email}."
+                    ),
+
+                    event_type="job_approved",
+
+                    notification_type="system",
+
+                    related_object_id=job.id
+                )
+
+        # =====================================================
+        # HOLD
+        # =====================================================
+
         elif action == "hold":
+
             job.approval_status = "pending"
             job.is_published = False
+
+            job.save()
+
+            # Employer notification
+            NotificationService.create_notification(
+
+                recipient=job.employer,
+
+                title="Job Put On Hold",
+
+                message=(
+                    f"Your job "
+                    f"'{job.job_title}' "
+                    f"has been put on hold "
+                    f"by admin."
+                ),
+
+                event_type="job_hold",
+
+                notification_type="system",
+
+                related_object_id=job.id
+            )
+
+            # Other admins
+            for admin in User.objects.filter(
+                user_type="admin"
+            ).exclude(
+                id=request.user.id
+            ):
+
+                NotificationService.create_notification(
+
+                    recipient=admin,
+
+                    title="Job Put On Hold",
+
+                    message=(
+                        f"Job '{job.job_title}' "
+                        f"submitted by {job.employer.email} "
+                        f"was put on hold by "
+                        f"{request.user.email}."
+                    ),
+
+                    event_type="job_hold",
+
+                    notification_type="system",
+
+                    related_object_id=job.id
+                )
+
+        # =====================================================
+        # FLAG
+        # =====================================================
+
         elif action == "flag":
+
             job.flagged = True
+
+            job.save()
+
+            # Employer notification
+            NotificationService.create_notification(
+
+                recipient=job.employer,
+
+                title="Job Flagged",
+
+                message=(
+                    f"Your job "
+                    f"'{job.job_title}' "
+                    f"was flagged by admin."
+                ),
+
+                event_type="job_flagged",
+
+                notification_type="system",
+
+                related_object_id=job.id
+            )
+
+            # Other admins
+            for admin in User.objects.filter(
+                user_type="admin"
+            ).exclude(
+                id=request.user.id
+            ):
+
+                NotificationService.create_notification(
+
+                    recipient=admin,
+
+                    title="Job Flagged",
+
+                    message=(
+                        f"Job '{job.job_title}' "
+                        f"submitted by {job.employer.email} "
+                        f"was flagged by "
+                        f"{request.user.email}."
+                    ),
+
+                    event_type="job_flagged",
+
+                    notification_type="system",
+
+                    related_object_id=job.id
+                )
+
+        # =====================================================
+        # DELETE
+        # =====================================================
+
         elif action == "delete":
+
+            # Save values before deleting
+            job_id = job.id
+            job_title = job.job_title
+            employer = job.employer
+
+            # Employer notification BEFORE delete
+            NotificationService.create_notification(
+
+                recipient=employer,
+
+                title="Job Deleted",
+
+                message=(
+                    f"Your job "
+                    f"'{job_title}' "
+                    f"has been permanently deleted by admin."
+                ),
+
+                event_type="job_deleted",
+
+                notification_type="system",
+
+                related_object_id=job_id
+            )
+
+            # Other admins
+            for admin in User.objects.filter(
+                user_type="admin"
+            ).exclude(
+                id=request.user.id
+            ):
+
+                NotificationService.create_notification(
+
+                    recipient=admin,
+
+                    title="Job Deleted",
+
+                    message=(
+                        f"Job '{job_title}' "
+                        f"submitted by {employer.email} "
+                        f"was deleted by "
+                        f"{request.user.email}."
+                    ),
+
+                    event_type="job_deleted",
+
+                    notification_type="system",
+
+                    related_object_id=job_id
+                )
+
             job.delete()
+
             return Response({
                 "message": "Job deleted successfully"
             })
+
+        # =====================================================
+        # INVALID ACTION
+        # =====================================================
+
         else:
+
             return Response(
                 {"error": "Invalid action"},
                 status=400
@@ -6600,7 +7319,7 @@ class AdminUpdateJobStatusView(APIView):
             "approval_status": job.approval_status,
             "flagged": job.flagged
         })
- 
+#--
  
 class AdminJobDeleteView(APIView):
     """Admin permanently delete a job"""
@@ -7129,6 +7848,33 @@ class RoleCreateView(APIView):
                 module=module,
                 read=False, create=False, update=False, delete=False
             )
+        
+        #new added
+        for admin in User.objects.filter(
+            user_type="admin"
+        ).exclude(
+            id=request.user.id
+        ):
+
+            NotificationService.create_notification(
+
+                recipient=admin,
+
+                title="New Role Created",
+
+                message=(
+                    f"Admin {request.user.email} "
+                    f"created a new role "
+                    f"'{role.name}'."
+                ),
+
+                event_type="role_created",
+
+                notification_type="system",
+
+                related_object_id=role.id
+            )
+            #--
 
         serializer = RoleSerializer(role)
         return Response(
@@ -7138,24 +7884,90 @@ class RoleCreateView(APIView):
 
 
 # ── DELETE a role ────────────────────────────────────────────────────────────
+# class RoleDeleteView(APIView):
+#     permission_classes = [IsAdminUserType]
+
+#     def delete(self, request, role_id):
+#         role = get_object_or_404(Role, id=role_id)
+
+#         # Prevent deleting built-in roles
+#         if role.name.lower() in ['candidate', 'employer']:
+#             return Response(
+#                 {"error": "Built-in roles cannot be deleted."},
+#                 status=status.HTTP_400_BAD_REQUEST
+#             )
+
+#         role.delete()
+#         return Response(
+#             {"message": f"Role deleted successfully."},
+#             status=status.HTTP_200_OK
+#         )
+#full view added 
 class RoleDeleteView(APIView):
+
     permission_classes = [IsAdminUserType]
 
     def delete(self, request, role_id):
-        role = get_object_or_404(Role, id=role_id)
+
+        role = get_object_or_404(
+            Role,
+            id=role_id
+        )
 
         # Prevent deleting built-in roles
-        if role.name.lower() in ['candidate', 'employer']:
+        if role.name.lower() in [
+            "candidate",
+            "employer"
+        ]:
+
             return Response(
-                {"error": "Built-in roles cannot be deleted."},
+                {
+                    "error":
+                    "Built-in roles cannot be deleted."
+                },
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+        # Save values before deletion
+        role_id = role.id
+        role_name = role.name
+
         role.delete()
+
+        # Notify other admins
+        for admin in User.objects.filter(
+            user_type="admin"
+        ).exclude(
+            id=request.user.id
+        ):
+
+            NotificationService.create_notification(
+
+                recipient=admin,
+
+                title="Role Deleted",
+
+                message=(
+                    f"Role '{role_name}' "
+                    f"was deleted by "
+                    f"{request.user.email}."
+                ),
+
+                event_type="role_deleted",
+
+                notification_type="system",
+
+                related_object_id=role_id
+            )
+
         return Response(
-            {"message": f"Role deleted successfully."},
+            {
+                "message":
+                "Role deleted successfully."
+            },
             status=status.HTTP_200_OK
         )
+#--
 
 
 # ── GET permissions for a specific role ──────────────────────────────────────
@@ -8187,6 +8999,25 @@ class VerifyAdmin2FAOTPView(APIView):
             status="SUCCESS",
             extra_data={"method": method}
         )
+        # new added
+        NotificationService.create_notification(
+
+            recipient=user,
+
+            title="Two-Factor Authentication Enabled",
+
+            message=(
+                "Two-factor authentication has been enabled "
+                "for your admin account. "
+                "You will need to complete two-step verification "
+                "when logging in."
+            ),
+
+            event_type="admin_2fa_enabled",
+
+            notification_type="system"
+        )
+        #--
  
         return Response({
             "success": True,
@@ -9068,6 +9899,260 @@ def _trend(today_val, yesterday_val):
  
 def _is_up(today_val, yesterday_val):
     return today_val >= yesterday_val
+
+from .models import JobseekerSecurityProfile, EmailOTP, SMSOTP
+from .serializers import JobseekerChangePasswordSerializer, Jobseeker2FAStatusSerializer
+from .utils import generate_otp, send_email_otp
+ 
+class JobseekerChangePasswordView(APIView):
+    permission_classes = [IsAuthenticated]
+ 
+    def patch(self, request):
+        serializer = JobseekerChangePasswordSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = request.user
+        if not user.check_password(serializer.validated_data['current_password']):
+            return Response({"current_password": "Wrong password"}, status=status.HTTP_400_BAD_REQUEST)
+        user.set_password(serializer.validated_data['new_password'])
+        user.save()
+        return Response({"message": "Password updated successfully."}, status=status.HTTP_200_OK)
+ 
+class Jobseeker2FAStatusView(APIView):
+    permission_classes = [IsAuthenticated]
+ 
+    def get(self, request):
+        profile, _ = JobseekerSecurityProfile.objects.get_or_create(user=request.user)
+        return Response(Jobseeker2FAStatusSerializer(profile).data, status=status.HTTP_200_OK)
+ 
+    def post(self, request):
+        method = str(request.data.get('method', '')).strip().lower()
+        if method not in ['email', 'sms']:
+            return Response({"success": False, "error": "Invalid method. Choose 'email' or 'sms'."}, status=status.HTTP_400_BAD_REQUEST)
+ 
+        user = request.user
+        profile, _ = JobseekerSecurityProfile.objects.get_or_create(user=user)
+        otp = generate_otp()
+ 
+        if method == 'email':
+            if not user.email:
+                return Response({"success": False, "error": "No email associated with this account."}, status=status.HTTP_400_BAD_REQUEST)
+ 
+            EmailOTP.objects.filter(email=user.email, purpose='jobseeker_2fa', is_verified=False).delete()
+            EmailOTP.objects.create(
+                email=user.email,
+                user=user,
+                otp=otp,
+                purpose='jobseeker_2fa',
+                expires_at=timezone.now() + timedelta(minutes=10)
+            )
+           
+            # Print to terminal for instant access during local testing
+            print(f"\n==============================")
+            print(f"🔐 JOBSEEKER 2FA EMAIL OTP: {otp} for {user.email}")
+            print(f"==============================\n")
+           
+            try:
+                send_email_otp(user.email, otp, "jobseeker_2fa")
+            except Exception as e:
+                print(f"❌ Email sending error: {e}")
+                # Return success so testing is not blocked if local SMTP is not working
+                return Response({
+                    "success": True,
+                    "message": f"OTP generated (check server console if SMTP fails): {otp}"
+                }, status=status.HTTP_200_OK)
+ 
+        elif method == 'sms':
+            if not user.phone:
+                return Response({"success": False, "error": "No mobile number found on profile."}, status=status.HTTP_400_BAD_REQUEST)
+ 
+            SMSOTP.objects.filter(phone=user.phone, purpose='jobseeker_2fa', is_verified=False).delete()
+            SMSOTP.objects.create(
+                phone=user.phone,
+                otp=otp,
+                purpose='jobseeker_2fa',
+                expires_at=timezone.now() + timedelta(minutes=10)
+            )
+            print(f"\n==============================")
+            print(f"📱 JOBSEEKER 2FA SMS OTP: {otp} for {user.phone}")
+            print(f"==============================\n")
+ 
+        return Response({"success": True, "message": f"OTP sent to your registered {method}."}, status=status.HTTP_200_OK)
+   
+class JobseekerLoginSend2FAOTPView(APIView):
+    permission_classes = [AllowAny]
+ 
+    def post(self, request):
+        temp_token = request.data.get("temp_token")
+        method = str(request.data.get("method", "email")).strip().lower()
+ 
+        if not temp_token:
+            return Response({"success": False, "error": "Temporary session token is required."}, status=status.HTTP_400_BAD_REQUEST)
+ 
+        user_id = Admin2FAService.validate_temp_token(temp_token)
+        if not user_id:
+            return Response({"success": False, "error": "Session expired. Please re-enter your credentials."}, status=status.HTTP_400_BAD_REQUEST)
+ 
+        user = get_object_or_404(User, id=user_id, user_type='jobseeker')
+        otp = generate_otp()
+ 
+        if method == "email":
+            if not user.email:
+                return Response({"success": False, "error": "No email registered for this account."}, status=status.HTTP_400_BAD_REQUEST)
+ 
+            EmailOTP.objects.filter(email=user.email, purpose='jobseeker_2fa', is_verified=False).delete()
+            EmailOTP.objects.create(
+                email=user.email,
+                user=user,
+                otp=otp,
+                purpose='jobseeker_2fa',
+                expires_at=timezone.now() + timedelta(minutes=5)
+            )
+ 
+            print(f"\n======================================")
+            print(f"🔐 JLOGIN 2FA EMAIL OTP: {otp} for {user.email}")
+            print(f"======================================\n")
+ 
+            try:
+                send_email_otp(user.email, otp, "jobseeker_2fa")
+            except Exception as e:
+                print(f"❌ Failed to send SMTP mail: {e}")
+ 
+        elif method == "sms":
+            if not user.phone:
+                return Response({"success": False, "error": "No phone number registered for this account."}, status=status.HTTP_400_BAD_REQUEST)
+ 
+            SMSOTP.objects.filter(phone=user.phone, purpose='jobseeker_2fa', is_verified=False).delete()
+            SMSOTP.objects.create(
+                phone=user.phone,
+                otp=otp,
+                purpose='jobseeker_2fa',
+                expires_at=timezone.now() + timedelta(minutes=5)
+            )
+            print(f"📱 JLOGIN 2FA SMS OTP: {otp} for {user.phone}")
+ 
+        return Response({
+            "success": True,
+            "message": f"OTP sent successfully via {method}."
+        }, status=status.HTTP_200_OK)
+   
+class JobseekerLoginVerify2FAView(APIView):
+    permission_classes = [AllowAny]
+ 
+    def post(self, request):
+        temp_token = request.data.get("temp_token")
+        otp = str(request.data.get("otp", "")).strip()
+        method = str(request.data.get("method", "email")).strip().lower()
+ 
+        if not temp_token or not otp:
+            return Response({"success": False, "message": "Token and OTP are required."}, status=status.HTTP_400_BAD_REQUEST)
+ 
+        user_id = Admin2FAService.validate_temp_token(temp_token)
+        if not user_id:
+            return Response({"success": False, "message": "Invalid or expired temporary session."}, status=status.HTTP_400_BAD_REQUEST)
+ 
+        user = get_object_or_404(User, id=user_id, user_type='jobseeker')
+ 
+        # Check OTP in EmailOTP or SMSOTP
+        if method == 'email':
+            otp_obj = EmailOTP.objects.filter(email=user.email, otp=otp, purpose='jobseeker_2fa', is_verified=False).last()
+        else:
+            otp_obj = SMSOTP.objects.filter(phone=user.phone, otp=otp, purpose='jobseeker_2fa', is_verified=False).last()
+ 
+        if not otp_obj or not otp_obj.is_valid():
+            return Response({"success": False, "message": "Invalid or expired OTP code."}, status=status.HTTP_400_BAD_REQUEST)
+ 
+        otp_obj.is_verified = True
+        otp_obj.save()
+ 
+        # Update login status
+        user.is_online = True
+        user.last_seen = timezone.now()
+        user.login_time = timezone.now()
+        user.save(update_fields=['is_online', 'last_seen', 'login_time'])
+ 
+        refresh = RefreshToken.for_user(user)
+        return Response({
+            "success": True,
+            "access": str(refresh.access_token),
+            "refresh": str(refresh),
+            "user": {
+                "id": user.id,
+                "email": user.email,
+                "username": user.username,
+                "user_type": user.user_type
+            }
+        }, status=status.HTTP_200_OK)
+ 
+ 
+class JobseekerVerify2FAOTPView(APIView):
+    permission_classes = [IsAuthenticated]
+ 
+    def post(self, request):
+        otp = str(request.data.get('otp', '')).strip()
+        method = str(request.data.get('method', '')).strip().lower()
+ 
+        if not otp or not method:
+            return Response({"success": False, "message": "OTP and method are required."}, status=status.HTTP_400_BAD_REQUEST)
+ 
+        user = request.user
+        profile, _ = JobseekerSecurityProfile.objects.get_or_create(user=user)
+ 
+        if method == 'email':
+            otp_obj = EmailOTP.objects.filter(
+                email=user.email,
+                otp=otp,
+                purpose='jobseeker_2fa',
+                is_verified=False
+            ).last()
+ 
+            if not otp_obj or not otp_obj.is_valid():
+                return Response({"success": False, "message": "Invalid or expired OTP."}, status=status.HTTP_400_BAD_REQUEST)
+ 
+            otp_obj.is_verified = True
+            otp_obj.save()
+            profile.email_verified = True
+ 
+        elif method == 'sms':
+            otp_obj = SMSOTP.objects.filter(
+                phone=user.phone,
+                otp=otp,
+                purpose='jobseeker_2fa',
+                is_verified=False
+            ).last()
+ 
+            if not otp_obj or not otp_obj.is_valid():
+                return Response({"success": False, "message": "Invalid or expired OTP."}, status=status.HTTP_400_BAD_REQUEST)
+ 
+            otp_obj.is_verified = True
+            otp_obj.save()
+            profile.sms_verified = True
+ 
+        else:
+            return Response({"success": False, "message": "Invalid verification method."}, status=status.HTTP_400_BAD_REQUEST)
+ 
+        profile.two_factor_enabled = True
+        profile.two_factor_method = method
+        profile.save()
+ 
+        return Response({
+            "success": True,
+            "message": f"{method.capitalize()} verification successful.",
+            "two_factor_enabled": profile.two_factor_enabled,
+            "email_verified": profile.email_verified,
+            "sms_verified": profile.sms_verified
+        }, status=status.HTTP_200_OK)
+ 
+class JobseekerDisable2FAView(APIView):
+    permission_classes = [IsAuthenticated]
+ 
+    def patch(self, request):
+        profile, _ = JobseekerSecurityProfile.objects.get_or_create(user=request.user)
+        profile.two_factor_enabled = False
+        profile.two_factor_method = None
+        profile.email_verified = False
+        profile.sms_verified = False
+        profile.save()
+        return Response({"success": True, "message": "2FA disabled successfully."}, status=status.HTTP_200_OK)
 
 from dateutil.relativedelta import relativedelta
 from django.db.models.functions import TruncMonth
@@ -10481,7 +11566,34 @@ class AdminAccountManagerListView(ListCreateAPIView):
     serializer_class = AccountManagerSerializer
 
     def perform_create(self, serializer):
-        serializer.save(created_by=self.request.user)
+        account_manager = serializer.save(created_by=self.request.user)
+         # newly added
+        for admin in User.objects.filter(
+            user_type="admin"
+        ).exclude(
+            id=self.request.user.id
+        ):
+
+            NotificationService.create_notification(
+
+                recipient=admin,
+
+                title="New Account Manager Created",
+
+                message=(
+                    f"Account manager "
+                    f"'{account_manager.name}' "
+                    f"was created by "
+                    f"{self.request.user.email}."
+                ),
+
+                event_type="account_manager_created",
+
+                notification_type="system",
+
+                related_object_id=account_manager.id
+            )
+            #--
 
 
 class AdminAccountManagerDetailView(RetrieveUpdateDestroyAPIView):
@@ -10556,6 +11668,34 @@ class AdminAssignAccountManagerView(APIView):
             notification_type="system",
             related_object_id=manager.id
         )
+        # new added
+        for admin in User.objects.filter(
+            user_type="admin"
+        ).exclude(
+            id=request.user.id
+        ):
+
+            NotificationService.create_notification(
+
+                recipient=admin,
+
+                title="Account Manager Assigned",
+
+                message=(
+                    f"'{manager.full_name}' from "
+                    f"{manager.get_department_display()} "
+                    f"department has been assigned to "
+                    f"{employer.email}'s account by "
+                    f"{request.user.email}."
+                ),
+
+                event_type="account_manager_assigned",
+
+                notification_type="system",
+
+                related_object_id=manager.id
+            )
+            #--
 
         return Response({
             "message": "Account Manager assigned successfully",
@@ -10674,6 +11814,32 @@ class AdminEmployerAssignmentsView(APIView):
             notification_type="system",
             related_object_id=manager.id
         )
+        # newly added
+        for admin in User.objects.filter(
+            user_type="admin"
+        ).exclude(
+            id=request.user.id
+        ):
+
+            NotificationService.create_notification(
+
+                recipient=admin,
+
+                title="Account Manager Removed",
+
+                message=(
+                    f"'{manager.full_name}' "
+                    f"was removed from "
+                    f"{employer.email}'s account by "
+                    f"{request.user.email}."
+                ),
+
+                event_type="account_manager_removed",
+
+                notification_type="system",
+
+                related_object_id=manager.id
+            )
  
         return Response({
             "message": "Account Manager removed successfully",
@@ -10832,3 +11998,91 @@ class AllowedDomainsView(APIView):
        
         serializer = AllowedDomainsSerializer(data)
         return Response(serializer.data, status=status.HTTP_200_OK)
+ 
+class MyTicketsListView(APIView):
+    """
+    GET /my-tickets/
+    Returns the logged-in user's own support tickets (jobseeker & employer).
+    RaiseTicket has no user FK, so we match on email — same approach
+    already used for ticket-owner checks in AdminTicketDeleteView.
+    """
+    permission_classes = [IsAuthenticated]
+ 
+    def get(self, request):
+        tickets = RaiseTicket.objects.filter(
+            email=request.user.email
+        ).order_by('-created_at')
+ 
+        serializer = AdminTicketSerializer(
+            tickets,
+            many=True,
+            context={'request': request}
+        )
+ 
+        return Response({
+            "status": True,
+            "count": tickets.count(),
+            "data": serializer.data
+        })
+ 
+ 
+class MyComplaintsListView(APIView):
+    """
+    GET /my-complaints/
+    Returns the logged-in jobseeker's own "report a job" submissions.
+    Employers never call this (no reported-jobs tab for them), but it's
+    still user-scoped/safe if they do.
+    """
+    permission_classes = [IsAuthenticated]
+ 
+    def get(self, request):
+        complaints = Complaint.objects.filter(
+            user=request.user
+        ).order_by('-created_at')
+ 
+        serializer = ComplaintSerializer(
+            complaints,
+            many=True,
+            context={'request': request}
+        )
+ 
+        return Response({
+            "status": True,
+            "count": complaints.count(),
+            "data": serializer.data
+        })
+
+from .services import NotificationRoutingService   # add to existing services import
+ 
+class NotificationRouteView(APIView):
+    """
+    Fallback only — used when the frontend can't resolve a route
+    client-side (currently: legacy new_message notifications created
+    before related_object_id was fixed to store conversation_id).
+    """
+    permission_classes = [IsAuthenticated]
+ 
+    def get(self, request, pk):
+        notification = get_object_or_404(
+            Notification, pk=pk, user=request.user
+        )
+        route = NotificationRoutingService.resolve(notification)
+        return Response(route or {})
+
+class EmployerWeeklySummaryDataView(APIView):
+    """
+    Authenticated JSON endpoint for the in-app Weekly Summary page.
+    Returns the currently logged-in employer's own report data.
+    Separate from EmployerWeeklySummaryView, which is the token-based,
+    no-login HTML page used for email/push deep links.
+    """
+    permission_classes = [IsAuthenticated]
+ 
+    def get(self, request):
+        if not hasattr(request.user, 'employer_profile'):
+            return Response(
+                {"detail": "Employer profile not found."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        context = _get_weekly_report_context(request.user)
+        return Response(context, status=status.HTTP_200_OK)

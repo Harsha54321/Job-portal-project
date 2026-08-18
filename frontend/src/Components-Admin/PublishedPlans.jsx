@@ -80,6 +80,24 @@ export const PublishedPlans = () => {
     fetchAllPlans();
   }, []);
 
+  // Notification click deep-link: open the specific plan's preview once
+  // the plans list has loaded.
+  useEffect(() => {
+    if (!allPlans || allPlans.length === 0) return;
+
+    const highlightType = sessionStorage.getItem('adminNotifHighlightType');
+    const highlightId = sessionStorage.getItem('adminNotifHighlightId');
+
+    if (highlightType === 'plan' && highlightId) {
+      const match = allPlans.find(p => String(p.id) === String(highlightId));
+      if (match) {
+        fetchSelectedPlanDetails(highlightId).then(() => setShowPreviewModal(true));
+      }
+      sessionStorage.removeItem('adminNotifHighlightType');
+      sessionStorage.removeItem('adminNotifHighlightId');
+    }
+  }, [allPlans]);
+
   const fetchAllPlans = async () => {
     try {
       const token = getAdminToken();

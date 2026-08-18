@@ -5,6 +5,7 @@ import bell_dot from '../assets/header_bell_dot.png'
 import { useJobs } from "../JobContext";
 import api from "../api/axios";
 import { useNavigate } from "react-router-dom";
+import { getNotificationRoute } from "../utils/notificationRoutes";
 
 export const JNotification = ({ }) => {
 
@@ -324,11 +325,17 @@ export const JNotification = ({ }) => {
                         <button
                             type="button"
                             className="notification-content"
-                            onClick={() => {
-                                if (!notification.isRead) {
-                                    handleMarkAsRead(notification.id);
-                                }
-                            }}
+                           onClick={async () => {
+                            if (!notification.isRead) {
+                                handleMarkAsRead(notification.id);
+                            }
+                            console.log(notification.related_obj_id)
+                            const route = await getNotificationRoute(notification, "jobseeker");
+                            if (route) {
+                                setShowNotification(false);
+                                navigate(route.path, route.state ? { state: route.state } : undefined);
+                            }
+                        }}
                             aria-label={
                                 notification.isRead
                                     ? notification.text

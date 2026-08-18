@@ -129,6 +129,23 @@ export const JsProfileOverview = () => {
             <ProfileCard user={currentUser} />
           </div>
 
+          {/* --- ADDED: INTRODUCTION VIDEO SECTION --- */}
+          {(currentUser.intro_video || currentUser.profile?.intro_video) && (
+            <div className="resume-section intro-video-section">
+              <h3>Introduction Video</h3>
+              <div className="video-container">
+                <video
+                  controls
+                  controlsList="nodownload"
+                  className="intro-video-player"
+                  src={currentUser.intro_video || currentUser.profile?.intro_video}
+                >
+                  Your browser does not support the video tag.
+                </video>
+              </div>
+            </div>
+          )}
+
           <div className="resume-section">
             <h3>Resume</h3>
             <div className="resume-box">

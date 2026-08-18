@@ -4,7 +4,7 @@ from drf_writable_nested.serializers import WritableNestedModelSerializer
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from .models import (
-    EmployerRegistrationSettings, PlanFeature, User, JobSeekerProfile, EmployerProfile, AdminProfile,
+    EmployerRegistrationSettings, JobseekerSecurityProfile, PlanFeature, User, JobSeekerProfile, EmployerProfile, AdminProfile,
     EducationEntry, WorkExperienceEntry, Skill, LanguageKnown, Certification,
     PostAJob, JobApplication, SavedJob,
     NewsletterSubscriber, Notification, Conversation, Message, ContactMessage, 
@@ -84,6 +84,34 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
                 "detail": ["Incorrect password."]
             })
 
+        # JOBSEEKER 2FA CHECK
+     
+        if user.user_type == "jobseeker":
+            sec_profile = getattr(user, 'security', None)
+            if sec_profile and sec_profile.two_factor_enabled:
+                available_methods = []
+                if sec_profile.email_verified:
+                    available_methods.append("email")
+                if sec_profile.sms_verified:
+                    available_methods.append("sms")
+ 
+                if available_methods:
+                    default_method = sec_profile.two_factor_method or available_methods[0]
+                    temp_token = Admin2FAService.generate_temp_token(user.id)
+                    return {
+                        "requires_2fa": True,
+                        "temp_token": temp_token,
+                        "user_id": user.id,
+                        "available_methods": available_methods,
+                        "default_method": default_method,
+                        "user": {
+                            "id": user.id,
+                            "email": user.email,
+                            "username": user.username,
+                            "user_type": user.user_type,
+                        }
+                    }
+
         # Check if user is active
         if not user.is_active:
             raise serializers.ValidationError({
@@ -158,6 +186,10 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
                 }
             )
  
+        user.is_online = True
+        user.last_seen = timezone.now()
+        user.save(update_fields=['is_online', 'last_seen'])
+
         return {
             'refresh': str(refresh),
             'access': str(refresh.access_token),
@@ -170,6 +202,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
                 'is_online': user.is_online,
                 'is_active': user.is_active,
                 'status': user.status,
+                'last_seen': user.last_seen,
             }
         }
  
@@ -375,12 +408,19 @@ class JobSeekerProfileReadSerializer(serializers.ModelSerializer):
     phone = serializers.CharField(source="user.phone", read_only=True)
     highest_qualification = serializers.SerializerMethodField()
     employment_status = serializers.CharField(read_only=True)
+    hide_cv = serializers.SerializerMethodField()
    
     educations = EducationEntrySerializer(many=True, read_only=True)
     experiences = WorkExperienceEntrySerializer(many=True, read_only=True)
     skills = SkillSerializer(many=True, read_only=True)
     languages = LanguageKnownSerializer(many=True, read_only=True)
     certifications = CertificationSerializer(many=True, read_only=True)
+    
+    def get_hide_cv(self, obj):
+        try:
+            return obj.user.settings.hide_cv
+        except UserSettings.DoesNotExist:
+            return False
  
     expected_salary = serializers.DecimalField(
         max_digits=10,
@@ -1681,6 +1721,21 @@ from .models import (
     JobseekerPlatformSettings
 )
 
+class JobseekerChangePasswordSerializer(serializers.Serializer):
+    current_password = serializers.CharField(write_only=True)
+    new_password = serializers.CharField(write_only=True, min_length=8)
+    confirm_password = serializers.CharField(write_only=True)
+ 
+    def validate(self, data):
+        if data['new_password'] != data['confirm_password']:
+            raise serializers.ValidationError({"confirm_password": "Passwords do not match."})
+        return data
+ 
+class Jobseeker2FAStatusSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = JobseekerSecurityProfile
+        fields = ['two_factor_enabled', 'two_factor_method', 'email_verified', 'sms_verified']
+        
 
 class JobApplicationWriteSerializer(
     serializers.ModelSerializer
@@ -2062,62 +2117,65 @@ class EmployerCompanyMixin:
         if profile and profile.company:
             return profile.company.company_name
         return None
-
-
-class AdminSubscriptionOrderSerializer(EmployerCompanyMixin, serializers.ModelSerializer):
-    """List/row view for a Payment (= an "order")."""
+    
+class AdminBillingSerializer(EmployerCompanyMixin, serializers.ModelSerializer):
+    """One row per Payment ("order"), with its linked Subscription's access
+    info flattened alongside it. Used for both the list and detail view of
+    the combined admin Billing screen."""
+ 
     user_email = serializers.CharField(source='user.email', read_only=True)
-    plan_name = serializers.CharField(source='plan.name', read_only=True, default=None)
-    employer_id = serializers.SerializerMethodField()
-    employer_name = serializers.SerializerMethodField()
-    company_name = serializers.SerializerMethodField()
-
-    class Meta:
-        model = Payment
-        fields = [
-            'id', 'user_email', 'employer_id', 'employer_name', 'company_name',
-            'plan_name', 'amount', 'currency', 'status',
-            'payment_method', 'razorpay_order_id', 'razorpay_payment_id',
-            'failure_reason', 'created_at', 'updated_at',
-        ]
-
-
-class AdminSubscriptionOrderDetailSerializer(EmployerCompanyMixin, serializers.ModelSerializer):
-    """Detail view for a single Payment ("order")."""
-    user_email = serializers.CharField(source='user.email', read_only=True)
-    user_id = serializers.IntegerField(source='user.id', read_only=True)
     employer_id = serializers.SerializerMethodField()
     employer_name = serializers.SerializerMethodField()
     company_name = serializers.SerializerMethodField()
     plan_name = serializers.CharField(source='plan.name', read_only=True, default=None)
     plan_id = serializers.IntegerField(source='plan.id', read_only=True, default=None)
-
+ 
+    # -- Subscription (access) side, resolved via the Payment.subscriptions
+    # reverse FK. Falls back to the most recent subscription for the same
+    # user+plan if this payment predates the payment<->subscription link
+    # (older data, or the link was never set for some other reason).
+    subscription_id = serializers.SerializerMethodField()
+    subscription_status = serializers.SerializerMethodField()
+    subscription_start_date = serializers.SerializerMethodField()
+    subscription_end_date = serializers.SerializerMethodField()
+ 
     class Meta:
         model = Payment
         fields = [
-            'id', 'user_id', 'user_email', 'employer_id', 'employer_name',
-            'company_name', 'plan_id', 'plan_name', 'amount',
-            'currency', 'status', 'payment_method', 'failure_reason',
-            'razorpay_order_id', 'razorpay_payment_id', 'razorpay_response',
-            'created_at', 'updated_at',
-        ]
-
-
-class AdminSubscriptionSerializer(EmployerCompanyMixin, serializers.ModelSerializer):
-    """List/row + detail view for a Subscription."""
-    user_email = serializers.CharField(source='user.email', read_only=True)
-    employer_id = serializers.SerializerMethodField()
-    employer_name = serializers.SerializerMethodField()
-    company_name = serializers.SerializerMethodField()
-    plan_name = serializers.CharField(source='plan.name', read_only=True, default=None)
-
-    class Meta:
-        model = Subscription
-        fields = [
             'id', 'user_email', 'employer_id', 'employer_name', 'company_name',
-            'plan_name', 'status', 'duration', 'start_date', 'end_date',
+            'plan_id', 'plan_name', 'amount', 'currency', 'status',
+            'payment_method', 'razorpay_order_id', 'razorpay_payment_id',
+            'failure_reason', 'created_at', 'updated_at',
+            'subscription_id', 'subscription_status',
+            'subscription_start_date', 'subscription_end_date',
         ]
-
+ 
+    def _linked_subscription(self, obj):
+        sub = obj.subscriptions.order_by('-start_date').first()
+        if sub:
+            return sub
+        # Fallback for orders created before the payment<->subscription link
+        # existed: best-effort match by same user + plan, most recent.
+        return Subscription.objects.filter(
+            user=obj.user, plan=obj.plan
+        ).order_by('-start_date').first()
+ 
+    def get_subscription_id(self, obj):
+        sub = self._linked_subscription(obj)
+        return sub.id if sub else None
+ 
+    def get_subscription_status(self, obj):
+        sub = self._linked_subscription(obj)
+        return sub.status if sub else None
+ 
+    def get_subscription_start_date(self, obj):
+        sub = self._linked_subscription(obj)
+        return sub.start_date if sub else None
+ 
+    def get_subscription_end_date(self, obj):
+        sub = self._linked_subscription(obj)
+        return sub.end_date if sub else None
+ 
 class SaveDeviceTokenSerializer(serializers.Serializer): #changed on 15/05
     fcm_token = serializers.CharField()
     platform = serializers.ChoiceField(
@@ -2150,12 +2208,31 @@ class UserSettingsSerializer(serializers.ModelSerializer):
  
  
 class ChatUserSerializer(serializers.ModelSerializer):
+    is_online = serializers.SerializerMethodField()
+
     class Meta:
         model = User
         fields = ['id', 'username', 'email', 'first_name', 'last_name', 'is_online']
         read_only_fields = fields
- 
- 
+
+    def get_is_online(self, obj):
+        # 1. Respect privacy setting from UserSettings
+        try:
+            user_settings = getattr(obj, 'settings', None)
+            if user_settings and not user_settings.show_online_status:
+                return False
+        except Exception:
+            pass
+
+        # 2. Return True if active within the last 2 minutes
+        if obj.last_seen:
+            diff = (timezone.now() - obj.last_seen).total_seconds()
+            if diff < 120:
+                return True
+
+        return bool(obj.is_online)
+
+
 class MessageSerializer(serializers.ModelSerializer):
     sender = ChatUserSerializer(read_only=True)
     receiver = ChatUserSerializer(read_only=True)

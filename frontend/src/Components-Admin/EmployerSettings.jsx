@@ -744,9 +744,9 @@ export const EmployerSettings = () => {
                 marginLeft: '8px',
                 cursor: 'help',
                 fontSize: '12px',
-                color: '#ff9800'
+                color: '#0066cc'
               }}
-              title="Job edit after approval is under implementation"
+              title="Controls whether employers can edit a job after it has been approved"
             >
               ⓘ
             </span></h3>
@@ -758,8 +758,8 @@ export const EmployerSettings = () => {
                   onChange={(e) =>
                     handleChange(null, 'allowEditAfterApproval', e.target.checked)
                   }
-                  disabled
-                  title="Job edit after approval is under implementation"
+
+
                 />
                 <span className="Jobseeker-Set-toggle-slider"></span>
               </label>

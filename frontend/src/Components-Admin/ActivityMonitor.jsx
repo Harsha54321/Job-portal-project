@@ -59,6 +59,24 @@ export const ActivityMonitor = ({ currentTab, onTabChange }) => {
     fetchCompanies();
   }, []);
 
+  // Notification click deep-link: open the specific company verification
+  // once the Company Approval list has loaded.
+  useEffect(() => {
+    if (companyLoading || !companyData || companyData.length === 0) return;
+
+    const highlightType = sessionStorage.getItem('adminNotifHighlightType');
+    const highlightId = sessionStorage.getItem('adminNotifHighlightId');
+
+    if (highlightType === 'company' && highlightId) {
+      const match = companyData.find(c => String(c.id) === String(highlightId));
+      if (match) {
+        handleCompanyNameClick(match);
+      }
+      sessionStorage.removeItem('adminNotifHighlightType');
+      sessionStorage.removeItem('adminNotifHighlightId');
+    }
+  }, [companyLoading, companyData]);
+
   useEffect(() => {
     const handleOutsideClick = () => {
       setOpenDropdownId(null);

@@ -16,9 +16,10 @@ const availableSkills = ["UI & UX", "UI/UX Design", "UI Design", "UX Design", "F
   "Agile", "Scrum", "Kanban", "Jira", "Trello", "Asana", "Git", "GitHub", "GitLab", "Bitbucket", "Postman", "Swagger",
   "Cybersecurity", "Penetration Testing", "Ethical Hacking", "Cryptography", "Blockchain", "Web3", "Smart Contracts", "Solidity", "QA Testing", "Selenium", "Jest", "Mocha", "Chai", "Cypress", "Puppeteer", "Project Management", "Product Management", "Digital Marketing", "SEO", "SEM", "Content Writing", "Copywriting", "Sales", "Business Development", "Customer Success", "Technical Support"];
 
-export const PostJobForm = ({ onCancel }) => {
+export const PostJobForm = ({ onCancel, editJobData }) => {
   const navigate = useNavigate();
   const formRef = useRef(null);
+  const isEditMode = Boolean(editJobData?.id);
 
   // ============================================
   // PLAN ACCESS STATE
@@ -443,6 +444,40 @@ export const PostJobForm = ({ onCancel }) => {
     return '';
   };
 
+  const parseExperienceData = (expStr) => {
+    if (!expStr) return { fresher: '', experience: '' };
+    const isFresher = /fresher/i.test(expStr);
+    const numMatch = expStr.match(/(\d+(?:\s*-\s*\d+)?)\s*years?/i);
+    const experience = numMatch ? numMatch[1].replace(/\s+/g, '') : '';
+    return { fresher: isFresher ? 'yes' : (experience ? 'no' : ''), experience };
+  };
+
+  useEffect(() => {
+    if (!editJobData) return;
+    const { fresher, experience } = parseExperienceData(editJobData.experience);
+    setFormData({
+      job_title: editJobData.job_title || '',
+      industry_type: editJobData.industry_type || [],
+      department: editJobData.department || [],
+      education: editJobData.education || [],
+      work_type: editJobData.work_type || '',
+      shift: Array.isArray(editJobData.shift) ? editJobData.shift[0] : (editJobData.shift || ''),
+      work_duration: editJobData.work_duration || '',
+      salary: editJobData.salary || '',
+      fresher,
+      experience,
+      location: editJobData.location || [],
+      openings: editJobData.openings ?? '',
+      job_category: editJobData.job_category || '',
+      key_skills: editJobData.key_skills || [],
+      job_highlights: editJobData.job_highlights?.length ? editJobData.job_highlights : [''],
+      job_description: editJobData.job_description || '',
+      responsibilities: editJobData.responsibilities?.length ? editJobData.responsibilities : ['']
+    });
+    setSkillsList(editJobData.key_skills || []);
+    setLocationList(editJobData.location || []);
+  }, [editJobData]);
+
   // ============================================
   // HANDLE SUBMIT WITH PLAN CHECK
   // ============================================
@@ -474,6 +509,7 @@ export const PostJobForm = ({ onCancel }) => {
     }
 
     const submissionData = {
+      ...(isEditMode && { id: editJobData.id }),
       job_title: formData.job_title,
       industry_type: formData.industry_type,
       department: formData.department,
@@ -538,6 +574,7 @@ export const PostJobForm = ({ onCancel }) => {
         <main className="jobpost-main-content">
           <header className="jobpost-form-header">
             <h1>Post a Job</h1>
+
             <p>Complete the steps below to reach thousands of qualified candidates</p>
           </header>
 
@@ -1014,7 +1051,8 @@ export const PostJobForm = ({ onCancel }) => {
               {/* Action Buttons */}
               <div className="jobpost-actions">
                 <button type="button" className="jobpost-btn-cancel" onClick={onCancel || (() => navigate(-1))}>Cancel</button>
-                <button type="button" className="jobpost-btn-preview" onClick={handleSubmit}>Preview</button>
+                {/* <button type="button" className="jobpost-btn-preview" onClick={handleSubmit}>Preview</button> */}
+                <button type="button" className="jobpost-btn-preview" onClick={handleSubmit}>{isEditMode ? 'Preview Changes' : 'Preview'}</button>
               </div>
             </form>
           </div>

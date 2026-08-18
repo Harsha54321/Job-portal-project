@@ -147,6 +147,22 @@ CELERY_BEAT_SCHEDULE = {
             minute=0
         ),
     },
+ 
+    # ─────────────────────────────
+    # PROCESS QUIET-HOUR NOTIFICATIONS
+    # ─────────────────────────────
+ 
+    'process-pending-notifications': {
+ 
+        'task': (
+            'jobapp.tasks.'
+            'process_pending_notifications'
+        ),
+ 
+        'schedule': crontab(
+            minute='*'
+        ),
+    },
 }
 
  

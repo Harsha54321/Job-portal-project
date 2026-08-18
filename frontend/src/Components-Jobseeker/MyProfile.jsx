@@ -7,6 +7,7 @@ import uploadIcon from "../assets/UploadIcon.png";
 import deleteIcon from "../assets/DeleteIcon.png";
 import resumeIcon from "../assets/resume_icon.png";
 import { Header } from "../Components-LandingPage/Header";
+import welcomeImg from "../assets/welcome.png";
 import { useEffect } from "react";
 import api from "../api/axios";
 import EducationDegreeDropdown, { degreeOptions } from "./EducationDegreeDropdown";
@@ -46,6 +47,24 @@ const isValidValue = (value) => {
 };
 
 // --- REUSABLE COMPONENTS ---
+
+const TypewriterText = ({ text, speed = 35 }) => {
+    const [displayedText, setDisplayedText] = useState("");
+
+    useEffect(() => {
+        let i = 0;
+        setDisplayedText("");
+        const timer = setInterval(() => {
+            setDisplayedText(text.substring(0, i + 1));
+            i++;
+            if (i === text.length) clearInterval(timer);
+        }, speed);
+
+        return () => clearInterval(timer);
+    }, [text, speed]);
+
+    return <span>{displayedText}</span>;
+};
 
 const EditableListItem = ({ title, onEdit }) => (
     <div className="skill-item">
@@ -486,12 +505,35 @@ const PopupModal = ({
 // --- FORM SECTIONS ---
 
 
-const Profile = ({ data, onChange, onReset, onNext, setProfilePhoto, setRemovePhotoFlag }) => {
+const Profile = ({
+    data,
+    onChange,
+    onReset,
+    onNext,
+    setProfilePhoto,
+    setRemovePhotoFlag,
+    videoFile,
+    setVideoFile,
+    removeVideoFlag,
+    setRemoveVideoFlag
+}) => {
     const [errors, setErrors] = useState({});
     const [photo, setPhoto] = useState(null);
     const [photoPreview, setPhotoPreview] = useState(null);
     const [imageError, setImageError] = useState("");
     const [imageLoading, setImageLoading] = useState(false);
+    const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
+    // const [videoFile, setVideoFile] = useState(null);
+    const [videoError, setVideoError] = useState("");
+    // --- NEW: Video & Recording States ---
+    const [isRecordingMode, setIsRecordingMode] = useState(false);
+    const [isRecording, setIsRecording] = useState(false);
+
+    // --- NEW: Refs for WebRTC Camera Access ---
+    const liveVideoRef = useRef(null);
+    const mediaRecorderRef = useRef(null);
+    const streamRef = useRef(null);
+    const chunksRef = useRef([]);
 
     useEffect(() => {
         const preloadAddPhoto = new Image();
@@ -500,6 +542,104 @@ const Profile = ({ data, onChange, onReset, onNext, setProfilePhoto, setRemovePh
         preloadAddPhoto.fetchPriority = "high";
     }, []);
 
+    // --- NEW: Cleanup camera if component unmounts ---
+    useEffect(() => {
+        return () => stopCamera();
+    }, []);
+
+    // --- Camera, Recording & Preview Functions ---
+    const stopCamera = () => {
+        if (streamRef.current) {
+            streamRef.current.getTracks().forEach(track => track.stop());
+            streamRef.current = null;
+        }
+        if (mediaRecorderRef.current && isRecording) {
+            mediaRecorderRef.current.onstop = null; // Prevent saving if forced stopped
+            mediaRecorderRef.current.stop();
+        }
+        setIsRecording(false);
+    };
+
+    const openCamera = async () => {
+        setIsRecordingMode(true);
+        setVideoFile(null); // Clear any existing file
+        try {
+            setVideoError("");
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+            streamRef.current = stream;
+
+            if (liveVideoRef.current) {
+                liveVideoRef.current.srcObject = stream;
+                liveVideoRef.current.muted = true; // Mute live feed to prevent echo
+            }
+        } catch (err) {
+            console.error("Camera error:", err);
+            setVideoError("❌ Camera or microphone access denied. Please check browser permissions.");
+            setIsRecordingMode(false);
+        }
+    };
+
+    const startRecording = () => {
+        if (!streamRef.current) return;
+        setVideoError("");
+        chunksRef.current = [];
+
+        const mediaRecorder = new MediaRecorder(streamRef.current);
+        mediaRecorderRef.current = mediaRecorder;
+
+        mediaRecorder.ondataavailable = (e) => {
+            if (e.data.size > 0) chunksRef.current.push(e.data);
+        };
+
+        mediaRecorder.onstop = () => {
+            const blob = new Blob(chunksRef.current, { type: "video/webm" });
+            const file = new File([blob], "recorded_intro.webm", { type: "video/webm" });
+            setVideoFile(file);
+            setRemoveVideoFlag(false);
+
+            // Switch video tag from Live Stream to Playback Preview
+            if (liveVideoRef.current) {
+                liveVideoRef.current.srcObject = null;
+                liveVideoRef.current.src = URL.createObjectURL(file);
+                liveVideoRef.current.muted = false; // Unmute so they can hear playback
+                liveVideoRef.current.controls = true; // Show play/pause controls
+            }
+        };
+
+        mediaRecorder.start();
+        setIsRecording(true);
+    };
+
+    const stopRecording = () => {
+        if (mediaRecorderRef.current && isRecording) {
+            mediaRecorderRef.current.stop(); // This triggers the onstop event above to save the file
+            setIsRecording(false);
+        }
+    };
+
+    const retakeVideo = () => {
+        setVideoFile(null);
+        if (liveVideoRef.current) {
+            liveVideoRef.current.src = ""; // Clear recorded video
+            liveVideoRef.current.controls = false; // Hide controls
+            liveVideoRef.current.srcObject = streamRef.current; // Reattach live stream
+            liveVideoRef.current.muted = true; // Remute live feed
+            liveVideoRef.current.play();
+        }
+    };
+
+    const cancelRecording = () => {
+        // Fix: Explicitly remove the onstop listener so it doesn't save the video
+        if (mediaRecorderRef.current) {
+            mediaRecorderRef.current.onstop = null;
+            if (isRecording) {
+                mediaRecorderRef.current.stop();
+            }
+        }
+        stopCamera();
+        setVideoFile(null);
+        setIsRecordingMode(false);
+    };
     useEffect(() => {
         if (data.profile_photo && !photoPreview) {
             if (typeof data.profile_photo === 'string') {
@@ -673,6 +813,11 @@ const Profile = ({ data, onChange, onReset, onNext, setProfilePhoto, setRemovePh
         else if (!AlphaOnlyreg.test(data.nationality))
             newErrors.nationality = "*Please use letters only";
 
+        // // --- NEW: Mandatory Video Validation ---
+        // if (!videoFile && !data.intro_video) {
+        //     newErrors.videoFile = "*Introduction video is required to continue";
+        // }
+
         setErrors(newErrors);
 
         if (Object.keys(newErrors).length === 0) {
@@ -699,130 +844,172 @@ const Profile = ({ data, onChange, onReset, onNext, setProfilePhoto, setRemovePh
                 </button>
             </div>
             <div className="profile-layout">
-                <div className="photo-uploader">
-                    <div className="photo-placeholder">
-                        {photoPreview ? (
-                            <img
-                                src={photoPreview}
-                                alt="Profile"
-                                loading="eager"
-                                fetchpriority="high"
-                                style={{
-                                    width: "100%",
-                                    height: "100%",
-                                    objectFit: "cover",
-                                    borderRadius: "8px",
-                                }}
-                                onError={(e) => {
-                                    console.error("Failed to load image preview:", photoPreview);
-                                    setImageError("❌ Failed to load image preview. The file may be corrupted or in an unsupported format.");
-                                    setPhotoPreview(null);
-                                    e.target.style.display = "none";
-                                }}
-                                onLoad={() => {
-                                    console.log("✅ Image preview loaded successfully");
-                                    setImageError("");
-                                }}
-                            />
-                        ) : (
-
-                            <>
+                <div className="photo-uploader-column">
+                    <div className="photo-uploader">
+                        <div className="photo-placeholder">
+                            {photoPreview ? (
                                 <img
-                                    className="photo-placeholder-icon"
-                                    src={addPhoto}
-                                    alt="upload"
+                                    src={photoPreview}
+                                    alt="Profile"
                                     loading="eager"
-                                    fetchPriority="high"
+                                    fetchpriority="high"
+                                    style={{
+                                        width: "100%",
+                                        height: "100%",
+                                        objectFit: "cover",
+                                        borderRadius: "8px",
+                                    }}
+                                    onError={(e) => {
+                                        console.error("Failed to load image preview:", photoPreview);
+                                        setImageError("❌ Failed to load image preview. The file may be corrupted or in an unsupported format.");
+                                        setPhotoPreview(null);
+                                        e.target.style.display = "none";
+                                    }}
+                                    onLoad={() => {
+                                        console.log("✅ Image preview loaded successfully");
+                                        setImageError("");
+                                    }}
                                 />
-                                <p>Upload photo</p>
-                            </>
-                        )}
-
-                        <input
-                            type="file"
-                            accept="image/png, image/jpeg, image/jpg"
-                            id="photoUpload"
-                            hidden
-                            onChange={handlePhotoChange}
-                        />
-                    </div>
-
-                    <small>Allowed format: </small>
-                    <span style={{ fontWeight: "600", fontSize: "0.9rem" }}>
-                        JPG, JPEG, PNG
-                    </span>
-
-                    <div className="photo-actions">
-                        <button
-                            type="button"
-                            className="photo-btn remove"
-                            onClick={removePhoto}
-                            disabled={!photoPreview && !data.profile_photo}
-                        >
-                            <div className="remove-action-wrapper">
-                                <img
-                                    className="upload-icon-btn"
-                                    src={deleteIcon}
-                                    alt="delete"
-                                />{" "}
-                                Remove Photo
-                            </div>
-                        </button>
-                        <button
-                            type="button"
-                            className="photo-btn upload"
-                            onClick={() => document.getElementById("photoUpload").click()}
-                        >
-                            {!photoPreview ? (
-                                <div className="remove-action-wrapper">
-                                    <img
-                                        className="upload-icon-btn"
-                                        src={uploadIcon}
-                                        alt="upload"
-                                        loading="eager"
-                                        fetchPriority="high"
-                                    />{" "}
-                                    Upload Photo{" "}
-                                </div>
                             ) : (
-                                <div className="remove-action-wrapper">
+
+                                <>
                                     <img
-                                        className="upload-icon-btn"
-                                        src={uploadIcon}
+                                        className="photo-placeholder-icon"
+                                        src={addPhoto}
                                         alt="upload"
                                         loading="eager"
                                         fetchPriority="high"
-                                    />{" "}
-                                    Change Photo{" "}
-                                </div>
+                                    />
+                                    <p>Upload photo</p>
+                                </>
                             )}
-                        </button>
+
+                            <input
+                                type="file"
+                                accept="image/png, image/jpeg, image/jpg"
+                                id="photoUpload"
+                                hidden
+                                onChange={handlePhotoChange}
+                            />
+                        </div>
+
+                        <small>Allowed format: </small>
+                        <span style={{ fontWeight: "600", fontSize: "0.9rem" }}>
+                            JPG, JPEG, PNG
+                        </span>
+
+                        <div className="photo-actions">
+                            <button
+                                type="button"
+                                className="photo-btn remove"
+                                onClick={removePhoto}
+                                disabled={!photoPreview && !data.profile_photo}
+                            >
+                                <div className="remove-action-wrapper">
+                                    <img
+                                        className="upload-icon-btn"
+                                        src={deleteIcon}
+                                        alt="delete"
+                                    />{" "}
+                                    Remove Photo
+                                </div>
+                            </button>
+                            <button
+                                type="button"
+                                className="photo-btn upload"
+                                onClick={() => document.getElementById("photoUpload").click()}
+                            >
+                                {!photoPreview ? (
+                                    <div className="remove-action-wrapper">
+                                        <img
+                                            className="upload-icon-btn"
+                                            src={uploadIcon}
+                                            alt="upload"
+                                            loading="eager"
+                                            fetchPriority="high"
+                                        />{" "}
+                                        Upload Photo{" "}
+                                    </div>
+                                ) : (
+                                    <div className="remove-action-wrapper">
+                                        <img
+                                            className="upload-icon-btn"
+                                            src={uploadIcon}
+                                            alt="upload"
+                                            loading="eager"
+                                            fetchPriority="high"
+                                        />{" "}
+                                        Change Photo{" "}
+                                    </div>
+                                )}
+                            </button>
+                        </div>
+
+                        {imageError && (
+                            <div style={{
+                                color: '#dc3545',
+                                fontSize: '13px',
+                                marginTop: '12px',
+                                padding: '10px',
+                                backgroundColor: '#ffe6e6',
+                                borderRadius: '6px',
+                                textAlign: 'center',
+                                border: '1px solid #ffcccc'
+                            }}>
+                                {imageError}
+                            </div>
+                        )}
+                        {imageLoading && (
+                            <div style={{
+                                color: '#007bff',
+                                fontSize: '12px',
+                                marginTop: '10px',
+                                textAlign: 'center'
+                            }}>
+                                Uploading image...
+                            </div>
+                        )}
                     </div>
 
-                    {imageError && (
-                        <div style={{
-                            color: '#dc3545',
-                            fontSize: '13px',
-                            marginTop: '12px',
-                            padding: '10px',
-                            backgroundColor: '#ffe6e6',
-                            borderRadius: '6px',
-                            textAlign: 'center',
-                            border: '1px solid #ffcccc'
-                        }}>
-                            {imageError}
-                        </div>
-                    )}
-                    {imageLoading && (
-                        <div style={{
-                            color: '#007bff',
-                            fontSize: '12px',
-                            marginTop: '10px',
-                            textAlign: 'center'
-                        }}>
-                            Uploading image...
-                        </div>
-                    )}
+                    {/* OPTIONAL VIDEO BUTTON AREA WITH REMOVE BUTTON */}
+                    <div style={{ width: "100%" }}>
+                        {(videoFile || data.intro_video) && !removeVideoFlag ? (
+                            <div style={{ display: "flex", gap: "1rem" }}>
+                                <button
+                                    type="button"
+                                    className="intro-video-btn uploaded"
+                                    onClick={() => setIsVideoModalOpen(true)}
+                                    style={{ flex: 1, flexDirection: "row", gap: "10px" }}
+                                >
+                                    <i className="fas fa-video" style={{ display: "inline-block", color: "#FF6F61", fontSize: "20px" }}></i>
+                                    <span>Change Video</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    className="intro-video-btn"
+                                    onClick={() => {
+                                        setVideoFile(null);
+                                        setRemoveVideoFlag(true);
+                                    }}
+                                    style={{ flex: 1, borderColor: "#6c757d", color: "#6c757d", flexDirection: "row", gap: "10px" }}
+                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#f8f9fa"}
+                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "#fff"}
+                                >
+                                    <i className="fas fa-trash-alt" style={{ fontSize: "20px" }}></i>
+                                    <span>Remove Video</span>
+                                </button>
+                            </div>
+                        ) : (
+                            <button
+                                type="button"
+                                className="intro-video-btn"
+                                onClick={() => setIsVideoModalOpen(true)}
+                            >
+                                <i className="fas fa-video"></i>
+                                <span>Upload Introduction Video</span>
+                            </button>
+                        )}
+                    </div>
                 </div>
                 <div className="profile-form">
                     {/* Form fields remain the same */}
@@ -902,6 +1089,193 @@ const Profile = ({ data, onChange, onReset, onNext, setProfilePhoto, setRemovePh
                     </div>
                 </div>
             </div>
+
+
+            {/* --- VIDEO UPLOAD MODAL --- */}
+            {isVideoModalOpen && (
+                <div className="modal-overlay">
+                    <div className="modal-content video-modal-content">
+                        <div className="modal-header" style={{ borderBottom: "none", paddingBottom: "0" }}>
+                            <h3 style={{ margin: "0", color: "#032240" }}>Hi buddy, welcome to Job Portal!</h3>
+                            <button
+                                type="button"
+                                className="close-modal"
+                                onClick={() => {
+                                    if (isRecordingMode) cancelRecording();
+                                    setIsVideoModalOpen(false);
+                                    setVideoError("");
+                                }}
+                            >
+                                &times;
+                            </button>
+                        </div>
+
+                        <div className="welcome-modal-body">
+                            {/* Left Side: Image with Slide Up Animation */}
+                            <div className="welcome-image-container">
+                                <img src={welcomeImg} alt="Welcome" className="welcome-image slide-up-animation" loading="eager" />
+                            </div>
+
+                            {/* Right Side: Chat Bubble & Upload Box */}
+                            <div className="welcome-text-container">
+                                <div className="welcome-message-box">
+                                    <p className="welcome-text">
+                                        <TypewriterText text="Please upload your introduction video in MP4, WebM, or AVI (Max size: 50MB), so that employers know you well." />
+                                    </p>
+                                </div>
+
+                                <div className="video-upload-wrapper">
+                                    {!isRecordingMode ? (
+                                        // --- START STATE: UPLOAD OR RECORD UI ---
+                                        <>
+                                            <input
+                                                type="file"
+                                                accept="video/mp4,video/webm,video/avi"
+                                                id="videoUploadInput"
+                                                hidden
+                                                onChange={(e) => {
+                                                    const file = e.target.files[0];
+                                                    if (!file) return;
+
+                                                    const allowedTypes = ["video/mp4", "video/webm", "video/avi", "video/x-msvideo"];
+                                                    if (!allowedTypes.includes(file.type)) {
+                                                        setVideoError("❌ Invalid format. Please select an MP4, WebM, or AVI video.");
+                                                        e.target.value = "";
+                                                        return;
+                                                    }
+                                                    if (file.size > 50 * 1024 * 1024) {
+                                                        setVideoError("❌ File is too large. Maximum size is 50MB.");
+                                                        e.target.value = "";
+                                                        return;
+                                                    }
+                                                    setVideoError("");
+                                                    setVideoFile(file);
+                                                    setRemoveVideoFlag(false);
+                                                }}
+                                            />
+
+                                            {/* If a video IS selected or exists */}
+                                            {(videoFile || (!removeVideoFlag && data.intro_video)) ? (
+                                                <div className="upload-box video-upload-label" style={{ padding: "1.5rem" }}>
+                                                    <div className="upload-text" style={{ color: "#28a745" }}>
+                                                        <i className="fas fa-check-circle" style={{ fontSize: "24px", marginBottom: "8px" }}></i>
+                                                        {videoFile ? videoFile.name : data.intro_video.split("/").pop()}
+                                                    </div>
+                                                    <div style={{ display: "flex", gap: "10px", marginTop: "15px", justifyContent: "center", width: "100%" }}>
+                                                        <label htmlFor="videoUploadInput" className="btn btn-outline" style={{ margin: 0, padding: "8px 16px", cursor: "pointer", width: "auto" }}>
+                                                            Change File
+                                                        </label>
+                                                        <button
+                                                            type="button"
+                                                            className="btn btn-danger"
+                                                            style={{ width: "auto", padding: "8px 16px" }}
+                                                            onClick={() => {
+                                                                setVideoFile(null);
+                                                                setRemoveVideoFlag(true);
+                                                            }}
+                                                        >
+                                                            Remove
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                /* If NO video is selected: Show Side-by-Side Choice */
+                                                <div className="video-choice-container">
+                                                    {/* Choice 1: Upload */}
+                                                    <label htmlFor="videoUploadInput" className="upload-box video-choice-btn">
+                                                        <div className="upload-text video-choice-text">
+                                                            <i className="fas fa-cloud-upload-alt"></i>
+                                                            Upload Video
+                                                        </div>
+                                                        <small>MP4, WebM (Max 50MB)</small>
+                                                    </label>
+
+                                                    {/* Choice 2: Record */}
+                                                    <button
+                                                        type="button"
+                                                        onClick={openCamera}
+                                                        className="upload-box video-choice-btn"
+                                                    >
+                                                        <div className="upload-text video-choice-text" style={{ color: "#FF6F61" }}>
+                                                            <i className="fas fa-video"></i>
+                                                            Record Camera
+                                                        </div>
+                                                        <small>Record directly here</small>
+                                                    </button>
+                                                </div>
+                                            )}
+
+                                            {videoError && (
+                                                <span className="error-message" style={{ display: "block", marginTop: "8px", textAlign: "center" }}>
+                                                    {videoError}
+                                                </span>
+                                            )}
+                                        </>
+                                    ) : (
+                                        // --- RECORDING & PREVIEW UI ---
+                                        <div className="recording-ui" style={{ textAlign: "center", width: "100%" }}>
+                                            <video
+                                                ref={liveVideoRef}
+                                                autoPlay
+                                                playsInline
+                                                className="live-video-preview"
+                                            />
+
+                                            {videoFile ? (
+                                                // --- PREVIEW MODE (After clicking Stop) ---
+                                                <div style={{ display: "flex", gap: "10px" }}>
+                                                    <button type="button" className="btn btn-outline" style={{ flex: 1 }} onClick={retakeVideo}>
+                                                        <i className="fas fa-redo"></i> Re-record
+                                                    </button>
+                                                    <button type="button" className="btn btn-primary" style={{ flex: 1 }} onClick={() => {
+                                                        stopCamera(); // Turn off webcam
+                                                        setIsRecordingMode(false); // Move to the green success block
+                                                    }}>
+                                                        <i className="fas fa-check"></i> Confirm Video
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                // --- LIVE CAMERA MODE (Before/During recording) ---
+                                                <div style={{ display: "flex", gap: "10px" }}>
+                                                    {isRecording ? (
+                                                        <button type="button" className="btn btn-danger" style={{ flex: 1 }} onClick={stopRecording}>
+                                                            <i className="fas fa-stop-circle"></i> Stop Recording
+                                                        </button>
+                                                    ) : (
+                                                        <button type="button" className="btn btn-primary" style={{ flex: 1 }} onClick={startRecording}>
+                                                            <i className="fas fa-circle"></i> Start Recording
+                                                        </button>
+                                                    )}
+                                                    <button type="button" className="btn btn-secondary" style={{ flex: 1 }} onClick={cancelRecording}>
+                                                        Cancel
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+
+
+                                <div className="modal-actions" style={{ marginTop: "1rem" }}>
+                                    <button
+                                        type="button"
+                                        className="btn btn-primary btn-full"
+                                        disabled={isRecording}
+                                        onClick={() => {
+                                            if (isRecordingMode) cancelRecording();
+                                            setIsVideoModalOpen(false);
+                                            setVideoError("");
+                                        }}
+                                    >
+                                        {(videoFile instanceof File) ? "Confirm Upload" : "Close"}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <div className="form-actions">
                 <button type="submit" className="btn btn-primary">
                     Save & Continue
@@ -4201,6 +4575,8 @@ export const MyProfile = () => {
     const [profilePhoto, setProfilePhoto] = useState(null);
     const [removePhotoFlag, setRemovePhotoFlag] = useState(false);
     const [resumeFile, setResumeFile] = useState(null);
+    const [videoFile, setVideoFile] = useState(null);
+    const [removeVideoFlag, setRemoveVideoFlag] = useState(false);
     const [saving, setSaving] = useState(false);
     const fetchProfile = async () => {
         try {
@@ -4222,6 +4598,7 @@ export const MyProfile = () => {
                     maritalStatus: res.data.marital_status || "Select",
                     nationality: res.data.nationality || "",
                     profile_photo: res.data.profile_photo,
+                    intro_video: res.data.intro_video || null,
                 },
 
                 currentDetails: {
@@ -5070,6 +5447,15 @@ export const MyProfile = () => {
                 console.log("✅ Added resume to FormData");
             }
 
+            // Add Introduction Video
+            if (videoFile instanceof File) {
+                formData.append("intro_video", videoFile);
+                console.log("✅ Added new intro video to FormData");
+            } else if (removeVideoFlag) {
+                formData.append("delete_intro_video", "true"); // ✅ Fixed key
+                console.log("🗑️ Removing existing intro video");
+            }
+
             // Add certification files with their names and IDs
             if (allData.certs.length > 0) {
                 allData.certs.forEach((cert, index) => {
@@ -5346,6 +5732,10 @@ export const MyProfile = () => {
                         onNext={handleNextStep}
                         setProfilePhoto={setProfilePhoto}
                         setRemovePhotoFlag={setRemovePhotoFlag}
+                        videoFile={videoFile}
+                        setVideoFile={setVideoFile}
+                        removeVideoFlag={removeVideoFlag}
+                        setRemoveVideoFlag={setRemoveVideoFlag}
                     />
                 );
             case "Current Details":

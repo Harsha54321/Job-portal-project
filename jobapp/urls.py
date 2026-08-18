@@ -145,6 +145,16 @@ from .views import (
     EmployerAccountManagersView,
     AdminLogin2FAOTPView,
     AllowedDomainsView,
+    AdminBillingListView,
+    AdminBillingDetailView,
+    MyComplaintsListView,
+    MyTicketsListView,
+    JobseekerChangePasswordView,
+    Jobseeker2FAStatusView,
+    JobseekerVerify2FAOTPView,
+    JobseekerDisable2FAView,
+    JobseekerLoginSend2FAOTPView,
+    JobseekerLoginVerify2FAView,
 
     # REMOVED: Company-related view imports (CompanyListView, CompanyDetailView, etc.)
 )
@@ -164,6 +174,23 @@ def api_root(request, format=None):
         except Exception:
             pass
     return Response(data)
+
+# from django.http import JsonResponse
+# def jobseeker_2fa_status(request, *args, **kwargs):
+#     """Return the current 2FA status for the authenticated job seeker."""
+#     return JsonResponse({
+#         "enabled": False,
+#         "status": "disabled",
+#         "message": "Two-factor authentication is currently disabled.",
+#     }, status=200)
+ 
+ 
+# def jobseeker_2fa_send_otp(request, *args, **kwargs):
+#     """Send a useful OTP response while keeping the route functional."""
+#     return JsonResponse({
+#         "detail": "OTP sent successfully.",
+#         "status": "sent",
+#     }, status=200)
 
 urlpatterns = [
     path('', api_root, name='api-root'),
@@ -462,5 +489,21 @@ urlpatterns = [
     path('employer/account-managers/', EmployerAccountManagersView.as_view(), name='employer-account-managers'),
 
     path('jobseeker/allowed-domains/', AllowedDomainsView.as_view(), name='jobseeker-allowed-domains'),
+    path('admin/billing/', AdminBillingListView.as_view(), name='admin-billing-list'),
+    path('admin/billing/<int:pk>/', AdminBillingDetailView.as_view(), name='admin-billing-detail'),
 
+    path('notifications/<int:pk>/route/', views.NotificationRouteView.as_view()),
+ 
+    path('my-tickets/', MyTicketsListView.as_view(), name='my-tickets'),
+    path('my-complaints/', MyComplaintsListView.as_view(), name='my-complaints'),
+ 
+    path('employer/weekly-summary-data/', views.EmployerWeeklySummaryDataView.as_view(), name='employer-weekly-summary-data'),
+
+    path('jobseeker/change-password/', JobseekerChangePasswordView.as_view(), name='jobseeker-change-password'),
+    path('jobseeker/2fa/status/', Jobseeker2FAStatusView.as_view(), name='jobseeker-2fa-status'),
+    path('jobseeker/2fa/send-otp/', Jobseeker2FAStatusView.as_view(), name='jobseeker-2fa-send-otp'),
+    path('jobseeker/2fa/verify-otp/', JobseekerVerify2FAOTPView.as_view(), name='jobseeker-2fa-verify-otp'),
+    path('jobseeker/2fa/disable/', JobseekerDisable2FAView.as_view(), name='jobseeker-2fa-disable'),
+    path('jobseeker/login/send-otp/', JobseekerLoginSend2FAOTPView.as_view(), name='jobseeker-login-send-otp'),
+    path('jobseeker/login/verify-otp/', JobseekerLoginVerify2FAView.as_view(), name='jobseeker-login-verify-otp'),
 ]

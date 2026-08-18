@@ -5,7 +5,7 @@ import { useJobs } from "../JobContext";
 import api from "../api/axios";
 import "./ViewApplicants.css";
 
-export const ViewApplicants = ({ job, onBack }) => {
+export const ViewApplicants = ({ job, onBack ,targetApplicationId}) => {
   const {
     updateApplicantStatus,
     addChatToSidebar,
@@ -64,6 +64,14 @@ export const ViewApplicants = ({ job, onBack }) => {
 
   // ✅ REMOVED fetchFullApplicationDetails - not needed since we have all data
 
+    useEffect(() => {
+    if (!targetApplicationId || loading || applications.length === 0) return;
+    const match = applications.find(app => app.id === targetApplicationId);
+    if (match) {
+      handleViewDetails(match);
+    }
+  }, [targetApplicationId, loading, applications]);
+
   const statusOptions = [
     "applied",
     "resume_screening",
@@ -83,7 +91,8 @@ export const ViewApplicants = ({ job, onBack }) => {
     "interview_called": "Interview Called",
     "offered": "Offered",
     "rejected": "Rejected",
-    "hired": "Hired"
+    "hired": "Hired",
+    "withdrawn" : "Application withdrawn"
   };
 
   const calculateJobStats = () => {
@@ -200,6 +209,7 @@ export const ViewApplicants = ({ job, onBack }) => {
     if (s === 'offered') return 'status-offered';
     if (s === 'rejected') return 'status-rejected';
     if (s === 'hired') return 'status-hired';
+    if (s === 'withdrawn') return 'Application_withdrawn'
     return 'status-pending';
   };
 

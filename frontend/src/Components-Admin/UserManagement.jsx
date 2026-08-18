@@ -37,6 +37,16 @@ export const UserManagement = () => {
     setSelectedUser(null);
   }, []);
 
+  // Notification click deep-link: if we came from a "New Jobseeker/Employer
+  // Signup" notification, pre-fill the search box with that user's email.
+  useEffect(() => {
+    const searchTerm = sessionStorage.getItem('adminNotifSearchTerm');
+    if (searchTerm) {
+      setSearch(searchTerm);
+      sessionStorage.removeItem('adminNotifSearchTerm');
+    }
+  }, []);
+
   useEffect(() => {
     if (isModalOpen) {
       // Focus trap for modal

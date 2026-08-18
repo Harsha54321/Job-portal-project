@@ -111,6 +111,23 @@ export const Enquiries = () => {
         fetchEnquiries();
     }, []);
 
+    // Notification click deep-link: open the specific enquiry once loaded.
+    useEffect(() => {
+        if (!enquiries || enquiries.length === 0) return;
+
+        const highlightType = sessionStorage.getItem('adminNotifHighlightType');
+        const highlightId = sessionStorage.getItem('adminNotifHighlightId');
+
+        if (highlightType === 'enquiry' && highlightId) {
+            const match = enquiries.find(e => String(e.id) === String(highlightId));
+            if (match) {
+                setSelectedEnquiry(match);
+            }
+            sessionStorage.removeItem('adminNotifHighlightType');
+            sessionStorage.removeItem('adminNotifHighlightId');
+        }
+    }, [enquiries]);
+
     const getSortedEnquiries = () => {
         if (!enquiries || enquiries.length === 0) return [];
         // Sort by date - latest first

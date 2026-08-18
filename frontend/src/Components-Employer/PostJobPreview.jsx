@@ -251,6 +251,7 @@ export const PostJobPreview = () => {
           ? state.responsibilities
           : state.responsibilities?.split(',').map(r => r.trim()) || [],
         shift: Array.isArray(state.shift) ? state.shift[0] : state.shift,
+        is_highlighted: withHighlight,
       };
 
       // ── EDIT flow ──

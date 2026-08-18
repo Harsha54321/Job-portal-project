@@ -594,6 +594,7 @@ export const PlansBilling = () => {
     };
 
     const processPaymentWithRazorpay = async (paymentMethodType) => {
+        if (isProcessing) return;
         setIsProcessing(true);
         try {
             const plan = availablePlans.find(p => p.id === additionalPlan.id);

@@ -1,8 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './Settings.css';
+import "../Components-Admin/AdminSecurity.css";
 import { Header } from '../Components-LandingPage/Header';
 import api from "../api/axios";
-import { useEffect } from "react";
+import ChangePassword from './ChangePassword';
+import TwoFactorAuth from './TwoFactorAuth';
+import UpArrow from '../assets/UpArrow.png';
 
 export const Settings = () => {
     const [tab, setTab] = useState('Account');
@@ -12,20 +15,40 @@ export const Settings = () => {
         phone: "",
         show_online_status: true,
         show_read_receipts: true,
+        hide_cv: false,
     });
-
+    const [username, setUsername] = useState('');
     const [online, setOnline] = useState("yes");
-    const [read, setRead] = useState("yes");
+    // const [read, setRead] = useState("yes");
+    const [activity, setActivity] = useState("yes");
     const [loading, setLoading] = useState(false);
     const [saveMessage, setSaveMessage] = useState('');
+    const [phoneError, setPhoneError] = useState('');
+
+    // --- New state for collapsible sections ---
+    const [isPasswordChange, setIsPasswordChange] = useState(false);
+    const [is2FAOpen, setIs2FAOpen] = useState(false);
+
+    // --- Toggle functions ---
+    const togglePasswordChange = () => setIsPasswordChange(!isPasswordChange);
+    const toggle2FA = () => setIs2FAOpen(!is2FAOpen);
 
     useEffect(() => {
         const fetchSettings = async () => {
             try {
-                const res = await api.get("/settings/");
-                setSettings(res.data);
-                setOnline(res.data.show_online_status ? "yes" : "no");
-                setRead(res.data.show_read_receipts ? "yes" : "no");
+                // 1. Fetch settings
+                const settingsRes = await api.get("/settings/");
+                setSettings(settingsRes.data);
+                setOnline(settingsRes.data.show_online_status ? "yes" : "no");
+                setActivity(settingsRes.data.hide_cv ? "no" : "yes");
+
+                // 2. Fetch current user details (includes username)
+                const userRes = await api.get("/users/me/");
+                setUsername(userRes.data.username || '');
+                setSettings(prev => ({
+                    ...prev,
+                    phone: userRes.data.phone || prev.phone || ''
+                }));
             } catch (err) {
                 console.error("Failed to load settings", err);
             }
@@ -37,19 +60,33 @@ export const Settings = () => {
     // Track changes locally without API calls
     const handleInputChange = (field, value) => {
         setSettings({ ...settings, [field]: value });
+        if (field === 'phone') {
+            setPhoneError('');
+        }
     };
 
     const handleCommunicationChange = (field, value) => {
         if (field === 'show_online_status') {
             setOnline(value ? 'yes' : 'no');
-        } else if (field === 'show_read_receipts') {
-            setRead(value ? 'yes' : 'no');
+            setSettings(prev => ({ ...prev, [field]: value }));
+        } else if (field === 'hide_cv') {
+            setActivity(value ? 'no' : 'yes');
+
+            setSettings({ ...settings, [field]: value });
         }
-        setSettings({ ...settings, [field]: value });
     };
 
     // Save all changes at once
     const saveSettings = async () => {
+        const phone = settings.phone?.trim() || '';
+        if (phone && !/^[6-9]\d{9}$/.test(phone)) {
+            setPhoneError('Phone number must be 10 digits and start with 6, 7, 8, or 9.');
+            setSaveMessage('');
+            setLoading(false);
+            return;
+        } else {
+            setPhoneError('');
+        }
         setLoading(true);
         setSaveMessage('');
 
@@ -59,9 +96,12 @@ export const Settings = () => {
                 phone: settings.phone,
                 show_online_status: settings.show_online_status,
                 show_read_receipts: settings.show_read_receipts,
+                hide_cv: settings.hide_cv,
             };
 
             await api.patch("/settings/", payload);
+            await api.patch("/profile/jobseeker/", { phone: settings.phone });
+
             setSaveMessage('Settings saved successfully!');
             setTimeout(() => setSaveMessage(''), 3000);
         } catch (err) {
@@ -94,27 +134,31 @@ export const Settings = () => {
                             <input
                                 placeholder="Account Type"
                                 value={settings.account_type || ""}
-                                onChange={(e) => handleInputChange('account_type', e.target.value)}
-                            />
-
-                            <input
-                                placeholder="Email Id"
-                                value={settings.email || ""}
                                 disabled
+                                onChange={(e) => handleInputChange('account_type', e.target.value)}
+                                className="JSettings-select"
                             />
-
+                            <input placeholder="Username" value={username} disabled />
+                            <input placeholder="Email Id" value={settings.email || ""} disabled />
                             <input
                                 placeholder="Phone Number"
+                                maxLength={10}
                                 value={settings.phone || ""}
                                 onChange={(e) => handleInputChange('phone', e.target.value)}
                             />
+                            {phoneError && <span className="JSettings-error">{phoneError}</span>}
                         </div>
                     )}
 
                     {tab === 'Communication' && (
                         <div className="JSettings-list">
                             <div className="JSettings-row">
-                                <span>Show Online Status</span>
+                                <div className="JSettings-label-group">
+                                    <span className="JSettings-label">Show Online Status</span>
+                                    <p className="JSettings-desc">
+                                        Your online status will be visible to employers during chat.
+                                    </p>
+                                </div>
                                 <div className="JSettings-btn-group">
                                     <button
                                         className={online === 'yes' ? 'JSettings-active-btn' : 'JSettings-flat-btn'}
@@ -130,19 +174,23 @@ export const Settings = () => {
                                     </button>
                                 </div>
                             </div>
-
                             <div className="JSettings-row">
-                                <span>Show Read Receipts</span>
+                                <div className="JSettings-label-group">
+                                    <span className="JSettings-label">Show account activity</span>
+                                    <p className="JSettings-desc">
+                                        When disabled or switched to No, your profile will be hidden from employer searches and views.
+                                    </p>
+                                </div>
                                 <div className="JSettings-btn-group">
                                     <button
-                                        className={read === 'yes' ? 'JSettings-active-btn' : 'JSettings-flat-btn'}
-                                        onClick={() => handleCommunicationChange('show_read_receipts', true)}
+                                        className={activity === 'yes' ? 'JSettings-active-btn' : 'JSettings-flat-btn'}
+                                        onClick={() => handleCommunicationChange('hide_cv', false)}false
                                     >
                                         Yes
                                     </button>
                                     <button
-                                        className={read === 'no' ? 'JSettings-active-btn' : 'JSettings-flat-btn'}
-                                        onClick={() => handleCommunicationChange('show_read_receipts', false)}
+                                        className={activity === 'no' ? 'JSettings-active-btn' : 'JSettings-flat-btn'}
+                                        onClick={() => handleCommunicationChange('hide_cv', true)}
                                     >
                                         No
                                     </button>
@@ -153,10 +201,39 @@ export const Settings = () => {
 
                     {tab === 'Security' && (
                         <div className="list">
-                            <div className="box">Security Settings</div>
-                            <div className="box">Account Protection</div>
-                            <div className="box">Third Party apps</div>
-                            <div className="box">Restrict Duplicate Applications</div>
+                            {/* <div className="box">Security Settings</div> */}
+
+
+                            <div className="box">
+                                <div className="Ad-security-header" onClick={togglePasswordChange} style={{ cursor: 'pointer' }}>
+                                    <div className="Ad-security-title-box">
+                                        <span className="Ad-security-title">Change Password</span>
+                                    </div>
+                                    <img
+                                        src={UpArrow}
+                                        alt="toggle"
+                                        width={10}
+                                        className={isPasswordChange ? 'Ad-security-up' : 'Ad-security-down'}
+                                    />
+                                </div>
+                                {isPasswordChange && <ChangePassword />}
+                            </div>
+
+
+                            <div className="box">
+                                <div className="Ad-security-header" onClick={toggle2FA} style={{ cursor: 'pointer' }}>
+                                    <div className="Ad-security-title-box">
+                                        <span className="Ad-security-title">Two-Factor Authentication</span>
+                                    </div>
+                                    <img
+                                        src={UpArrow}
+                                        alt="toggle"
+                                        width={10}
+                                        className={is2FAOpen ? 'Ad-security-up' : 'Ad-security-down'}
+                                    />
+                                </div>
+                                {is2FAOpen && <TwoFactorAuth userEmail={settings.email} userPhone={settings.phone} />}
+                            </div>
                         </div>
                     )}
 
@@ -220,4 +297,4 @@ export const Settings = () => {
             </div>
         </div>
     );
-}
+};

@@ -52,6 +52,26 @@ export const AddManagerContact = () => {
     fetchData(1);
   }, []);
 
+  // Notification click deep-link: best-effort — only opens the manager if
+  // it's on the currently loaded page. Newly created managers are always
+  // on page 1 (list is sorted by id desc), so account_manager_created will
+  // reliably work; assigned/removed may not if the manager isn't on page 1.
+  useEffect(() => {
+    if (loading || !managers || managers.length === 0) return;
+
+    const highlightType = sessionStorage.getItem('adminNotifHighlightType');
+    const highlightId = sessionStorage.getItem('adminNotifHighlightId');
+
+    if (highlightType === 'manager' && highlightId) {
+      const match = managers.find(m => String(m.id) === String(highlightId));
+      if (match) {
+        handleEdit(match);
+      }
+      sessionStorage.removeItem('adminNotifHighlightType');
+      sessionStorage.removeItem('adminNotifHighlightId');
+    }
+  }, [loading, managers]);
+
   // Update fetchData to handle pagination
   const fetchData = async (page = 1) => {
     setLoading(true);

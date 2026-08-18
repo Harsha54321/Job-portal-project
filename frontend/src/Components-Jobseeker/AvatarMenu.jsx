@@ -170,6 +170,17 @@ export const AvatarMenu = () => {
             Help Centre
           </Link>
 
+          <Link
+            to="/Job-portal/jobseeker/mytickets"
+            className="menu-items"
+            role="menuitem"
+            ref={lastMenuItemRef}
+            onClick={() => setOpen(false)}
+          >
+            <img src={reviewIcon} className="menu-icon" alt="my tickets" />
+            My Tickets
+          </Link>
+
           <div className="menu-divider" role="separator"></div>
 
           <button

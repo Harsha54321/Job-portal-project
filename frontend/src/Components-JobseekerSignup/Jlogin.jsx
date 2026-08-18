@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import manSitting from '../assets/Illustration_1.png';
 import eye from '../assets/show_password.png';
@@ -26,6 +26,21 @@ export const Jlogin = () => {
   const [rememberMe, setRememberMe] = useState(false);
   const [fcmRegistered, setFcmRegistered] = useState(false);
 
+  // ========== 2FA STATE VARIABLES ==========
+  const [showOTPModal, setShowOTPModal] = useState(false);
+  const [otpValue, setOtpValue] = useState("");
+  const [tempToken, setTempToken] = useState("");
+  const [userId, setUserId] = useState(null);
+  const [availableMethods, setAvailableMethods] = useState([]);
+  const [selectedMethod, setSelectedMethod] = useState("");
+  const [is2FALoading, setIs2FALoading] = useState(false);
+  const [otpError, setOtpError] = useState("");
+  const [countdown, setCountdown] = useState(0);
+  const [canResend, setCanResend] = useState(true);
+  const [isSendingOTP, setIsSendingOTP] = useState(false);
+  const otpInputRef = useRef(null);
+  // =========================================
+
   const initialValues = {
     username: "",
     password: "",
@@ -35,7 +50,7 @@ export const Jlogin = () => {
 
   const [formValues, setFormValues] = useState(initialValues);
   const [errors, setErrors] = useState({});
-  const[underDevEffect, setUnderDevEffect] = useState(false);
+  const [underDevEffect, setUnderDevEffect] = useState(false);
 
   const togglePasswordView = () => {
     setPasswordShow((prev) => !prev);
@@ -93,14 +108,12 @@ export const Jlogin = () => {
       setRememberMe(true);
     }
 
-    // Check for redirect from sessionStorage (from footer before login)
     const redirectPath = sessionStorage.getItem("redirectAfterLogin");
     const redirectTab = sessionStorage.getItem("redirectTab");
 
     console.log("🔍 Redirect check:", { redirectPath, redirectTab });
 
     if (redirectPath && redirectTab) {
-      // Store in location state for after login
       window.history.replaceState(
         {
           ...location.state,
@@ -111,16 +124,33 @@ export const Jlogin = () => {
       );
     }
 
-    //  REMOVED: requestAndRegisterNotificationPermission() - This was causing the error
-    // We'll now call it only after successful login
-
-    // Check FCM status but don't register yet
     console.log(" FCM Status:", {
       permission: Notification.permission,
       authenticated: !!sessionStorage.getItem("access")
     });
+  }, []);
 
-  }, []); // Empty dependency array - runs only once on mount
+  // Countdown timer for 2FA OTP resend
+  useEffect(() => {
+    let timer;
+    if (countdown > 0) {
+      timer = setTimeout(() => {
+        setCountdown(countdown - 1);
+      }, 1000);
+    } else {
+      setCanResend(true);
+    }
+    return () => clearTimeout(timer);
+  }, [countdown]);
+
+  useEffect(() => {
+    if (showOTPModal && otpSent) {
+      const t = setTimeout(() => {
+        otpInputRef.current?.focus();
+      }, 150);
+      return () => clearTimeout(t);
+    }
+  }, [showOTPModal, otpSent]);
 
   const handleForm = (e) => {
     const { name, value } = e.target;
@@ -143,7 +173,7 @@ export const Jlogin = () => {
     setInterval(() => {
       setUnderDevEffect(false);
     }, 5000);
-  }
+  };
 
   const validateForm = () => {
     const newErrors = {};
@@ -159,6 +189,183 @@ export const Jlogin = () => {
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
+
+  // ========== 2FA FUNCTIONS ==========
+
+  const sendOTPForMethod = async (e, method) => {
+    if (e && typeof e.preventDefault === 'function') {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+
+    // If method was passed as the first parameter (e.g. sendOTPForMethod('email'))
+    const targetMethod = typeof e === 'string' ? e : method;
+
+    if (!targetMethod) {
+      setOtpError("Please select a verification method first");
+      return;
+    }
+
+    setIsSendingOTP(true);
+    setOtpError("");
+
+    try {
+      const response = await api.post('jobseeker/login/send-otp/', {
+        method: targetMethod,
+        temp_token: tempToken,
+      });
+
+      if (response.data?.success) {
+        setOtpSent(true);
+        setCanResend(false);
+        setCountdown(60);
+        setOtpError("");
+      } else {
+        setOtpError(response.data?.error || response.data?.message || `Failed to send OTP`);
+        setOtpSent(false);
+      }
+    } catch (error) {
+      console.error("Send OTP error:", error);
+      setOtpError(error?.response?.data?.error || error?.response?.data?.message || `Failed to send OTP`);
+      setOtpSent(false);
+    } finally {
+      setIsSendingOTP(false);
+    }
+  };
+
+  const handleResendOTP = async (event) => {
+    if (event && typeof event.preventDefault === 'function') {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    if (!canResend) return;
+    await sendOTPForMethod(event, selectedMethod);
+  };
+
+  const handleCloseOTPModal = () => {
+    setShowOTPModal(false);
+    setOtpValue("");
+    setOtpError("");
+    setTempToken("");
+    setUserId(null);
+    setAvailableMethods([]);
+    setSelectedMethod("");
+    setIs2FALoading(false);
+    setOtpSent(false);
+    setCanResend(true);
+    setCountdown(0);
+  };
+
+  const handleVerifyOTP = async () => {
+    if (!otpValue || otpValue.length !== 6) {
+      setOtpError("Please enter a valid 6-digit OTP");
+      return;
+    }
+
+    if (!selectedMethod) {
+      setOtpError("Please select a verification method");
+      return;
+    }
+
+    if (!otpSent) {
+      setOtpError("Please send OTP first by clicking the 'Send OTP' button");
+      return;
+    }
+
+    setIs2FALoading(true);
+    setOtpError("");
+
+    try {
+      const response = await api.post('jobseeker/login/verify-otp/', {
+        temp_token: tempToken,
+        otp: otpValue,
+        method: selectedMethod
+      });
+
+      if (response.data?.success && response.data?.access) {
+        handleCloseOTPModal();
+        await finalizeLoginSuccess(response.data);
+      } else {
+        setOtpError(response.data?.message || "OTP verification failed");
+      }
+    } catch (error) {
+      console.error("OTP verification error:", error);
+      const message = error.response?.data?.message ||
+        error.response?.data?.detail ||
+        "Invalid OTP. Please try again.";
+      setOtpError(message);
+    } finally {
+      setIs2FALoading(false);
+    }
+  };
+
+  const handleMethodChange = (method) => {
+    setSelectedMethod(method);
+    setOtpValue("");
+    setOtpError("");
+    setOtpSent(false);
+  };
+
+  // Helper to complete login redirection and token caching
+  const finalizeLoginSuccess = async (data) => {
+    sessionStorage.setItem('access', data.access);
+    sessionStorage.setItem('refresh', data.refresh);
+    sessionStorage.setItem('user_type', 'jobseeker');
+
+    if (data.user) {
+      sessionStorage.setItem('user_data', JSON.stringify(data.user));
+      sessionStorage.setItem('user_id', data.user.id);
+    }
+
+    sessionStorage.setItem("userRole", "jobseeker");
+
+    if (rememberMe) {
+      localStorage.setItem("rememberedUsername", formValues.username);
+      localStorage.setItem("rememberedPassword", formValues.password);
+    } else {
+      localStorage.removeItem("rememberedUsername");
+      localStorage.removeItem("rememberedPassword");
+    }
+
+    try {
+      const fcmResult = await handleFCMRegistration();
+      console.log(" FCM registration completed:", fcmResult);
+    } catch (fcmError) {
+      console.warn("⚠️ FCM registration failed but login successful:", fcmError);
+    }
+
+    await fetchAllJobs();
+
+    const nextStep = getRedirectAfterLogin();
+
+    if (nextStep.type === "search") {
+      sessionStorage.removeItem('pendingSearch');
+      sessionStorage.removeItem('savedSearch');
+      sessionStorage.removeItem("redirectAfterLogin");
+      sessionStorage.removeItem("redirectTab");
+
+      navigate('/Job-portal/jobseeker/searchresults', {
+        replace: true,
+        state: {
+          query: nextStep.data.query,
+          location: nextStep.data.location,
+          experience: nextStep.data.experience
+        }
+      });
+    } else {
+      sessionStorage.removeItem("redirectAfterLogin");
+      sessionStorage.removeItem("redirectTab");
+
+      navigate(nextStep.path, {
+        replace: true,
+        state: {
+          activeTab: nextStep.targetTab
+        }
+      });
+    }
+  };
+
+  // =====================================
 
   const handleSendEmailOTP = async () => {
     const newErrors = {};
@@ -186,17 +393,14 @@ export const Jlogin = () => {
         user_type: 'jobseeker'
       });
 
-       console.log('OTP Response:', response.data);
+      console.log('OTP Response:', response.data);
 
-      // Block right here if the backend tells us this isn't a jobseeker account
-      // (requires the backend to include "user_type" in the send-login-otp/ response)
       if (response.data.user_type && response.data.user_type !== 'jobseeker') {
         setErrors({ username: "This login is only for Jobseeker accounts. Please use the Employer login." });
         setLoading(false);
         return;
       }
 
-      console.log('OTP Response:', response.data);
       setOtpData(response.data);
       setOtpSent(true);
       alert(`OTP sent to ${formValues.username}. Please check your email.`);
@@ -299,7 +503,6 @@ export const Jlogin = () => {
   };
 
   const getRedirectAfterLogin = () => {
-    // First priority: Check for intendedPath from footer click
     if (location.state?.intendedPath) {
       return {
         type: "redirect",
@@ -308,12 +511,10 @@ export const Jlogin = () => {
       };
     }
 
-    // Second priority: Check sessionStorage (from footer before login)
     const redirectPath = sessionStorage.getItem("redirectAfterLogin");
     const redirectTab = sessionStorage.getItem("redirectTab");
 
     if (redirectPath) {
-      // Clear sessionStorage after reading
       sessionStorage.removeItem("redirectAfterLogin");
       sessionStorage.removeItem("redirectTab");
 
@@ -324,7 +525,6 @@ export const Jlogin = () => {
       };
     }
 
-    // Third priority: Check from search
     if (location.state?.fromSearch) {
       return {
         type: "search",
@@ -336,7 +536,6 @@ export const Jlogin = () => {
       };
     }
 
-    // Default redirect
     return {
       type: "redirect",
       path: redirectTo,
@@ -347,10 +546,8 @@ export const Jlogin = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Email validation before API call
     const isEmail = formValues.username.includes('@');
 
-    // Frontend validations
     if (!formValues.username.trim()) {
       setErrors({ username: "Username or Email is required" });
       setLoading(false);
@@ -388,7 +585,25 @@ export const Jlogin = () => {
 
       const response = await api.post('login/', loginData);
 
-      // Check if user type is jobseeker
+      // Check if 2FA challenge is requested
+      if (response.data?.requires_2fa === true) {
+        setTempToken(response.data.temp_token);
+        setUserId(response.data.user_id);
+        setAvailableMethods(response.data.available_methods || ['email']);
+
+        const defaultMethod = response.data.default_method ||
+          (response.data.available_methods?.[0]) ||
+          "email";
+        setSelectedMethod(defaultMethod);
+
+        setOtpSent(false);
+        setCanResend(true);
+        setCountdown(0);
+        setShowOTPModal(true);
+        setLoading(false);
+        return;
+      }
+
       if (response.data.user.user_type !== 'jobseeker') {
         setErrors({
           username: "Invalid credentials. This login is only for Jobseeker users."
@@ -399,64 +614,7 @@ export const Jlogin = () => {
 
       if (response.data.access && response.data.refresh) {
         console.log("✅ Login successful. Storing tokens...");
-        sessionStorage.setItem('access', response.data.access);
-        sessionStorage.setItem('refresh', response.data.refresh);
-        sessionStorage.setItem('user_type', 'jobseeker');
-
-        if (response.data.user) {
-          sessionStorage.setItem('user_data', JSON.stringify(response.data.user));
-          sessionStorage.setItem('user_id', response.data.user.id);
-        }
-
-        sessionStorage.setItem("userRole", "jobseeker");
-
-        if (rememberMe) {
-          localStorage.setItem("rememberedUsername", formValues.username);
-          localStorage.setItem("rememberedPassword", formValues.password);
-        } else {
-          localStorage.removeItem("rememberedUsername");
-          localStorage.removeItem("rememberedPassword");
-        }
-
-        //  REGISTER FCM TOKEN AFTER SUCCESSFUL LOGIN
-        console.log(" Registering FCM token after login...");
-        try {
-          const fcmResult = await handleFCMRegistration();
-          console.log(" FCM registration completed:", fcmResult);
-        } catch (fcmError) {
-          // Non-critical error - don't block login flow
-          console.warn("⚠️ FCM registration failed but login successful:", fcmError);
-        }
-
-        await fetchAllJobs();
-
-        const nextStep = getRedirectAfterLogin();
-
-        if (nextStep.type === "search") {
-          sessionStorage.removeItem('pendingSearch');
-          sessionStorage.removeItem('savedSearch');
-          sessionStorage.removeItem("redirectAfterLogin");
-          sessionStorage.removeItem("redirectTab");
-
-          navigate('/Job-portal/jobseeker/searchresults', {
-            replace: true,
-            state: {
-              query: nextStep.data.query,
-              location: nextStep.data.location,
-              experience: nextStep.data.experience
-            }
-          });
-        } else {
-          sessionStorage.removeItem("redirectAfterLogin");
-          sessionStorage.removeItem("redirectTab");
-
-          navigate(nextStep.path, {
-            replace: true,
-            state: {
-              activeTab: nextStep.targetTab
-            }
-          });
-        }
+        await finalizeLoginSuccess(response.data);
       } else {
         throw new Error('Invalid response format from server');
       }
@@ -466,7 +624,6 @@ export const Jlogin = () => {
       const newErrors = {};
       const errorData = error.response?.data;
 
-      // Handle incorrect password - primary priority
       if (errorData?.detail) {
         const detail = errorData.detail;
         const detailStr = Array.isArray(detail) ? detail[0] : detail;
@@ -484,7 +641,6 @@ export const Jlogin = () => {
           newErrors.general = detailStr;
         }
       }
-      // Handle non_field_errors
       else if (errorData?.non_field_errors) {
         const errorMsg = Array.isArray(errorData.non_field_errors) ? errorData.non_field_errors[0] : errorData.non_field_errors;
         if (errorMsg && errorMsg.toLowerCase().includes("password")) {
@@ -495,7 +651,6 @@ export const Jlogin = () => {
           newErrors.general = errorMsg;
         }
       }
-      // Handle field-specific errors
       else if (errorData?.email) {
         const emailError = Array.isArray(errorData.email) ? errorData.email[0] : errorData.email;
         if (emailError && emailError.toLowerCase().includes("no account")) {
@@ -516,7 +671,6 @@ export const Jlogin = () => {
         const passwordError = Array.isArray(errorData.password) ? errorData.password[0] : errorData.password;
         newErrors.password = passwordError;
       }
-      // Handle HTTP status codes
       else if (error.response?.status === 401) {
         newErrors.password = "Incorrect password. Please try again.";
       }
@@ -626,24 +780,24 @@ export const Jlogin = () => {
                   autoComplete="current-password"
                 />
                 <button
-                    type="button"
-                    className="login-eye-icon"
-                    onClick={togglePasswordView}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        e.preventDefault();
-                        togglePasswordView();
-                      }
-                    }}
-                    aria-label={passwordShow ? "Show password" : "Hide password"}
-                    disabled={loading}
-                  >
-                    <img
-                      src={passwordShow ? eyeHide : eye}
-                      className="show-icon"
-                      alt=""
-                    />
-                  </button>
+                  type="button"
+                  className="login-eye-icon"
+                  onClick={togglePasswordView}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      togglePasswordView();
+                    }
+                  }}
+                  aria-label={passwordShow ? "Show password" : "Hide password"}
+                  disabled={loading}
+                >
+                  <img
+                    src={passwordShow ? eyeHide : eye}
+                    className="show-icon"
+                    alt=""
+                  />
+                </button>
               </div>
               {errors.password && <span className="error-msg">{errors.password}</span>}
 
@@ -655,7 +809,7 @@ export const Jlogin = () => {
                     onChange={(e) => setRememberMe(e.target.checked)}
                     onKeyDown={(e) => {
                       if (e.key === "Enter") {
-                        e.preventDefault(); // stop form submit
+                        e.preventDefault();
                         setRememberMe(prev => !prev);
                       }
                     }}
@@ -776,6 +930,228 @@ export const Jlogin = () => {
           )}
         </form>
       </div>
+
+      {/* ========== 2FA OTP MODAL ========== */}
+      {showOTPModal && (
+        <div className="otp-modal-overlay" style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 1000
+        }}>
+          <div className="otp-modal-content" style={{
+            backgroundColor: 'white',
+            borderRadius: '12px',
+            padding: '30px',
+            width: '90%',
+            maxWidth: '450px',
+            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)'
+          }}>
+            <h2 style={{ marginBottom: '10px', color: '#333' }}>Two-Factor Authentication</h2>
+            <p style={{ marginBottom: '20px', color: '#666', fontSize: '14px' }}>
+              Please verify your identity to complete login
+            </p>
+
+            <div className="2fa-method-selector" style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#555' }}>
+                Select Verification Method:
+              </label>
+
+              <div style={{ display: 'flex', gap: '10px', flexDirection: 'column' }}>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  {availableMethods.includes('email') && (
+                    <button
+                      type="button"
+                      onClick={() => handleMethodChange('email')}
+                      style={{
+                        flex: 1,
+                        padding: '10px',
+                        borderRadius: '6px',
+                        border: selectedMethod === 'email' ? '2px solid #2563eb' : '1px solid #ddd',
+                        backgroundColor: selectedMethod === 'email' ? '#eff6ff' : 'white',
+                        color: selectedMethod === 'email' ? '#2563eb' : '#666',
+                        cursor: 'pointer',
+                        fontWeight: selectedMethod === 'email' ? '600' : '400',
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                      📧 Email
+                    </button>
+                  )}
+                  {availableMethods.includes('sms') && (
+                    <button
+                      type="button"
+                      onClick={() => handleMethodChange('sms')}
+                      style={{
+                        flex: 1,
+                        padding: '10px',
+                        borderRadius: '6px',
+                        border: selectedMethod === 'sms' ? '2px solid #2563eb' : '1px solid #ddd',
+                        backgroundColor: selectedMethod === 'sms' ? '#eff6ff' : 'white',
+                        color: selectedMethod === 'sms' ? '#2563eb' : '#666',
+                        cursor: 'pointer',
+                        fontWeight: selectedMethod === 'sms' ? '600' : '400',
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                      📱 SMS
+                    </button>
+                  )}
+                </div>
+
+                {selectedMethod && (
+                  <button
+                    type="button"
+                    onClick={(event) => sendOTPForMethod(event, selectedMethod)}
+                    disabled={isSendingOTP || (otpSent && !canResend)}
+                    style={{
+                      padding: '10px',
+                      borderRadius: '6px',
+                      border: 'none',
+                      backgroundColor: (isSendingOTP || (otpSent && !canResend)) ? '#ccc' : '#10b981',
+                      color: 'white',
+                      cursor: (isSendingOTP || (otpSent && !canResend)) ? 'not-allowed' : 'pointer',
+                      fontSize: '14px',
+                      fontWeight: '500',
+                      marginTop: '10px',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    {isSendingOTP ? 'Sending...' : otpSent ? 'Resend OTP' : `Send OTP via ${selectedMethod === 'email' ? 'Email' : 'SMS'}`}
+                  </button>
+                )}
+              </div>
+
+              {otpSent && selectedMethod && (
+                <div style={{
+                  marginTop: '10px',
+                  padding: '8px',
+                  backgroundColor: '#d1fae5',
+                  borderRadius: '6px',
+                  fontSize: '12px',
+                  textAlign: 'center',
+                  color: '#065f46'
+                }}>
+                  ✓ OTP has been sent to your {selectedMethod === 'email' ? 'email address' : 'phone number'}
+                </div>
+              )}
+            </div>
+
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#555' }}>
+                Enter Verification Code
+              </label>
+              <input
+                type="text"
+                ref={otpInputRef}
+                value={otpValue}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/\D/g, '').slice(0, 6);
+                  setOtpValue(value);
+                  setOtpError("");
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (otpValue.length === 6 && otpSent && !is2FALoading) {
+                      handleVerifyOTP();
+                    }
+                  }
+                }}
+                placeholder="Enter 6-digit OTP"
+                maxLength={6}
+                disabled={!otpSent}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  fontSize: '18px',
+                  textAlign: 'center',
+                  letterSpacing: '4px',
+                  border: otpError ? '1px solid #dc3545' : '1px solid #ddd',
+                  borderRadius: '6px',
+                  outline: 'none',
+                  backgroundColor: !otpSent ? '#f5f5f5' : 'white'
+                }}
+                autoFocus
+              />
+              {otpError && (
+                <p style={{ color: '#dc3545', fontSize: '12px', marginTop: '5px' }}>
+                  {otpError}
+                </p>
+              )}
+              {!otpSent && selectedMethod && (
+                <p style={{ color: '#f59e0b', fontSize: '12px', marginTop: '5px' }}>
+                  ⚠️ Please click "Send OTP" button to receive verification code
+                </p>
+              )}
+            </div>
+
+            {otpSent && (
+              <div style={{ marginBottom: '20px', textAlign: 'center' }}>
+                <button
+                  type="button"
+                  onClick={(event) => handleResendOTP(event)}
+                  disabled={!canResend || isSendingOTP}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: canResend ? '#2563eb' : '#999',
+                    cursor: canResend ? 'pointer' : 'not-allowed',
+                    fontSize: '14px'
+                  }}
+                >
+                  {canResend ? "Didn't receive OTP? Resend" : `Resend available in ${countdown}s`}
+                </button>
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button
+                type="button"
+                onClick={handleCloseOTPModal}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  borderRadius: '6px',
+                  border: '1px solid #ddd',
+                  backgroundColor: 'white',
+                  color: '#666',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: '500'
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleVerifyOTP}
+                disabled={is2FALoading || !otpValue || otpValue.length !== 6 || !otpSent}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  borderRadius: '6px',
+                  border: 'none',
+                  backgroundColor: (is2FALoading || !otpValue || otpValue.length !== 6 || !otpSent) ? '#ccc' : '#2563eb',
+                  color: 'white',
+                  cursor: (is2FALoading || !otpValue || otpValue.length !== 6 || !otpSent) ? 'not-allowed' : 'pointer',
+                  fontSize: '14px',
+                  fontWeight: '500'
+                }}
+              >
+                {is2FALoading ? 'Verifying...' : 'Verify & Login'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

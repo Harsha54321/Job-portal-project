@@ -4,7 +4,7 @@ import api from '../api/axios';
 import './AddManagerSupport.css';
 import ProfileIcon from "../assets/icon_profile.png";
 
-export const AddManagerSupport = () => {
+export const AddManagerSupport = ({ targetManagerId } = {}) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [contacts, setContacts] = useState([]);
@@ -35,12 +35,16 @@ export const AddManagerSupport = () => {
       setActionButton(data.action_button);
 
       if (data.has_access && data.contacts && data.contacts.length > 0) {
-        setContacts(data.contacts);
-        // Prioritize selecting the primary contact first
-        const primary = data.contacts.find(c => c.is_primary);
-        setSelectedContact(primary || data.contacts[0]);
-        setShowAllContacts(false);
-      } else {
+          setContacts(data.contacts);
+
+          const target = targetManagerId
+              ? data.contacts.find(c => String(c.id) === String(targetManagerId))
+              : null;
+          const primary = data.contacts.find(c => c.is_primary);
+
+          setSelectedContact(target || primary || data.contacts[0]);
+          setShowAllContacts(false);
+      }else {
         setContacts([]);
         setSelectedContact(null);
         setShowAllContacts(true);
@@ -299,9 +303,6 @@ export const AddManagerSupport = () => {
     );
   }
 
-  // ──────────────────────────────────────────────
-  // ALL CONTACTS LIST VIEW
-  // ──────────────────────────────────────────────
   return (
     <div className="employer-manager-container">
       <div className="employer-manager-card width-max-550">

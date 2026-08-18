@@ -105,6 +105,46 @@ export const Escalation = () => {
         loadData();
     }, []);
 
+    // Notification click deep-link: open the specific complaint/report once
+    // reports (and jobs, for the "jobExists" check) have loaded.
+    useEffect(() => {
+        if (isJobsLoading || !reports || reports.length === 0) return;
+
+        const highlightType = sessionStorage.getItem('adminNotifHighlightType');
+        const highlightId = sessionStorage.getItem('adminNotifHighlightId');
+
+        if (highlightType === 'complaint' && highlightId) {
+            const match = reports.find(r => String(r.id) === String(highlightId));
+
+            if (match) {
+                const openMatch = async () => {
+                    const jobId = match.JobId || match.jobId;
+                    let jobExists = true;
+
+                    if (jobId) {
+                        const existsInContext = jobs.some(job => String(job.id) === String(jobId));
+                        if (existsInContext) {
+                            jobExists = true;
+                        } else {
+                            try {
+                                const response = await api.get(`/admin/jobs/${jobId}/detail/`);
+                                jobExists = !!response.data && !!response.data.id;
+                            } catch (err) {
+                                jobExists = false;
+                            }
+                        }
+                    }
+
+                    setSelectedReport({ ...match, jobExists });
+                };
+                openMatch();
+            }
+
+            sessionStorage.removeItem('adminNotifHighlightType');
+            sessionStorage.removeItem('adminNotifHighlightId');
+        }
+    }, [isJobsLoading, reports, jobs]);
+
     const formatToLocalTime = (dateString) => {
         if (!dateString) return "N/A";
         try {

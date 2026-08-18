@@ -6,7 +6,7 @@ import { useJobs } from '../JobContext';
 import api from "../api/axios";
 import { LocationDisplay } from '../Components-Jobseeker/LocationDisplay';
 
-export const PostedJobs = ({ onViewApplicants }) => {
+export const PostedJobs = ({ onViewApplicants, onEditJob, allowEditAfterApproval = true }) => {
   const navigate = useNavigate();
   const { jobs, getJobStats, currentEmployer, deleteJob, setCurrentEmployer, setAlluser } = useJobs();
 
@@ -16,6 +16,7 @@ export const PostedJobs = ({ onViewApplicants }) => {
   const [selectedJobId, setSelectedJobId] = useState(null);
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
+
 
   const PostedJob = currentEmployer?.jobPosted || [];
 
@@ -65,6 +66,13 @@ export const PostedJobs = ({ onViewApplicants }) => {
   const handleEditClick = (job) => {
     setActiveMenu(null);
     navigate('/Job-portal/Employer/EditJob', { state: job });
+  };
+
+  const handleEditJobClick = (job) => {
+    setActiveMenu(null);
+    if (job.approval_status === 'approved' && !allowEditAfterApproval) return;
+
+    if (onEditJob) onEditJob(job);
   };
 
   const handleDeleteClick = async (id) => {
@@ -133,7 +141,7 @@ export const PostedJobs = ({ onViewApplicants }) => {
                 <div key={job.id} className={cardClassName} style={{ position: 'relative', overflow: 'visible', zIndex: activeMenu === job.id ? 1000 : 1 }}>
                   {/* Badge only for highlighted jobs */}
                   {isHighlighted && <span className="job-badge premium-badge">⭐ Highlighted job</span>}
-                  
+
                   <div className="postedjobs-info">
                     <h3>{job.job_title}</h3>
                     <p className="postedjobs-loc flex items-center gap-2">
@@ -179,11 +187,30 @@ export const PostedJobs = ({ onViewApplicants }) => {
                             minWidth: '130px'
                           }}
                         >
+
                           <button
                             onClick={() => handleEditClick(job)}
                             style={{ display: 'block', width: '100%', padding: '12px 15px', border: 'none', background: 'none', textAlign: 'left', cursor: 'pointer', fontSize: '14px' }}
                           >
                             Edit Status
+                          </button>
+                          {/* <button
+                            onClick={() => handleEditJobClick(job)}
+                            style={{ display: 'block', width: '100%', padding: '12px 15px', border: 'none', background: 'none', textAlign: 'left', cursor: 'pointer', fontSize: '14px' }}
+                          >
+                            Edit Job
+                          </button> */}
+                          <button
+                            onClick={() => handleEditJobClick(job)}
+                            disabled={job.approval_status === 'approved' && !allowEditAfterApproval}
+                            title={job.approval_status === 'approved' && !allowEditAfterApproval ? 'Editing approved jobs is disabled' : undefined}
+                            style={{
+                              display: 'block', width: '100%', padding: '12px 15px', border: 'none', background: 'none', textAlign: 'left', fontSize: '14px',
+                              cursor: (job.approval_status === 'approved' && !allowEditAfterApproval) ? 'not-allowed' : 'pointer',
+                              color: (job.approval_status === 'approved' && !allowEditAfterApproval) ? '#a0aab5' : 'inherit'
+                            }}
+                          >
+                            Edit Job
                           </button>
                           <button
                             onClick={() => handleDeleteClick(job.id)}

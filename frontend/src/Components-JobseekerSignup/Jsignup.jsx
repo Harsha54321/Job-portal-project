@@ -684,15 +684,15 @@ export const Jsignup = () => {
   // ─── RENDER ─────────────────────────────────────────────────────────────────
 
   // Show loading indicator while fetching settings
-  if (isLoadingSettings) {
-    return (
-      <div className="j-sign-up-page">
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-          <div>Loading...</div>
-        </div>
-      </div>
-    );
-  }
+  // if (isLoadingSettings) {
+  //   return (
+  //     <div className="j-sign-up-page">
+  //       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+  //         <div>Loading...</div>
+  //       </div>
+  //     </div>
+  //   );
+  // }
 
   return (
     <>
