@@ -11,7 +11,7 @@ from .models import (
     CompanyVerification, Complaint, CompanyProfile, UserSettings, 
     HelpTopic, RaiseTicket, PasswordResetToken, EmailOTP, ChatMessage, Plan, Subscription,
     Invoice, PaymentMethod,AdminAccessLog, AdminTrustedDevice, CompanyReview, UserDevice,
-    EmployerPlatformSettings, AccountManager, EmployerAccountManagerAssignment,
+    EmployerPlatformSettings, AccountManager, EmployerAccountManagerAssignment,Payment
 )
 from .services import Admin2FAService , AdminSecurityService
  
@@ -2030,9 +2030,93 @@ class NewsletterSubscriberSerializer(serializers.ModelSerializer):
 class NotificationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Notification
-        fields = ['id', 'user', 'message', 'created_at', 'is_read', 'notification_type', 'related_object_id']
+        fields = ['id', 'user', 'message', 'created_at', 'is_read', 'notification_type','event_type', 'related_object_id']
         read_only_fields = ['id', 'created_at']
 
+# ── Admin: Subscription Orders (Payment) & Subscriptions ──────────────────
+# Added to support the "Orders" / "Subscriptions" screens under the Admin
+# Membership tab (backs the subscription_order_created / subscription_cancelled
+# notification click-through).
+
+class EmployerCompanyMixin:
+    """Shared employer_id / employer_name / company_name fields for Payment
+    and Subscription serializers below. Both models' `user` FK points at the
+    employer's User account; employer_id here is the EmployerProfile's
+    `employee_id` (the ID assigned to the employer within their company),
+    NOT the User account's DB id. Display name and company also come from
+    that same EmployerProfile (which may not exist for older/test accounts,
+    so every lookup is guarded)."""
+
+    def get_employer_id(self, obj):
+        profile = getattr(obj.user, 'employer_profile', None)
+        return profile.employee_id if profile else None
+
+    def get_employer_name(self, obj):
+        profile = getattr(obj.user, 'employer_profile', None)
+        if profile and profile.full_name:
+            return profile.full_name
+        return obj.user.username if obj.user else None
+
+    def get_company_name(self, obj):
+        profile = getattr(obj.user, 'employer_profile', None)
+        if profile and profile.company:
+            return profile.company.company_name
+        return None
+
+
+class AdminSubscriptionOrderSerializer(EmployerCompanyMixin, serializers.ModelSerializer):
+    """List/row view for a Payment (= an "order")."""
+    user_email = serializers.CharField(source='user.email', read_only=True)
+    plan_name = serializers.CharField(source='plan.name', read_only=True, default=None)
+    employer_id = serializers.SerializerMethodField()
+    employer_name = serializers.SerializerMethodField()
+    company_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Payment
+        fields = [
+            'id', 'user_email', 'employer_id', 'employer_name', 'company_name',
+            'plan_name', 'amount', 'currency', 'status',
+            'payment_method', 'razorpay_order_id', 'razorpay_payment_id',
+            'failure_reason', 'created_at', 'updated_at',
+        ]
+
+
+class AdminSubscriptionOrderDetailSerializer(EmployerCompanyMixin, serializers.ModelSerializer):
+    """Detail view for a single Payment ("order")."""
+    user_email = serializers.CharField(source='user.email', read_only=True)
+    user_id = serializers.IntegerField(source='user.id', read_only=True)
+    employer_id = serializers.SerializerMethodField()
+    employer_name = serializers.SerializerMethodField()
+    company_name = serializers.SerializerMethodField()
+    plan_name = serializers.CharField(source='plan.name', read_only=True, default=None)
+    plan_id = serializers.IntegerField(source='plan.id', read_only=True, default=None)
+
+    class Meta:
+        model = Payment
+        fields = [
+            'id', 'user_id', 'user_email', 'employer_id', 'employer_name',
+            'company_name', 'plan_id', 'plan_name', 'amount',
+            'currency', 'status', 'payment_method', 'failure_reason',
+            'razorpay_order_id', 'razorpay_payment_id', 'razorpay_response',
+            'created_at', 'updated_at',
+        ]
+
+
+class AdminSubscriptionSerializer(EmployerCompanyMixin, serializers.ModelSerializer):
+    """List/row + detail view for a Subscription."""
+    user_email = serializers.CharField(source='user.email', read_only=True)
+    employer_id = serializers.SerializerMethodField()
+    employer_name = serializers.SerializerMethodField()
+    company_name = serializers.SerializerMethodField()
+    plan_name = serializers.CharField(source='plan.name', read_only=True, default=None)
+
+    class Meta:
+        model = Subscription
+        fields = [
+            'id', 'user_email', 'employer_id', 'employer_name', 'company_name',
+            'plan_name', 'status', 'duration', 'start_date', 'end_date',
+        ]
 
 class SaveDeviceTokenSerializer(serializers.Serializer): #changed on 15/05
     fcm_token = serializers.CharField()
