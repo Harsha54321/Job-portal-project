@@ -50,6 +50,8 @@ export const EmployerDashboard = () => {
     const [applications, setApplications] = useState([]);
     const [loadingStats, setLoadingStats] = useState(true);
     const [isDataLoading, setIsDataLoading] = useState(true);
+    const [editJobData, setEditJobData] = useState(null);
+    const [allowEditAfterApproval, setAllowEditAfterApproval] = useState(true);
 
     const [verificationStatus, setVerificationStatus] = useState({
         isLoading: true,
@@ -86,6 +88,18 @@ export const EmployerDashboard = () => {
             setActiveTab("My job post");
         }
     }, [activetab, selectedJob]);
+
+    useEffect(() => {
+        const fetchEditPermission = async () => {
+            try {
+                const res = await api.get('/subscription/');
+                setAllowEditAfterApproval(res.data?.allow_edit_after_approval ?? false);
+            } catch (error) {
+                console.error("Error fetching edit-after-approval permission:", error);
+            }
+        };
+        fetchEditPermission();
+    }, []);
 
 
     // const PostedJob = currentEmployer?.jobPosted || [];
@@ -368,6 +382,19 @@ export const EmployerDashboard = () => {
     const handleViewApplicants = (job) => {
         setSelectedJob(job);
         setActiveTab('ViewApplicants');
+    };
+
+
+    const handleEditJob = (job) => {
+        setActiveMenu(null);
+        if (job.approval_status === 'approved' && !allowEditAfterApproval) return;
+        setEditJobData(job);
+        setActiveTab('Post a Job');
+    };
+
+    const goToPostJobTab = () => {
+        setEditJobData(null);
+        setActiveTab('Post a Job');
     };
 
     // ============ LOADING SPINNER COMPONENT ============
@@ -673,6 +700,18 @@ export const EmployerDashboard = () => {
                                                                                                     Edit Status
                                                                                                 </button>
                                                                                                 <button
+                                                                                                    onClick={() => handleEditJob(job)}
+                                                                                                    disabled={job.approval_status === 'approved' && !allowEditAfterApproval}
+                                                                                                    title={job.approval_status === 'approved' && !allowEditAfterApproval ? 'Editing approved jobs is disabled' : undefined}
+                                                                                                    style={{
+                                                                                                        display: 'block', width: '100%', padding: '12px 15px', border: 'none', background: 'none', textAlign: 'left', fontSize: '14px',
+                                                                                                        cursor: (job.approval_status === 'approved' && !allowEditAfterApproval) ? 'not-allowed' : 'pointer',
+                                                                                                        color: (job.approval_status === 'approved' && !allowEditAfterApproval) ? '#a0aab5' : 'inherit'
+                                                                                                    }}
+                                                                                                >
+                                                                                                    Edit Job
+                                                                                                </button>
+                                                                                                <button
                                                                                                     onClick={() => handleDeleteClick(job.id)}
                                                                                                     className="delete-opt"
                                                                                                     style={{ display: 'block', width: '100%', padding: '12px 15px', border: 'none', background: 'none', textAlign: 'left', cursor: 'pointer', fontSize: '14px', color: '#d9534f', fontWeight: '600' }}
@@ -714,14 +753,16 @@ export const EmployerDashboard = () => {
                     )}
 
                     {activetab === 'Post a Job' && verificationStatus.isVerified && (
+                       
                         <PostJobForm
-                            onCancel={() => setActiveTab('Dashboard')}
+                            onCancel={() => { setEditJobData(null); setActiveTab('Dashboard'); }}
                             showHomeIcon={location.state?.fromFooter}
+                            editJobData={editJobData}
                         />
                     )}
 
                     {activetab === 'My job post' && verificationStatus.isVerified && (
-                        <PostedJobs onViewApplicants={(job) => { setSelectedJob(job); setActiveTab('ViewApplicants'); }} />
+                        <PostedJobs onViewApplicants={(job) => { setSelectedJob(job); setActiveTab('ViewApplicants'); }} onEditJob={handleEditJob} allowEditAfterApproval={allowEditAfterApproval} />
                     )}
 
                     {activetab === 'ViewApplicants' &&
