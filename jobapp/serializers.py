@@ -2517,30 +2517,20 @@ class CompanyVerificationSerializer(serializers.ModelSerializer):
             'employer',
             'created_at'
         ]
+        extra_kwargs = {
+            'incorporation_certificate': {'required': False, 'allow_null': True},
+            'registration_certificate': {'required': False, 'allow_null': True},
+            'tax_certificate': {'required': False, 'allow_null': True},
+        }
  
     def validate(self, data):
- 
-        registration_number = data.get(
-            "registration_number"
-        )
- 
+        registration_number = data.get("registration_number")
         tax_id = data.get("tax_id")
- 
         legal_name = data.get("legal_name")
- 
-        # ─────────────────────────────────────
-        # EMPLOYER
-        # ─────────────────────────────────────
- 
+
         employer = None
-        if (
-            hasattr(self, 'context')
-            and
-            'request' in self.context
-        ):
-            employer = self.context[
-                'request'
-            ].user
+        if hasattr(self, 'context') and 'request' in self.context:
+            employer = self.context['request'].user
 
         # Check if this employer already has a verification
         if employer and CompanyVerification.objects.filter(employer=employer).exists():
@@ -2548,143 +2538,41 @@ class CompanyVerificationSerializer(serializers.ModelSerializer):
                 "You have already submitted a verification request."
             )
 
-        # ─────────────────────────────────────
-        # ACTIVE SUBSCRIPTION
-        # ─────────────────────────────────────
- 
+        # Active subscription check
         subscription = Subscription.objects.filter(
             user=employer,
             status='active'
-        ).select_related(
-            'plan'
-        ).first()
- 
+        ).select_related('plan').first()
+
         if not subscription:
- 
-            raise serializers.ValidationError(
-                {
-                    "subscription": (
-                        "No active subscription found."
-                    )
-                }
-            )
- 
-        # ─────────────────────────────────────
-        # PLAN SETTINGS
-        # ─────────────────────────────────────
- 
-        platform = (
-            EmployerPlatformSettings.objects.filter(
- 
-                plan=subscription.plan,
- 
-                account_status=employer.status
- 
-            ).first()
-        )
- 
+            raise serializers.ValidationError({
+                "subscription": "No active subscription found."
+            })
+
+        # Plan settings check
+        platform = EmployerPlatformSettings.objects.filter(
+            plan=subscription.plan,
+            account_status=employer.status
+        ).first()
+
         if not platform:
- 
-            raise serializers.ValidationError(
-                {
-                    "settings": (
-                        "Employer platform settings "
-                        "not configured for this plan."
-                    )
-                }
-            )
- 
-        # if not platform.allow_multiple_company:
-        #     existing_verification = (
-        #         CompanyVerification.objects.filter(
-        #             employer=employer
-        #         ).exists()
-        #     )
-        #     if existing_verification:
-        #         raise serializers.ValidationError(
-        #             {
-        #                 "company": (
-        #                     "Multiple companies "
-        #                     "are not allowed."
-        #                 )
-        #             }
-        #         )
- 
-        # if employer:
- 
-        #     existing_company = (
-        #         CompanyVerification.objects.filter(
- 
-        #             employer=employer,
- 
-        #             legal_name__iexact=legal_name
- 
-        #         ).exists()
-        #     )
- 
-        #     if existing_company:
- 
-        #         raise serializers.ValidationError(
-        #             {
-        #                 "legal_name": (
-        #                     "Company with this "
-        #                     "name already exists."
-        #                 )
-        #             }
-        #         )
- 
-        existing_reg = (
-            CompanyVerification.objects.filter(
-                registration_number=registration_number,
-                status='Verified'
-            ).exists()
-        )
- 
-        existing_tax = (
-            CompanyVerification.objects.filter(
-                tax_id=tax_id,
-                status='Verified'
-            ).exists()
-        )
- 
-        # ─────────────────────────────────────
-        # VALIDATION ERRORS
-        # ─────────────────────────────────────
- 
-        errors = {}
+            raise serializers.ValidationError({
+                "settings": "Employer platform settings not configured for this plan."
+            })
 
-        # if existing_reg:
- 
-        #     errors[
-        #         "registration_number"
-        #     ] = (
-        #         "This registration number "
-        #         "already exists."
-        #     )
- 
-        # if existing_tax:
- 
-        #     errors[
-        #         "tax_id"
-        #     ] = (
-        #         "This tax ID already exists."
-        #     )
- 
-        if errors:
- 
-            raise serializers.ValidationError(
-                errors
-            )
-
+        # ─────────────────────────────────────
+        # REMOVED: incorporation_certificate validation
+        # Only check registration_certificate and tax_certificate
+        # ─────────────────────────────────────
         if not data.get('registration_certificate'):
-           raise serializers.ValidationError({
-            "registration_certificate": "Registration document is required."
-        })
+            raise serializers.ValidationError({
+                "registration_certificate": "Registration document is required."
+            })
         if not data.get('tax_certificate'):
-           raise serializers.ValidationError({
-            "tax_certificate": "Tax document is required."
-        })
- 
+            raise serializers.ValidationError({
+                "tax_certificate": "Tax document is required."
+            })
+
         return data
 
 # OTP Serializer
@@ -3207,10 +3095,12 @@ class AdminCompanySerializer(serializers.ModelSerializer):
         return obj.created_at.strftime("%d %B %Y") if obj.created_at else None
  
     def get_certificate(self, obj):
-        return "Yes" if obj.incorporation_certificate else "No"
+        # Check registration_certificate and tax_certificate instead of incorporation_certificate
+        if obj.registration_certificate and obj.tax_certificate:
+            return "Yes"
+        return "No"
  
     def get_name(self, obj):
-        # Prioritize customized company profile configurations over registration legal names
         if hasattr(obj.employer, 'employer_profile') and obj.employer.employer_profile.company:
             return obj.employer.employer_profile.company.company_name
         return obj.legal_name
@@ -3241,7 +3131,10 @@ class AdminCompanyDetailSerializer(serializers.ModelSerializer):
         return obj.created_at.strftime("%d %B %Y") if obj.created_at else None
 
     def get_certificate(self, obj):
-        return "Yes" if obj.incorporation_certificate else "No"
+        # Check registration_certificate and tax_certificate instead of incorporation_certificate
+        if obj.registration_certificate and obj.tax_certificate:
+            return "Yes"
+        return "No"
 
     def get_name(self, obj):
         if hasattr(obj.employer, 'employer_profile') and obj.employer.employer_profile.company:
@@ -3271,11 +3164,26 @@ class AdminCompanyDetailSerializer(serializers.ModelSerializer):
     def get_verification_details(self, obj):
         request = self.context.get("request")
 
-        certificate_url = None
-        if obj.incorporation_certificate:
-            certificate_url = obj.incorporation_certificate.url
+        # Get registration certificate URL
+        registration_certificate_url = None
+        if obj.registration_certificate:
+            registration_certificate_url = obj.registration_certificate.url
             if request:
-                certificate_url = request.build_absolute_uri(certificate_url)
+                registration_certificate_url = request.build_absolute_uri(registration_certificate_url)
+
+        # Get tax certificate URL
+        tax_certificate_url = None
+        if obj.tax_certificate:
+            tax_certificate_url = obj.tax_certificate.url
+            if request:
+                tax_certificate_url = request.build_absolute_uri(tax_certificate_url)
+
+        # Remove incorporation_certificate
+        # incorporation_certificate_url = None
+        # if obj.incorporation_certificate:
+        #     incorporation_certificate_url = obj.incorporation_certificate.url
+        #     if request:
+        #         incorporation_certificate_url = request.build_absolute_uri(incorporation_certificate_url)
 
         return {
             "legal_name": obj.legal_name,
@@ -3284,7 +3192,11 @@ class AdminCompanyDetailSerializer(serializers.ModelSerializer):
             "website_url": obj.website_url,
             "official_email": obj.official_email,
             "phone_number": obj.phone_number,
-            "incorporation_certificate": certificate_url,
+            # Use registration_certificate instead
+            "registration_certificate": registration_certificate_url,
+            "tax_certificate": tax_certificate_url,
+            # Remove this
+            # "incorporation_certificate": incorporation_certificate_url,
             "email_verified": True,
             "mobile_verified": True,
             "submitted_by": obj.employer.username if obj.employer else None,

@@ -46,13 +46,13 @@ export const CompanyVerify = () => {
   const [formData, setFormData] = useState({
     legalName: "",
     registrationNumber: "",
-    registrationFile: null,   
+    registrationFile: null,
     taxId: "",
-    taxFile: null,            
+    taxFile: null,
     websiteUrl: "",
     officialEmail: "",
     phoneNumber: "",
-    incorporationCertificate: null,
+    // incorporationCertificate: null,
   });
 
   // Handle all inputs (including file uploads)
@@ -77,7 +77,7 @@ export const CompanyVerify = () => {
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
       ];
 
-       // if (file && !allowedTypes.includes(file.type)) {
+      // if (file && !allowedTypes.includes(file.type)) {
       //   alert("Only PDF, JPG, JPEG, and PNG files are allowed!");
       //   return;
       // }
@@ -200,9 +200,9 @@ export const CompanyVerify = () => {
       newErrors.phoneNumber = "Enter valid 10-digit mobile (starts with 6-9)";
     }
 
-    if (!formData.incorporationCertificate) {
-      newErrors.incorporationCertificate = "Certificate upload is required";
-    }
+    // if (!formData.incorporationCertificate) {
+    //   newErrors.incorporationCertificate = "Certificate upload is required";
+    // }
 
     setErrors(newErrors);
     if (Object.keys(newErrors).length > 0) {
@@ -407,10 +407,10 @@ export const CompanyVerify = () => {
       return;
     }
 
-    if (!formData.incorporationCertificate) {
-      alert("Company Incorporation Certificate is required!");
-      return;
-    }
+    // if (!formData.incorporationCertificate) {
+    //   alert("Company Incorporation Certificate is required!");
+    //   return;
+    // }
 
     setIsSubmitting(true);  // Only submitting state
     setBackendError("");
@@ -423,7 +423,8 @@ export const CompanyVerify = () => {
       formDataToSend.append("website_url", formData.websiteUrl);
       formDataToSend.append("official_email", formData.officialEmail);
       formDataToSend.append("phone_number", formData.phoneNumber);
-      formDataToSend.append("incorporation_certificate", formData.incorporationCertificate);
+      // ❌ REMOVED: incorporation_certificate
+      // formDataToSend.append("incorporation_certificate", formData.incorporationCertificate);
 
       if (formData.registrationFile) {
         formDataToSend.append("registration_certificate", formData.registrationFile);

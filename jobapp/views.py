@@ -3904,8 +3904,9 @@ class CompanyVerificationAction(APIView):
  
         status_value = request.data.get("status")
  
-        if status_value not in ["Verified", "reject"]:
-            return Response({"error": "Invalid status"})
+        # This should work if frontend sends "Reject"
+        if status_value not in ["Verified", "Reject"]:
+            return Response({"error": "Invalid status"}, status=400)
  
         verification.status = status_value
         verification.save()

@@ -1237,7 +1237,9 @@ class CompanyVerification(models.Model):
     official_email = models.EmailField()
     phone_number = models.CharField(max_length=20)
     incorporation_certificate = models.FileField(
-        upload_to="company_certificates/"
+        upload_to="company_certificates/",
+        null=True,
+        blank=True  # Add this
     )
     registration_certificate = models.FileField(
         upload_to="company/registration/",

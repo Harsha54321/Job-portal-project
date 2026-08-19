@@ -1,3 +1,5 @@
+// Updated ActivityMonitor.jsx with fixed Quick View modal
+
 import React, { useState, useEffect } from 'react'
 import './ActivityMonitor.css'
 import YellowProfile from '../assets/AdminAssets/YellowBGProfile.png'
@@ -126,6 +128,7 @@ export const ActivityMonitor = ({ currentTab, onTabChange }) => {
     setDetailsError("");
     setDetailsLoading(false);
 
+    // Check if we already have full details
     const hasFullDetails =
       company.company_profile ||
       company.verification_details ||
@@ -191,14 +194,12 @@ export const ActivityMonitor = ({ currentTab, onTabChange }) => {
   const filteredCompanies = companyData
     .filter(company => {
       const searchTerm = search.toLowerCase().trim();
-      if (!searchTerm) return true; // If search is empty, show all rows
+      if (!searchTerm) return true;
 
-      // Resolve the exact visible company name strings from the grid row matching paths
       const visibleCompanyName = (company.name || "").toLowerCase();
       const embeddedProfileName = (company.company_profile?.company_name || "").toLowerCase();
       const rootCompanyName = (company.company_name || "").toLowerCase();
 
-      // Other column fields
       const submittedBy = (company.user || "").toLowerCase();
       const statusText = (company.verification || "").toLowerCase();
 
@@ -597,7 +598,7 @@ export const ActivityMonitor = ({ currentTab, onTabChange }) => {
 
               <div className="C-Approval-content-constrained">
 
-                {/* Integrated Search Box - Styled dynamically to look same as User Management */}
+                {/* Integrated Search Box */}
                 <div className="um-search-container" style={{ margin: "0px 0px 20px 0px" }}>
                   <div className="search-wrapper">
                     <span className="search-icon"><img src={Searchicon} alt="Search" /></span>
@@ -632,13 +633,11 @@ export const ActivityMonitor = ({ currentTab, onTabChange }) => {
                       )}
                       {currentRecords.map((company) => (
                         <div className="C-Approval-data-row" key={company.id}>
-                          {/* Displaying configured Company Name instead of backend Legal Name fields */}
                           <div className="C-Approval-col C-Approval-name">
                             {company.company_profile?.company_name || company.company_name || company.name || "N/A"}
                           </div>
                           <div className="C-Approval-col">
                             <div className="C-Approval-user-info">
-                              {/* <div className="C-Approval-avatar"></div> */}
                               <span>{company.user}</span>
                             </div>
                           </div>
@@ -700,7 +699,7 @@ export const ActivityMonitor = ({ currentTab, onTabChange }) => {
                       ))}
                     </div>
 
-                    {/* Integrated Pagination Footer Footer matching User Management design pattern */}
+                    {/* Pagination Footer */}
                     <div className="pagination-footer" style={{ marginTop: "20px" }}>
                       <p>Page {currentPage} of {nPages || 1}</p>
                       <div className="pagination-btns">
@@ -720,6 +719,7 @@ export const ActivityMonitor = ({ currentTab, onTabChange }) => {
         </div>
       </div>
 
+      {/* Company Details Modal - Updated */}
       {selectedCompany && (
         <div
           className="company-details-overlay"
@@ -986,24 +986,45 @@ export const ActivityMonitor = ({ currentTab, onTabChange }) => {
                     </p>
                   </div>
 
-                  {/* Enhanced Verification Certificate File Lookups resolving historical links mapping */}
-                  {(selectedCompany.verification_details?.incorporation_certificate ||
-                    selectedCompany.incorporation_certificate) && (
+                  {/* Registration Certificate - NEW */}
+                  {(selectedCompany.verification_details?.registration_certificate ||
+                    selectedCompany.registration_certificate) && (
                       <div className="company-details-full">
-                        <span>Incorporation Certificate</span>
+                        <span>Registration Certificate</span>
                         <a
                           href={
-                            selectedCompany.verification_details?.incorporation_certificate ||
-                            selectedCompany.incorporation_certificate
+                            selectedCompany.verification_details?.registration_certificate ||
+                            selectedCompany.registration_certificate
                           }
                           target="_blank"
                           rel="noopener noreferrer"
                           className="company-details-link"
                         >
-                          View Certificate
+                          View Registration Certificate
                         </a>
                       </div>
                     )}
+
+                  {/* Tax Certificate - NEW */}
+                  {(selectedCompany.verification_details?.tax_certificate ||
+                    selectedCompany.tax_certificate) && (
+                      <div className="company-details-full">
+                        <span>Tax / GST Certificate</span>
+                        <a
+                          href={
+                            selectedCompany.verification_details?.tax_certificate ||
+                            selectedCompany.tax_certificate
+                          }
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="company-details-link"
+                        >
+                          View Tax Certificate
+                        </a>
+                      </div>
+                    )}
+
+                  {/* REMOVED: Incorporation Certificate section - using registration and tax certificates instead */}
                 </div>
               </>
             )}
