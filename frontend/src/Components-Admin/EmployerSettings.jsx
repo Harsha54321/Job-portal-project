@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import "./EmployerSettings.css";
 import Info from '../assets/AdminAssets/Circle-Info.png';
 import api from "../api/axios";
+import Registration from '../assets/AdminAssets/registrationAccess.png';
 
 export const EmployerSettings = () => {
 
@@ -536,6 +537,10 @@ export const EmployerSettings = () => {
 
         {/* ── Required Documents ── */}
         <div className="Jobseeker-Set-registration-right">
+          <img src={Registration} alt="Verification illustration" loading="eager" />
+        </div>
+
+        {/* <div className="Jobseeker-Set-registration-right">
           <h2>Required Documents <span
             style={{
               marginLeft: '8px',
@@ -572,7 +577,7 @@ export const EmployerSettings = () => {
               </div>
             ))}
           </div>
-        </div>
+        </div> */}
       </div>
 
       {/* ── Preferences / Notifications / Plan+Status ── */}

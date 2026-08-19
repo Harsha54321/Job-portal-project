@@ -1239,6 +1239,16 @@ class CompanyVerification(models.Model):
     incorporation_certificate = models.FileField(
         upload_to="company_certificates/"
     )
+    registration_certificate = models.FileField(
+        upload_to="company/registration/",
+        null=True,
+        blank=True
+    )
+    tax_certificate = models.FileField(
+        upload_to="company/tax/",
+        null=True,
+        blank=True
+    )
     gst_certificate = models.FileField(
         upload_to='company/gst/',
         null=True,

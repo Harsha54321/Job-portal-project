@@ -1202,8 +1202,6 @@ class PostAJobSerializer(serializers.ModelSerializer):
             'is_published',
             'posted_date',
             'employer',
-            'is_highlighted',     # set by view via serializer.save()
-            'highlighted_at',     # set by view via serializer.save()
             'created_at',
             'approval_status',
             'expiry_date',
@@ -1735,7 +1733,7 @@ class Jobseeker2FAStatusSerializer(serializers.ModelSerializer):
     class Meta:
         model = JobseekerSecurityProfile
         fields = ['two_factor_enabled', 'two_factor_method', 'email_verified', 'sms_verified']
-        
+
 
 class JobApplicationWriteSerializer(
     serializers.ModelSerializer
@@ -2677,6 +2675,15 @@ class CompanyVerificationSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 errors
             )
+
+        if not data.get('registration_certificate'):
+           raise serializers.ValidationError({
+            "registration_certificate": "Registration document is required."
+        })
+        if not data.get('tax_certificate'):
+           raise serializers.ValidationError({
+            "tax_certificate": "Tax document is required."
+        })
  
         return data
 

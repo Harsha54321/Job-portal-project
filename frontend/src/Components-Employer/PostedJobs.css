@@ -401,3 +401,12 @@
     color: #5D4037;
     box-shadow: 0 2px 12px rgba(255, 215, 0, 0.3);
 }
+
+/* LocationDisplay modal must not be affected by job-card hover/stacking */
+.postedjobs-card .postedjobs-loc {
+    min-width: 0;
+}
+
+.postedjobs-card .loc-wrap {
+    min-width: 0;
+}

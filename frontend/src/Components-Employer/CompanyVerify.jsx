@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from "react";
 import { Footer } from "../Components-LandingPage/Footer";
-import fileIcon from "../assets/Employer/fileIcon.png"
+import fileIcon from "../assets/Employer/fileIcon.png";
 import "./CompanyVerify.css";
 import { EHeader } from "./EHeader";
 import { useNavigate } from "react-router-dom";
 import api from "../api/axios";
-import emailIcon from '../assets/icon_email_otp.png'
-import mobileIcon from '../assets/icon_mobile_otp.png'
-import Verified from '../assets/verified-otpimage.png'
+import emailIcon from '../assets/icon_email_otp.png';
+import mobileIcon from '../assets/icon_mobile_otp.png';
+import Verified from '../assets/verified-otpimage.png';
 import { useLocation } from "react-router-dom";
+import uploadIcon from "../assets/UploadIcon.png";
 
 export const CompanyVerify = () => {
 
@@ -17,7 +18,7 @@ export const CompanyVerify = () => {
   // FIX: Separate loading states for different actions
   const [isEmailLoading, setIsEmailLoading] = useState(false);
   const [isMobileLoading, setIsMobileLoading] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);  // For final submit
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [backendError, setBackendError] = useState("");
 
   const location = useLocation();
@@ -38,17 +39,23 @@ export const CompanyVerify = () => {
   const [emailForOtp, setEmailForOtp] = useState("");
   const [mobileForOtp, setMobileForOtp] = useState("");
 
+  // Upload visibility toggles
+  const [showRegUpload, setShowRegUpload] = useState(false);
+  const [showTaxUpload, setShowTaxUpload] = useState(false);
+
   const [formData, setFormData] = useState({
     legalName: "",
     registrationNumber: "",
+    registrationFile: null,   
     taxId: "",
+    taxFile: null,            
     websiteUrl: "",
     officialEmail: "",
     phoneNumber: "",
     incorporationCertificate: null,
   });
 
-  // Handle all inputs
+  // Handle all inputs (including file uploads)
   const handleChange = (e) => {
     const { name, value, files } = e.target;
 
@@ -59,15 +66,18 @@ export const CompanyVerify = () => {
 
     if (files) {
       const file = files[0];
+      if (!file) return;
 
       const allowedTypes = [
         "application/pdf",
-        "image/jpeg",
-        "image/jpg",
-        "image/png"
+        "image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp",
+        "application/msword",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "application/vnd.ms-excel",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
       ];
 
-      // if (file && !allowedTypes.includes(file.type)) {
+       // if (file && !allowedTypes.includes(file.type)) {
       //   alert("Only PDF, JPG, JPEG, and PNG files are allowed!");
       //   return;
       // }
@@ -78,14 +88,25 @@ export const CompanyVerify = () => {
       //   return;
       // }
 
-      if (file && !allowedTypes.includes(file.type)) {
-        setErrors(prev => ({ ...prev, incorporationCertificate: "Only PDF, JPG, JPEG, and PNG files are allowed!" }));
+      //       if (file && !allowedTypes.includes(file.type)) {
+      //   setErrors(prev => ({ ...prev, incorporationCertificate: "Only PDF, JPG, JPEG, and PNG files are allowed!" }));
+      //   return;
+      // }
+
+      if (!allowedTypes.includes(file.type)) {
+        setErrors(prev => ({ ...prev, [name]: "Unsupported file format. Allowed: PDF, JPG, PNG, GIF, WEBP, DOC, DOCX, XLS, XLSX." }));
         return;
       }
 
+      //       const maxSize = 5 * 1024 * 1024;
+      // if (file && file.size > maxSize) {
+      //   setErrors(prev => ({ ...prev, incorporationCertificate: "File size exceeds 5 MB. Please upload a smaller file." }));
+      //   return;
+      // }
+
       const maxSize = 5 * 1024 * 1024;
-      if (file && file.size > maxSize) {
-        setErrors(prev => ({ ...prev, incorporationCertificate: "File size exceeds 5 MB. Please upload a smaller file." }));
+      if (file.size > maxSize) {
+        setErrors(prev => ({ ...prev, [name]: "File size exceeds 5 MB. Please upload a smaller file." }));
         return;
       }
 
@@ -104,6 +125,12 @@ export const CompanyVerify = () => {
       setFormData({ ...formData, [name]: val });
       setBackendError("");
     }
+  };
+
+  const removeFile = (fieldName) => {
+    setFormData({ ...formData, [fieldName]: null });
+    const input = document.getElementById(fieldName);
+    if (input) input.value = "";
   };
 
   const validateForm = () => {
@@ -131,10 +158,23 @@ export const CompanyVerify = () => {
       newErrors.registrationNumber = "Invalid Registration Number length";
     }
 
+    // Registration file validation
+    if (!formData.registrationFile) {
+      newErrors.registrationFile = "Please upload the Registration Number document.";
+    }
+    if (!formData.taxFile) {
+      newErrors.taxFile = "Please upload the TIN  / GST document.";
+    }
+
     if (!formData.taxId.trim()) {
       newErrors.taxId = "Please fill out this field.";
     } else if (!smartTaxRegex.test(formData.taxId)) {
       newErrors.taxId = "Tax ID must be 8-15 characters and contain both letters and numbers.";
+    }
+
+    // Tax file validation
+    if (!formData.taxFile) {
+      newErrors.taxFile = "Please upload the TIN  / GST document.";
     }
 
     if (!formData.websiteUrl.trim()) {
@@ -385,6 +425,13 @@ export const CompanyVerify = () => {
       formDataToSend.append("phone_number", formData.phoneNumber);
       formDataToSend.append("incorporation_certificate", formData.incorporationCertificate);
 
+      if (formData.registrationFile) {
+        formDataToSend.append("registration_certificate", formData.registrationFile);
+      }
+      if (formData.taxFile) {
+        formDataToSend.append("tax_certificate", formData.taxFile);
+      }
+
       if (employerEmail) {
         formDataToSend.append("employer_email", employerEmail);
       }
@@ -427,7 +474,61 @@ export const CompanyVerify = () => {
     }
   };
 
+  // Reusable file upload section (appears below input when toggled)
+  const FileUploadSection = ({ fieldName, accept }) => {
+    const file = formData[fieldName];
+    const error = errors[fieldName];
+    const inputId = `file-${fieldName}`;
+
+    return (
+      <div className="company-verify-file-upload-box" style={{ marginTop: '10px' }}>
+        <input
+          type="file"
+          name={fieldName}
+          id={inputId}
+          accept={accept}
+          onChange={handleChange}
+          hidden
+          disabled={isSubmitting}
+        />
+
+        {!file ? (
+          <label htmlFor={inputId} className="company-verify-upload-placeholder">
+            <p>Click to upload document</p>
+            <small style={{ display: 'block', color: '#888' }}>PDF, JPG, PNG, DOC, DOCX, XLS, XLSX (Max 5MB)</small>
+          </label>
+        ) : (
+          <div className="company-verify-file-preview" title="Remove file and re-upload">
+            <div className="company-verify-file-left clickable-area">
+              <img src={fileIcon} alt="file" />
+              <div>
+                <p>{file.name}</p>
+                <span>
+                  {file.size < 1024 * 1024
+                    ? `${(file.size / 1024).toFixed(2)} KB`
+                    : `${(file.size / (1024 * 1024)).toFixed(2)} MB`}
+                </span>
+              </div>
+            </div>
+            <span title="Remove File" style={{ display: 'inline-flex' }}>
+              <button
+                type="button"
+                className="file-remove-btn"
+                onClick={() => removeFile(fieldName)}
+                aria-label="Remove File"
+              >
+                ✕
+              </button>
+            </span>
+          </div>
+        )}
+        {error && <span className="error-msg" style={{ color: 'red', fontSize: '12px' }}>{error}</span>}
+      </div>
+    );
+  };
+
   const renderEmployerOtpModal = (type) => {
+    // ... (unchanged, same as original)
     const isEmail = type === 'email';
     const targetValue = isEmail ? formData.officialEmail : formData.phoneNumber;
     const otpKey = isEmail ? "emailOtp" : "mobileOtp";
@@ -575,7 +676,7 @@ export const CompanyVerify = () => {
         </div>
       </div>
     );
-  }
+  };
 
   return (
     <>
@@ -599,8 +700,9 @@ export const CompanyVerify = () => {
           )}
 
           <form className="company-verify-form" onSubmit={handleSubmit}>
+            {/* Legal Name */}
             <div className="company-verify-form-group">
-              <label>Company Legal Name</label>
+              <label>Company Legal Name <span style={{ color: 'red' }}>*</span></label>
               <input
                 type="text"
                 name="legalName"
@@ -613,36 +715,97 @@ export const CompanyVerify = () => {
               {errors.legalName && <span className="error-msg" style={{ color: 'red', fontSize: '12px' }}>{errors.legalName}</span>}
             </div>
 
+            {/* Registration Number with Upload */}
             <div className="company-verify-form-group">
-              <label>Registration Number</label>
-              <input
-                type="text"
-                name="registrationNumber"
-                className={errors.registrationNumber ? "input-error" : ""}
-                placeholder="e.g., L12345MH2023PTC123456"
-                value={formData.registrationNumber}
-                onChange={handleChange}
-                disabled={isSubmitting}
-              />
+              <label>Registration Number <span style={{ color: 'red' }}>*</span></label>
+              <div className="company-verify-input-with-btn">
+                <input
+                  type="text"
+                  name="registrationNumber"
+                  className={errors.registrationNumber ? "input-error" : ""}
+                  placeholder="e.g., L12345MH2023PTC123456"
+                  value={formData.registrationNumber}
+                  onChange={handleChange}
+                  disabled={isSubmitting}
+                />
+                <button
+                  type="button"
+                  className="company-small-upload-btn"
+                  title="upload certificate"
+                  onClick={() => setShowRegUpload(!showRegUpload)}
+                >
+                  <div className="remove-action-wrapper">
+                    <img
+                      className="upload-icon-btn"
+                      src={uploadIcon}
+                      alt="upload"
+                      loading="eager"
+                      fetchPriority="high"
+                      title="Upload Registration Document"
+                    />{" "}
+                    {/* Upload Certificate{" "} */}
+                  </div>
+                </button>
+              </div>
               {errors.registrationNumber && <span className="error-msg" style={{ color: 'red', fontSize: '12px' }}>{errors.registrationNumber}</span>}
+              {errors.registrationFile && <span className="error-msg">{errors.registrationFile}</span>}
+              {showRegUpload && (
+                <FileUploadSection
+                  fieldName="registrationFile"
+                  label="Registration Document"
+                  accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.doc,.docx,.xls,.xlsx"
+                />
+              )}
             </div>
 
+            {/* Tax ID with Upload */}
             <div className="company-verify-form-group">
-              <label>Tax Id / VAT / GST</label>
-              <input
-                type="text"
-                name="taxId"
-                className={errors.taxId ? "input-error" : ""}
-                placeholder="e.g., 22AAAAA0000A1Z5"
-                value={formData.taxId}
-                onChange={handleChange}
-                disabled={isSubmitting}
-              />
+              <label>TIN  / GST <span style={{ color: 'red' }}>*</span></label>
+              <div className="company-verify-input-with-btn">
+                <input
+                  type="text"
+                  name="taxId"
+                  className={errors.taxId ? "input-error" : ""}
+                  placeholder="e.g., 22AAAAA0000A1Z5"
+                  value={formData.taxId}
+                  onChange={handleChange}
+                  disabled={isSubmitting}
+                />
+                <button
+                  type="button"
+                  className="company-small-upload-btn"
+                  title="upload certificate"
+                  onClick={() => setShowTaxUpload(!showTaxUpload)}
+                >
+                  <div className="remove-action-wrapper">
+                    <img
+                      className="upload-icon-btn"
+                      src={uploadIcon}
+                      alt="upload"
+                      loading="eager"
+                      fetchPriority="high"
+                      title="Upload TIN / GST Document"
+                    />{" "}
+                    {/* Upload Certificate{" "} */}
+                  </div>
+                </button>
+              </div>
               {errors.taxId && <span className="error-msg" style={{ color: 'red', fontSize: '12px' }}>{errors.taxId}</span>}
+              {errors.taxFile && <span className="error-msg" style={{ color: 'red', fontSize: '12px' }}>{errors.taxFile}</span>}
+              {showTaxUpload && (
+                <FileUploadSection
+                  fieldName="taxFile"
+                  label="Tax Document"
+                  accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.doc,.docx,.xls,.xlsx"
+                />
+              )}
+
+
             </div>
 
+            {/* Website URL */}
             <div className="company-verify-form-group">
-              <label>Web Site URL</label>
+              <label>Web Site URL <span style={{ color: 'red' }}>*</span></label>
               <input
                 type="text"
                 name="websiteUrl"
@@ -655,8 +818,9 @@ export const CompanyVerify = () => {
               {errors.websiteUrl && <span className="error-msg" style={{ color: 'red', fontSize: '12px' }}>{errors.websiteUrl}</span>}
             </div>
 
+            {/* Official Email */}
             <div className="company-verify-form-group">
-              <label>Official Company Mail Id</label>
+              <label>Official Company Mail Id <span style={{ color: 'red' }}>*</span></label>
               <div className="company-verify-input-with-btn">
                 <input
                   type="email"
@@ -689,11 +853,12 @@ export const CompanyVerify = () => {
                 )}
                 {isEmailVerified && <span className="verified-badge" style={{ color: 'green', marginLeft: '10px' }}>✓ Verified</span>}
               </div>
-              {errors.officialEmail && <span style={{ color: 'red', fontSize: '12px' }}>{errors.officialEmail}</span>}
+              {errors.officialEmail && <span className="error-msg" style={{ color: 'red', fontSize: '12px' }}>{errors.officialEmail}</span>}
             </div>
 
+            {/* Phone Number */}
             <div className="company-verify-form-group">
-              <label>Phone Number</label>
+              <label>Phone Number <span style={{ color: 'red' }}>*</span></label>
               <div className="company-verify-input-with-btn">
                 <input
                   type="text"
@@ -726,11 +891,12 @@ export const CompanyVerify = () => {
                 )}
                 {isMobileVerified && <span className="verified-badge" style={{ color: 'green', marginLeft: '10px' }}>✓ Verified</span>}
               </div>
-              {errors.phoneNumber && <span style={{ color: 'red', fontSize: '12px' }}>{errors.phoneNumber}</span>}
+              {errors.phoneNumber && <span className="error-msg" style={{ color: 'red', fontSize: '12px' }}>{errors.phoneNumber}</span>}
             </div>
 
-            <div className="company-verify-form-group">
-              <label>Company Incorporation Certificate</label>
+            {/* Incorporation Certificate */}
+            {/* <div className="company-verify-form-group">
+              <label>Company Incorporation Certificate <span style={{ color: 'red' }}>*</span></label>
               <div className={`company-verify-file-upload-box ${errors.incorporationCertificate ? "input-error" : ""}`}>
                 <input
                   type="file"
@@ -745,6 +911,7 @@ export const CompanyVerify = () => {
                 {!formData.incorporationCertificate && (
                   <label htmlFor="pdfUpload" className="company-verify-upload-placeholder">
                     <p>Click to Upload File</p>
+                    <small style={{ display: 'block', color: '#888' }}>PDF, JPG, JPEG, PNG (Max 5MB)</small>
                   </label>
                 )}
 
@@ -762,8 +929,8 @@ export const CompanyVerify = () => {
                   </div>
                 )}
               </div>
-              {errors.incorporationCertificate && <span style={{ color: 'red', fontSize: '12px' }}>{errors.incorporationCertificate}</span>}
-            </div>
+              {errors.incorporationCertificate && <span className="error-msg" style={{ color: 'red', fontSize: '12px' }}>{errors.incorporationCertificate}</span>}
+            </div> */}
 
             <div className="company-verify-btn-wrapper">
               <button type="submit" className="company-main-verify-btn" disabled={isSubmitting || isEmailLoading || isMobileLoading}>

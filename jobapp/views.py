@@ -1666,6 +1666,33 @@ class UpdateJobView(generics.UpdateAPIView):
         print("PATCH request received for job update")
         print("Request data:", request.data)
         print("=" * 50)
+ 
+       
+        job = self.get_object()
+        if job.approval_status == PostAJob.ApprovalStatus.APPROVED:
+            subscription = Subscription.objects.filter(
+                user=request.user,
+                status='active'
+            ).select_related('plan').first()
+ 
+            platform = None
+            if subscription:
+                platform = EmployerPlatformSettings.objects.filter(
+                    plan=subscription.plan,
+                    account_status=request.user.status
+                ).first()
+                if not platform:
+                    # Fallback if no row exists for this exact account_status
+                    platform = EmployerPlatformSettings.objects.filter(
+                        plan=subscription.plan
+                    ).first()
+ 
+            if not platform or not platform.allow_edit_after_approval:
+                return Response(
+                    {"detail": "Editing approved jobs is disabled."},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+ 
         return super().patch(request, *args, **kwargs)
  
 
@@ -4935,9 +4962,22 @@ class CurrentSubscriptionView(APIView):
             and sub.end_date < timezone.now()
         )
  
+     # Expose the platform's "edit after approval" toggle for this plan
+        # so the employer UI can enable/disable the Edit Job option.
+        platform = EmployerPlatformSettings.objects.filter(
+            plan=sub.plan,
+            account_status=request.user.status
+        ).first()
+        if not platform:
+            # Fallback if no row exists for this exact account_status
+            platform = EmployerPlatformSettings.objects.filter(
+                plan=sub.plan
+            ).first()
+        data["allow_edit_after_approval"] = (
+            platform.allow_edit_after_approval if platform else False
+        )
+ 
         return Response(data)
-    
-    
 
 from django.utils import timezone
 

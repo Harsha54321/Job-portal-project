@@ -193,7 +193,7 @@ export default function RaisedTickets({
 
     return (
         <div>
-            <Header />
+            {/* <Header /> */}
             <div className="rt-page">
                 
                 <div className="rt-topbar">
@@ -287,7 +287,7 @@ export default function RaisedTickets({
 
                 {selected && <TicketDetail item={selected} />}
             </div>
-            <Footer/>
+            {/* <Footer/> */}
         </div>
 
     );
