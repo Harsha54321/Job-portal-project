@@ -1,5 +1,3 @@
-// Updated ActivityMonitor.jsx with fixed Quick View modal
-
 import React, { useState, useEffect } from 'react'
 import './ActivityMonitor.css'
 import YellowProfile from '../assets/AdminAssets/YellowBGProfile.png'
@@ -895,7 +893,7 @@ export const ActivityMonitor = ({ currentTab, onTabChange }) => {
                   </div>
 
                   <div>
-                    <span>Tax ID / GST</span>
+                    <span>TIN / GST</span>
                     <p>
                       {selectedCompany.verification_details?.tax_id ||
                         selectedCompany.tax_id ||
@@ -1009,7 +1007,7 @@ export const ActivityMonitor = ({ currentTab, onTabChange }) => {
                   {(selectedCompany.verification_details?.tax_certificate ||
                     selectedCompany.tax_certificate) && (
                       <div className="company-details-full">
-                        <span>Tax / GST Certificate</span>
+                        <span>GST/ TIN Certificate</span>
                         <a
                           href={
                             selectedCompany.verification_details?.tax_certificate ||

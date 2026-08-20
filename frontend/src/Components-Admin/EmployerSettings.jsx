@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import "./EmployerSettings.css";
 import Info from '../assets/AdminAssets/Circle-Info.png';
 import api from "../api/axios";
-import Registration from '../assets/AdminAssets/registrationAccess.png';
+import Registration from '../assets/AdminAssets/RegistrationAccess.png';
 
 export const EmployerSettings = () => {
 
